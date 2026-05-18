@@ -119,7 +119,7 @@ This product includes game rules and data derived from the **Cepheus Engine Syst
 
 **Non-Affiliation:** This product is not affiliated with, endorsed by, or sponsored by Jason "Flynn" Kemp, Samardan Press, Mongoose Publishing, Far Future Enterprises, Moon Toad Publishing, or Wizards of the Coast, Inc. The use of Open Game Content from these sources does not convey endorsement.
 
-**Mongoose Publishing Fair Use Policy:** The Traveller game in all forms is owned by Mongoose Publishing. Copyright 1977 - 2025 Mongoose Publishing. Traveller is a registered trademark of Mongoose Publishing. The contents of this project are for personal, non-commercial use only. Any use of Mongoose Publishing's trademarks within this project's documentation should not be viewed as a challenge to those trademarks.
+**Mongoose Publishing Fair Use Policy:** The Traveller, 2300AD, Twilight: 2000 and Dark Conspiracy games in all forms are owned by Mongoose Publishing. Copyright 1977 - 2025 Mongoose Publishing. Traveller is a registered trademark of Mongoose Publishing. Mongoose Publishing permits web sites and fanzines for this game, provided it contains this notice, that Mongoose Publishing is notified, and subject to a withdrawal of permission on 90 days notice. The contents of this site are for personal, non-commercial use only. Any use of Mongoose Publishing's copyrighted material or trademarks anywhere on this web site and its files should not be viewed as a challenge to those copyrights or trademarks.
 
 [Full OGL license text](OGL-1.0a.txt) | [Full license documentation](LICENSE.md)
 
