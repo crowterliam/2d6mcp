@@ -1,6 +1,6 @@
 # Dual-License Architecture
 
-This repository contains two distinct components governed by different open-source licenses:
+This repository contains two distinct components governed by different open-source licenses.
 
 ---
 
@@ -24,14 +24,76 @@ Full license text: https://www.gnu.org/licenses/agpl-3.0.en.html
 ## The Game Data (Content)
 
 All files under the `data/ogl/` directory — including but not limited to SQLite databases,
-JSON files, and Markdown files containing game rules, tables, and reference text from the
-**Cepheus Engine System Reference Document** — are licensed exclusively under the
-**Open Game License v1.0a (OGL)**.
+JSON files, and Markdown files containing game rules, tables, and reference text — are
+governed exclusively by the **Open Game License v1.0a (OGL)**.
 
 Full license text: see `OGL-1.0a.txt` in this repository.
 
-The OGL content in this repository is designated as **Open Game Content** and is
-clearly identified as such.
+---
+
+## Designation of Open Game Content
+
+All text within the `data/ogl/` directory is designated as **Open Game Content**
+under the terms of the Open Game License v1.0a. This includes the bundled SQLite
+database (`data/ogl/cepheus.db`), database schema definitions, and any structured
+data derived from the Cepheus Engine System Reference Document.
+
+## Designation of Product Identity
+
+The following terms are designated as **Product Identity** and are not Open Game Content:
+
+- "Cepheus Engine" (trademark of Jason "Flynn" Kemp)
+- "Samardan Press" (trademark of Jason "Flynn" Kemp)
+- "Moon Toad Publishing" (trademark of Paul Elliott)
+- "Mongoose Publishing" (trademark of Mongoose Publishing Ltd)
+- "Traveller" (trademark of Far Future Enterprises)
+- Titles of any products published by Samardan Press, Moon Toad Publishing, or Mongoose Publishing
+- The name "2d6mcp" and its associated logos (project identity)
+
+These trademarks and Product Identity elements are used here solely for attribution
+and license compliance and do not constitute a challenge to ownership.
+
+---
+
+## Derivation Statement
+
+The game data in this repository is derived from:
+
+1. The **Cepheus Engine System Reference Document**, Copyright 2016, Samardan Press;
+   Author Jason "Flynn" Kemp
+2. The **Cepheus Engine Core SRD**, Copyright 2022, Moon Toad Publishing;
+   Authors Jason Kemp, Paul Elliott, Ian Stead
+3. Which is in turn derived from the **Traveller System Reference Document**,
+   Copyright 2008, Mongoose Publishing
+
+This Product is derived from the Traveller System Reference Document and other Open
+Gaming Content made available by the Open Gaming License, and does not contain closed
+content from products published by either Mongoose Publishing or Far Future Enterprises.
+
+---
+
+## Non-Affiliation Statement
+
+This Product is **not** affiliated with, endorsed by, or sponsored by:
+
+- Jason "Flynn" Kemp or Samardan Press
+- Mongoose Publishing or its successors
+- Far Future Enterprises
+- Moon Toad Publishing
+- Wizards of the Coast, Inc.
+
+The use of the Traveller System Reference Document and the Cepheus Engine System
+Reference Document does not convey the endorsement of this Product by any of the
+above entities as a product of any of their product lines or systems.
+
+---
+
+## Attribution
+
+The machine-readable game rules included in this repository are derived from Open
+Game Content made available by Jason "Flynn" Kemp through Samardan Press under the
+Open Game License v1.0a. The Cepheus Engine System Reference Document is the work of
+Jason "Flynn" Kemp, Copyright 2016 Samardan Press.
 
 ---
 
@@ -45,11 +107,38 @@ the code and the game content.
 
 ---
 
+## Mongoose Publishing Fair Use Compliance
+
+This project is a non-commercial tool that automates game processes for the
+Cepheus Engine System Reference Document, which is Open Game Content under the
+Open Game License v1.0a.
+
+In compliance with the Mongoose Publishing Fair Use Policy (May 1, 2025):
+
+"The Traveller game in all forms is owned by Mongoose Publishing.
+Copyright 1977 - 2025 Mongoose Publishing."
+
+"The 2300AD game in all forms is owned by Mongoose Publishing.
+Copyright 1986 - 2025 Mongoose Publishing."
+
+"The Twilight: 2000 game in all forms is owned by Mongoose Publishing.
+Copyright 1984 - 2025 Mongoose Publishing."
+
+"The Dark Conspiracy game in all forms is owned by Mongoose Publishing.
+Copyright 1991 - 2025 Mongoose Publishing."
+
+The Traveller, 2300AD, Twilight: 2000 and Dark Conspiracy games in all forms
+are owned by Mongoose Publishing. Traveller is a registered trademark of
+Mongoose Publishing. The contents of this project are for personal, non-commercial
+use only. Any use of Mongoose Publishing's copyrighted material or trademarks
+within this project's documentation should not be viewed as a challenge to
+those copyrights or trademarks. This project is not affiliated with or endorsed
+by Mongoose Publishing, Far Future Enterprises, or Free League.
+
+---
+
 ## Third-Party Notices
 
-This repository bundles data from the **Cepheus Engine System Reference Document**,
-which is available under the Open Game License v1.0a. See `OGL-1.0a.txt` for full
-copyright attributions.
-
 No trademark, product identity, or proprietary content from any third-party game
-publisher is included in this repository.
+publisher is included in this repository beyond what is explicitly permitted under
+the Open Game License v1.0a or the Mongoose Publishing Fair Use Policy.

@@ -109,6 +109,22 @@ data/
   ogl/cepheus.db    Bundled OGL SQLite database
 ```
 
+## Open Game Content
+
+This product includes game rules and data derived from the **Cepheus Engine System Reference Document**, which is Open Game Content available under the Open Game License v1.0a.
+
+**Designation:** All text within the `data/ogl/` directory is designated as Open Game Content. The names "Cepheus Engine", "Samardan Press", "Moon Toad Publishing", "Mongoose Publishing", and "Traveller", and any product titles published by those entities, are designated as Product Identity under the OGL and are used solely for compliance and attribution.
+
+**Derivation:** This product is derived from the Traveller System Reference Document (Copyright 2008, Mongoose Publishing) and the Cepheus Engine System Reference Document (Copyright 2016, Samardan Press; Author Jason "Flynn" Kemp).
+
+**Non-Affiliation:** This product is not affiliated with, endorsed by, or sponsored by Jason "Flynn" Kemp, Samardan Press, Mongoose Publishing, Far Future Enterprises, Moon Toad Publishing, or Wizards of the Coast, Inc. The use of Open Game Content from these sources does not convey endorsement.
+
+**Mongoose Publishing Fair Use Policy:** The Traveller game in all forms is owned by Mongoose Publishing. Copyright 1977 - 2025 Mongoose Publishing. Traveller is a registered trademark of Mongoose Publishing. The contents of this project are for personal, non-commercial use only. Any use of Mongoose Publishing's trademarks within this project's documentation should not be viewed as a challenge to those trademarks.
+
+[Full OGL license text](OGL-1.0a.txt) | [Full license documentation](LICENSE.md)
+
+---
+
 ## License
 
 This project uses a dual-license architecture:

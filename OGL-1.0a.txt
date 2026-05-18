@@ -34,8 +34,14 @@ The following text is the property of Wizards of the Coast, Inc. and is Copyrigh
 
 Open Game License v 1.0a Copyright 2000, Wizards of the Coast, Inc.
 
-Cepheus Engine System Reference Document, Copyright 2016, Samardan Press; Author Jason "Flynn" Kemp
-Cepheus Engine Vehicle Design System, Copyright 2021, Moon Toad Publishing; Author Paul Elliott
-Cepheus Engine Core SRD, Copyright 2022, Moon Toad Publishing; Authors Jason Kemp, Paul Elliott, Ian Stead
+System Reference Document, Copyright 2000, Wizards of the Coast, Inc.; Authors Jonathan Tweet, Monte Cook, Skip Williams, based on original material by E. Gary Gygax and Dave Arneson.
+
+Traveller System Reference Document, Copyright 2008, Mongoose Publishing.
+
+Cepheus Engine System Reference Document, Copyright 2016, Samardan Press; Author Jason "Flynn" Kemp.
+
+Cepheus Engine Vehicle Design System, Copyright 2021, Moon Toad Publishing; Author Paul Elliott.
+
+Cepheus Engine Core SRD, Copyright 2022, Moon Toad Publishing; Authors Jason Kemp, Paul Elliott, Ian Stead.
 
 END OF LICENSE
