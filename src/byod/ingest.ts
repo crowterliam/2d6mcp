@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, extname, resolve } from "node:path";
-import pdfParse from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 
 const TEXT_EXTENSIONS = new Set([".txt", ".md", ".markdown", ".json", ".xml", ".csv", ".html"]);
 const SUPPORTED_EXTENSIONS = new Set([...TEXT_EXTENSIONS, ".pdf"]);
@@ -113,8 +113,10 @@ export async function ingestFile(file: IngestedFile): Promise<IngestedChunk[]> {
   } else if (file.ext === ".pdf") {
     try {
       const buffer = readFileSync(file.path);
-      const data = await pdfParse(buffer);
-      text = data.text;
+      const pdf = new PDFParse({ data: buffer });
+      const result = await pdf.getText();
+      text = result.text;
+      await pdf.destroy();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       process.stderr.write(`2d6mcp: Failed to parse PDF ${file.name}: ${msg}\n`);
