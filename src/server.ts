@@ -19,6 +19,9 @@ import {
   searchOglSkills,
   searchOglCareers,
   searchOglEquipment,
+  searchCombat,
+  searchShipOps,
+  searchWorldBuilding,
   listOglCategories,
   listOglTables,
 } from "./ogl/queries.js";
@@ -322,6 +325,17 @@ export async function startServer(): Promise<void> {
           case "categories":
             response.categories = listOglCategories(db);
             break;
+          case "combat":
+            response.combat = searchCombat(db, searchTerm);
+            break;
+          case "starships":
+          case "ship_ops":
+            response.starships = searchShipOps(db, searchTerm);
+            break;
+          case "worlds":
+          case "world_building":
+            response.worlds = searchWorldBuilding(db, searchTerm);
+            break;
           case "list_tables":
             response.tables_list = listOglTables(db);
             break;
@@ -330,6 +344,9 @@ export async function startServer(): Promise<void> {
             response.skills = searchOglSkills(db, searchTerm);
             response.careers = searchOglCareers(db, searchTerm);
             response.equipment = searchOglEquipment(db, searchTerm);
+            response.combat = searchCombat(db, searchTerm);
+            response.starships = searchShipOps(db, searchTerm);
+            response.worlds = searchWorldBuilding(db, searchTerm);
             break;
         }
 

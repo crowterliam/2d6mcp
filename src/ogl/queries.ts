@@ -130,3 +130,24 @@ export function listOglTables(db: Database.Database): { name: string; descriptio
     )
     .all() as { name: string; description: string | null; entryCount: number }[];
 }
+
+export function searchCombat(db: Database.Database, searchTerm: string): { topic: string; content: string; category: string }[] {
+  const like = `%${searchTerm}%`;
+  return db.prepare(
+    "SELECT topic, content, category FROM combat WHERE topic LIKE ? OR content LIKE ? OR category LIKE ? ORDER BY category, topic LIMIT 20"
+  ).all(like, like, like) as { topic: string; content: string; category: string }[];
+}
+
+export function searchShipOps(db: Database.Database, searchTerm: string): { topic: string; content: string; category: string }[] {
+  const like = `%${searchTerm}%`;
+  return db.prepare(
+    "SELECT topic, content, category FROM starship_operations WHERE topic LIKE ? OR content LIKE ? OR category LIKE ? ORDER BY category, topic LIMIT 20"
+  ).all(like, like, like) as { topic: string; content: string; category: string }[];
+}
+
+export function searchWorldBuilding(db: Database.Database, searchTerm: string): { topic: string; content: string; category: string }[] {
+  const like = `%${searchTerm}%`;
+  return db.prepare(
+    "SELECT topic, content, category FROM world_building WHERE topic LIKE ? OR content LIKE ? OR category LIKE ? ORDER BY category, topic LIMIT 20"
+  ).all(like, like, like) as { topic: string; content: string; category: string }[];
+}
