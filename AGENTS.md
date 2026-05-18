@@ -50,7 +50,7 @@ data/
 
 ## BYOD Consent Gate
 
-The server checks for `AGREE_NON_COMMERCIAL_USE="true"` env var OR the presence of a `.mcp-fair-use-accepted` token file in the project root before enabling BYOD tools. Without consent, BYOD tools return a clear disclaimer message.
+The server checks for `AGREE_BYOD_USE="true"` env var OR the presence of a `.mcp-byod-consent-accepted` token file in the project root before enabling BYOD tools. Without consent, BYOD tools return a clear disclaimer message.
 
 ## Naming Conventions
 

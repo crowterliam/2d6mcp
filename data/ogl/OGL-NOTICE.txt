@@ -17,8 +17,3 @@ Product Identity: "Cepheus Engine", "Samardan Press", "Moon Toad Publishing",
 "Mongoose Publishing", and "Traveller" are trademarks of their respective owners
 and are used solely for attribution. This product is not affiliated with or
 endorsed by any of these trademark holders.
-
-Mongoose Publishing Fair Use Compliance (May 1, 2025):
-The Traveller game in all forms is owned by Mongoose Publishing.
-Copyright 1977 - 2025 Mongoose Publishing. Traveller is a registered trademark
-of Mongoose Publishing. This content is for personal, non-commercial use only.

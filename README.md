@@ -35,7 +35,7 @@ npm run start
       "command": "node",
       "args": ["/path/to/2d6mcp/dist/index.js"],
       "env": {
-        "AGREE_NON_COMMERCIAL_USE": "true",
+        "AGREE_BYOD_USE": "true",
         "BYOD_PATH": "/path/to/your/rpg/files"
       }
     }
@@ -63,22 +63,22 @@ Works out of the box with the bundled Cepheus Engine SRD database. All OGL tools
 
 ### Mode B: BYOD Engine
 
-Enable by setting `AGREE_NON_COMMERCIAL_USE="true"` or running `npm run setup`. Requires a `BYOD_PATH` pointing to a directory of PDF/text/markdown files. Ingested content is indexed into a local SQLite FTS5 database and searchable via `query_local_byod`.
+Enable by setting `AGREE_BYOD_USE="true"` or running `npm run setup`. Requires a `BYOD_PATH` pointing to a directory of PDF/text/markdown files. Ingested content is indexed into a local SQLite FTS5 database and searchable via `query_local_byod`.
 
-**Disclaimer:** By enabling local file ingestion, you confirm that you are the legal owner of the imported files or hold a valid license to use them. This tool is provided strictly for personal, non-commercial automation and referencing.
+**Disclaimer:** By enabling local file ingestion, you confirm that you are the legal owner of the imported files or hold a valid license to use them. The developers of this software do not condone piracy or the unauthorized distribution of copyrighted tabletop roleplaying materials.
 
 ## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AGREE_NON_COMMERCIAL_USE` | `"false"` | Set to `"true"` to enable BYOD mode |
+| `AGREE_BYOD_USE` | `"false"` | Set to `"true"` to enable BYOD mode |
 | `BYOD_PATH` | — | Path to directory containing local RPG source files |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Path to custom OGL SQLite database |
 
 ## CLI Commands
 
 ```bash
-npm run setup                    # create .mcp-fair-use-accepted token
+npm run setup                    # create .mcp-byod-consent-accepted token
 npm run populate-ogl             # generate OGL database
 npm run populate-ogl -- --force  # regenerate OGL database
 ```
@@ -119,8 +119,6 @@ This product includes game rules and data derived from the **Cepheus Engine Syst
 
 **Non-Affiliation:** This product is not affiliated with, endorsed by, or sponsored by Jason "Flynn" Kemp, Samardan Press, Mongoose Publishing, Far Future Enterprises, Moon Toad Publishing, or Wizards of the Coast, Inc. The use of Open Game Content from these sources does not convey endorsement.
 
-**Mongoose Publishing Fair Use Policy:** The Traveller, 2300AD, Twilight: 2000 and Dark Conspiracy games in all forms are owned by Mongoose Publishing. Copyright 1977 - 2025 Mongoose Publishing. Traveller is a registered trademark of Mongoose Publishing. Mongoose Publishing permits web sites and fanzines for this game, provided it contains this notice, that Mongoose Publishing is notified, and subject to a withdrawal of permission on 90 days notice. The contents of this site are for personal, non-commercial use only. Any use of Mongoose Publishing's copyrighted material or trademarks anywhere on this web site and its files should not be viewed as a challenge to those copyrights or trademarks.
-
 [Full OGL license text](OGL-1.0a.txt) | [Full license documentation](LICENSE.md)
 
 ---
@@ -129,5 +127,5 @@ This product includes game rules and data derived from the **Cepheus Engine Syst
 
 This project uses a dual-license architecture:
 
-- **Source code** (`src/**/*.ts`, config files): [AGPL-3.0-only](https://www.gnu.org/licenses/agpl-3.0.en.html)
+- **Source code** (`src/**/*.ts`, root-level config files): [AGPL-3.0-only](https://www.gnu.org/licenses/agpl-3.0.en.html)
 - **Game data** (`data/ogl/**`): [OGL v1.0a](OGL-1.0a.txt)

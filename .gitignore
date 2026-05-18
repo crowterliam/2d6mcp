@@ -5,5 +5,5 @@ dist/
 *.db-wal
 *.db-shm
 .env
-.mcp-fair-use-accepted
+.mcp-byod-consent-accepted
 .reference

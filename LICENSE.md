@@ -7,8 +7,10 @@ This repository contains two distinct components governed by different open-sour
 ## The Software Engine (Code)
 
 All executable source code in this repository — including but not limited to TypeScript files
-(`.ts`), JavaScript files (`.js`), JSON configuration files, and build scripts — is licensed
-under the **GNU Affero General Public License v3.0 (AGPL-3.0-only)**.
+(`.ts`), JavaScript files (`.js`), root-level JSON configuration files (e.g., `package.json`,
+`tsconfig.json`), and build scripts — is licensed under the **GNU Affero General Public License
+v3.0 (AGPL-3.0-only)**. This license expressly excludes data files located in the `data/ogl/`
+directory.
 
 Full license text: https://www.gnu.org/licenses/agpl-3.0.en.html
 
@@ -104,32 +106,3 @@ Incorporating, linking, or distributing the software engine does not subject the
 software to the OGL, and incorporating the OGL data does not subject it to the AGPL-3.0.
 This firewall is intentional and designed to prevent license contamination between
 the code and the game content.
-
----
-
-## Mongoose Publishing Fair Use Compliance
-
-This project is a non-commercial tool that automates game processes for the
-Cepheus Engine System Reference Document, which is Open Game Content under the
-Open Game License v1.0a.
-
-In compliance with the Mongoose Publishing Fair Use Policy (May 1, 2025):
-
-The Traveller, 2300AD, Twilight: 2000 and Dark Conspiracy games in all forms
-are owned by Mongoose Publishing. Copyright 1977 - 2025 Mongoose Publishing.
-Traveller is a registered trademark of Mongoose Publishing. Mongoose Publishing
-permits web sites and fanzines for this game, provided it contains this notice,
-that Mongoose Publishing is notified, and subject to a withdrawal of permission
-on 90 days notice. The contents of this site are for personal, non-commercial
-use only. Any use of Mongoose Publishing's copyrighted material or trademarks
-anywhere on this web site and its files should not be viewed as a challenge to
-those copyrights or trademarks. This project is not affiliated with or endorsed
-by Mongoose Publishing, Far Future Enterprises, or Free League.
-
----
-
-## Third-Party Notices
-
-No trademark, product identity, or proprietary content from any third-party game
-publisher is included in this repository beyond what is explicitly permitted under
-the Open Game License v1.0a or the Mongoose Publishing Fair Use Policy.

@@ -1,9 +1,9 @@
 import { loadConfig, BYOD_DISCLAIMER, isByodEnabled } from "../config.js";
 
 export function checkByodConsent(): { allowed: boolean; message: string } {
-  const { agreeNonCommercial } = loadConfig();
+  const { byodConsented } = loadConfig();
 
-  if (!agreeNonCommercial) {
+  if (!byodConsented) {
     return { allowed: false, message: BYOD_DISCLAIMER };
   }
 
