@@ -50,12 +50,12 @@ function resolveSafePath(filePath: string): string | null {
   return null;
 }
 
-function syncByodIndex(): { message: string } {
+async function syncByodIndex(): Promise<{ message: string }> {
   const consent = checkByodConsent();
   if (!consent.allowed) return { message: consent.message };
 
   const byodPath = getByodPath();
-  const { files, chunks } = ingestDirectory(byodPath);
+  const { files, chunks } = await ingestDirectory(byodPath);
   const db = getByodDatabase();
 
   for (const file of files) {
@@ -491,11 +491,22 @@ export async function startServer(): Promise<void> {
   });
 
   const transport = new StdioServerTransport();
-  await server.connect(transport);
 
   ensureOglDb();
+
   const consent = checkByodConsent();
   if (consent.allowed) {
-    syncByodIndex();
+    setImmediate(() => {
+      syncByodIndex()
+        .then((result) => {
+          process.stderr.write(`2d6mcp: ${result.message}\n`);
+        })
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : "Unknown error";
+          process.stderr.write(`2d6mcp: BYOD sync failed: ${msg}\n`);
+        });
+    });
   }
+
+  await server.connect(transport);
 }

@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, extname, resolve } from "node:path";
+import pdfParse from "pdf-parse";
 
 const TEXT_EXTENSIONS = new Set([".txt", ".md", ".markdown", ".json", ".xml", ".csv", ".html"]);
 const SUPPORTED_EXTENSIONS = new Set([...TEXT_EXTENSIONS, ".pdf"]);
@@ -100,7 +101,7 @@ function chunkText(text: string, maxChunkSize = 2000, overlap = 200): string[] {
   return chunks;
 }
 
-export function ingestFile(file: IngestedFile): IngestedChunk[] {
+export async function ingestFile(file: IngestedFile): Promise<IngestedChunk[]> {
   if (file.size > MAX_FILE_SIZE_BYTES) {
     return [];
   }
@@ -110,7 +111,15 @@ export function ingestFile(file: IngestedFile): IngestedChunk[] {
   if (TEXT_EXTENSIONS.has(file.ext)) {
     text = readTextFile(file.path);
   } else if (file.ext === ".pdf") {
-    text = readTextFile(file.path);
+    try {
+      const buffer = readFileSync(file.path);
+      const data = await pdfParse(buffer);
+      text = data.text;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      process.stderr.write(`2d6mcp: Failed to parse PDF ${file.name}: ${msg}\n`);
+      return [];
+    }
   } else {
     return [];
   }
@@ -131,15 +140,15 @@ export function ingestFile(file: IngestedFile): IngestedChunk[] {
   }));
 }
 
-export function ingestDirectory(byodPath: string): {
+export async function ingestDirectory(byodPath: string): Promise<{
   files: IngestedFile[];
   chunks: IngestedChunk[];
-} {
+}> {
   const files = discoverFiles(byodPath);
   const chunks: IngestedChunk[] = [];
 
   for (const file of files) {
-    chunks.push(...ingestFile(file));
+    chunks.push(...(await ingestFile(file)));
   }
 
   return { files, chunks };
