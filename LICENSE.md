@@ -115,23 +115,14 @@ Open Game License v1.0a.
 
 In compliance with the Mongoose Publishing Fair Use Policy (May 1, 2025):
 
-"The Traveller game in all forms is owned by Mongoose Publishing.
-Copyright 1977 - 2025 Mongoose Publishing."
-
-"The 2300AD game in all forms is owned by Mongoose Publishing.
-Copyright 1986 - 2025 Mongoose Publishing."
-
-"The Twilight: 2000 game in all forms is owned by Mongoose Publishing.
-Copyright 1984 - 2025 Mongoose Publishing."
-
-"The Dark Conspiracy game in all forms is owned by Mongoose Publishing.
-Copyright 1991 - 2025 Mongoose Publishing."
-
 The Traveller, 2300AD, Twilight: 2000 and Dark Conspiracy games in all forms
-are owned by Mongoose Publishing. Traveller is a registered trademark of
-Mongoose Publishing. The contents of this project are for personal, non-commercial
+are owned by Mongoose Publishing. Copyright 1977 - 2025 Mongoose Publishing.
+Traveller is a registered trademark of Mongoose Publishing. Mongoose Publishing
+permits web sites and fanzines for this game, provided it contains this notice,
+that Mongoose Publishing is notified, and subject to a withdrawal of permission
+on 90 days notice. The contents of this site are for personal, non-commercial
 use only. Any use of Mongoose Publishing's copyrighted material or trademarks
-within this project's documentation should not be viewed as a challenge to
+anywhere on this web site and its files should not be viewed as a challenge to
 those copyrights or trademarks. This project is not affiliated with or endorsed
 by Mongoose Publishing, Far Future Enterprises, or Free League.
 
