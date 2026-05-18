@@ -1,5 +1,9 @@
 import Database from "better-sqlite3";
 
+function sanitizeFts5Query(term: string): string {
+  return term.replace(/[*"()^]/g, "").trim();
+}
+
 export interface RuleSearchResult {
   title: string;
   snippet: string;
@@ -18,8 +22,11 @@ export function searchOglRules(db: Database.Database, searchTerm: string): RuleS
     LIMIT 20
   `);
 
+  const safeTerm = sanitizeFts5Query(searchTerm);
+  if (!safeTerm) return [];
+
   try {
-    const rows = ftsQuery.all(searchTerm) as { section: string; subsection: string | null; snippet: string }[];
+    const rows = ftsQuery.all(safeTerm) as { section: string; subsection: string | null; snippet: string }[];
     for (const row of rows) {
       results.push({
         title: row.subsection || row.section,

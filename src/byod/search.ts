@@ -3,6 +3,10 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { PROJECT_ROOT } from "../config.js";
 
+function sanitizeFts5Query(term: string): string {
+  return term.replace(/[*"()^]/g, "").trim();
+}
+
 const BYOD_DB_NAME = "byod_index.db";
 
 function getByodDbPath(): string {
@@ -109,8 +113,11 @@ export function searchByodIndex(
     LIMIT ?
   `);
 
+  const safeTerm = sanitizeFts5Query(searchTerm);
+  if (!safeTerm) return [];
+
   try {
-    const rows = stmt.all(searchTerm, limit) as {
+    const rows = stmt.all(safeTerm, limit) as {
       title: string;
       snippet: string;
       file_name: string;

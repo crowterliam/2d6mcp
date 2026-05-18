@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { writeFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { PROJECT_ROOT, BYOD_CONSENT_FILE } from "./config.js";
 import { populateOglDatabase } from "./ogl/populate.js";
@@ -44,7 +44,6 @@ function cmdPopulate(): void {
   }
 
   if (force && existsSync(dbPath)) {
-    const { unlinkSync } = require("node:fs");
     unlinkSync(dbPath);
   }
 

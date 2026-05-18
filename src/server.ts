@@ -8,7 +8,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { loadConfig, BYOD_DISCLAIMER } from "./config.js";
+import { loadConfig, BYOD_DISCLAIMER, PROJECT_ROOT } from "./config.js";
 import { roll2d6, rollCustom } from "./dice/roller.js";
 import { rollD66, rollOnTable, roll2d6Sum, normalizeDiceType, resolveDiceRange } from "./dice/tables.js";
 import { getDatabase, initSchema, closeDatabase } from "./ogl/database.js";
@@ -31,6 +31,24 @@ import { getByodDatabase, indexChunks, rebuildByodFts, searchByodIndex, closeByo
 import { parseCharacterText, readCharacterFile, type CharacterStats } from "./character/parser.js";
 
 let lastSyncHash: string | null = null;
+
+function resolveSafePath(filePath: string): string | null {
+  const resolved = resolve(filePath);
+  const allowedRoots: string[] = [resolve(PROJECT_ROOT)];
+
+  const { byodPath } = loadConfig();
+  if (byodPath && existsSync(byodPath)) {
+    allowedRoots.push(resolve(byodPath));
+  }
+
+  for (const root of allowedRoots) {
+    if (resolved === root || resolved.startsWith(root + "/")) {
+      return resolved;
+    }
+  }
+
+  return null;
+}
 
 function syncByodIndex(): { message: string } {
   const consent = checkByodConsent();
@@ -404,7 +422,19 @@ export async function startServer(): Promise<void> {
           };
         }
 
-        const resolvedPath = resolve(filePath);
+        const resolvedPath = resolveSafePath(filePath);
+
+        if (!resolvedPath) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "Error: Access denied. File must be within the project directory or your configured BYOD path.",
+              },
+            ],
+            isError: true,
+          };
+        }
 
         if (!existsSync(resolvedPath)) {
           return {

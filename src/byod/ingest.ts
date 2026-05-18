@@ -3,6 +3,7 @@ import { join, extname, resolve } from "node:path";
 
 const TEXT_EXTENSIONS = new Set([".txt", ".md", ".markdown", ".json", ".xml", ".csv", ".html"]);
 const SUPPORTED_EXTENSIONS = new Set([...TEXT_EXTENSIONS, ".pdf"]);
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 
 export interface IngestedFile {
   path: string;
@@ -100,12 +101,16 @@ function chunkText(text: string, maxChunkSize = 2000, overlap = 200): string[] {
 }
 
 export function ingestFile(file: IngestedFile): IngestedChunk[] {
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    return [];
+  }
+
   let text: string;
 
   if (TEXT_EXTENSIONS.has(file.ext)) {
     text = readTextFile(file.path);
   } else if (file.ext === ".pdf") {
-    text = readTextFile(file.path); // PDF handled separately by BYOD PDF parser
+    text = readTextFile(file.path);
   } else {
     return [];
   }
