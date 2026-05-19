@@ -106,6 +106,7 @@ data/
   rules/            # Cline rule definitions
 .windsurfrules      # Windsurf rules file
 AIDER.md            # Aider conventions and MCP tool reference
+MCP_SETUP.md         # User guide for connecting to AI harnesses
 ```
 
 ## Available Tools
