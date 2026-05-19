@@ -9,8 +9,8 @@ import {
   McpError,
   ErrorCode,
 } from "@modelcontextprotocol/sdk/types.js";
-import { readFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, existsSync, statSync } from "node:fs";
+import { resolve, join, extname } from "node:path";
 import { loadConfig, BYOD_DISCLAIMER, PROJECT_ROOT, type Config } from "./config.js";
 import { roll2d6, rollCustom } from "./dice/roller.js";
 import { rollD66, rollOnTable, roll2d6Sum, normalizeDiceType, resolveDiceRange } from "./dice/tables.js";
@@ -62,6 +62,172 @@ function resolveSafePath(filePath: string): string | null {
 
 function yieldToEventLoop(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve));
+}
+
+const SUPPORTED_EXTENSIONS = new Set([".pdf", ".md", ".markdown", ".txt", ".html", ".htm", ".json", ".xml", ".csv"]);
+
+interface SyncFileResult {
+  relativePath: string;
+  fileName: string;
+  ext: string;
+  size: number;
+  status: "indexed" | "skipped" | "failed" | "not_found" | "unsupported";
+  chunks: number;
+  elapsedMs: number;
+  message: string;
+}
+
+async function syncFile(
+  config: Config,
+  relativePath: string
+): Promise<SyncFileResult> {
+  const consent = checkByodConsent();
+  if (!consent.allowed) {
+    return {
+      relativePath,
+      fileName: "",
+      ext: "",
+      size: 0,
+      status: "failed",
+      chunks: 0,
+      elapsedMs: 0,
+      message: consent.message,
+    };
+  }
+
+  const byodPath = getByodPath();
+  const fullPath = join(byodPath, relativePath);
+  const resolved = resolve(fullPath);
+
+  if (!resolved.startsWith(resolve(byodPath) + "/") && resolved !== resolve(byodPath)) {
+    return {
+      relativePath,
+      fileName: "",
+      ext: "",
+      size: 0,
+      status: "failed",
+      chunks: 0,
+      elapsedMs: 0,
+      message: "Access denied. File must be within the BYOD path.",
+    };
+  }
+
+  if (!existsSync(resolved)) {
+    return {
+      relativePath,
+      fileName: "",
+      ext: "",
+      size: 0,
+      status: "not_found",
+      chunks: 0,
+      elapsedMs: 0,
+      message: `File not found: ${relativePath}`,
+    };
+  }
+
+  const name = resolved.split("/").pop() || relativePath;
+  const ext = extname(name).toLowerCase();
+
+  if (!SUPPORTED_EXTENSIONS.has(ext)) {
+    return {
+      relativePath,
+      fileName: name,
+      ext,
+      size: 0,
+      status: "unsupported",
+      chunks: 0,
+      elapsedMs: 0,
+      message: `Unsupported file type: ${ext}`,
+    };
+  }
+
+  const stat = statSync(resolved);
+  if (stat.size > 50 * 1024 * 1024) {
+    return {
+      relativePath,
+      fileName: name,
+      ext,
+      size: stat.size,
+      status: "failed",
+      chunks: 0,
+      elapsedMs: 0,
+      message: `File exceeds 50 MB limit (${(stat.size / (1024 * 1024)).toFixed(1)} MB).`,
+    };
+  }
+
+  const fingerprint = String(stat.mtimeMs) + "-" + String(stat.size);
+
+  const db = getByodDatabase();
+  const storedHash = getStoredFileHash(db, relativePath);
+  if (storedHash === fingerprint) {
+    return {
+      relativePath,
+      fileName: name,
+      ext,
+      size: stat.size,
+      status: "skipped",
+      chunks: 0,
+      elapsedMs: 0,
+      message: "File unchanged since last sync — skipped.",
+    };
+  }
+
+  const startTime = Date.now();
+  const file: IngestedFile = {
+    path: resolved,
+    relativePath,
+    name,
+    size: stat.size,
+    ext,
+    hash: fingerprint,
+  };
+
+  const options = {
+    chunkSize: config.byodChunkSize,
+    overlap: config.byodChunkOverlap,
+    maxChunksPerFile: config.byodMaxChunksPerFile,
+  };
+
+  const chunks = await ingestFile(file, options);
+
+  if (chunks.length === 0) {
+    markFileFailed(db, relativePath, name, ext, stat.size);
+    const elapsed = Date.now() - startTime;
+    return {
+      relativePath,
+      fileName: name,
+      ext,
+      size: stat.size,
+      status: "failed",
+      chunks: 0,
+      elapsedMs: elapsed,
+      message: `Failed to extract text from ${name}. File marked as failed.`,
+    };
+  }
+
+  indexChunks(
+    db,
+    relativePath,
+    name,
+    ext,
+    stat.size,
+    fingerprint,
+    chunks.map((c) => ({ title: c.title, content: c.content, chunkIndex: c.chunkIndex }))
+  );
+
+  rebuildByodFts(db);
+
+  const elapsed = Date.now() - startTime;
+  return {
+    relativePath,
+    fileName: name,
+    ext,
+    size: stat.size,
+    status: "indexed",
+    chunks: chunks.length,
+    elapsedMs: elapsed,
+    message: `Indexed ${name} (${chunks.length} chunks, ${formatSizeForLog(stat.size)}) in ${(elapsed / 1000).toFixed(1)}s.`,
+  };
 }
 
 interface SyncResult {
@@ -369,6 +535,21 @@ export async function startServer(): Promise<void> {
         },
       },
       {
+        name: "sync_file",
+        description:
+          "Index a single file from your BYOD directory by its relative path. Use this for large files that time out in bulk syncs, or to selectively sync specific files without running a full sync.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            relative_path: {
+              type: "string",
+              description: "Relative path of the file within your BYOD_PATH directory",
+            },
+          },
+          required: ["relative_path"],
+        },
+      },
+      {
         name: "clear_byod",
         description:
           "Delete the BYOD search index database. Use this to start fresh — all indexed files are forgotten. The database is recreated on the next sync_byod call. Does not affect your source files.",
@@ -668,6 +849,32 @@ export async function startServer(): Promise<void> {
 
         const config = loadConfig();
         const result = await syncByodIndex(config);
+        return {
+          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case "sync_file": {
+        const consent = checkByodConsent();
+        if (!consent.allowed) {
+          return {
+            content: [{ type: "text", text: consent.message }],
+            isError: true,
+          };
+        }
+
+        const relativePath =
+          typeof args?.relative_path === "string" ? args.relative_path : "";
+
+        if (!relativePath) {
+          return {
+            content: [{ type: "text", text: "Error: relative_path is required" }],
+            isError: true,
+          };
+        }
+
+        const config = loadConfig();
+        const result = await syncFile(config, relativePath);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
