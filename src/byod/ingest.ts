@@ -4,6 +4,7 @@
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, extname, resolve } from "node:path";
 import { PDFParse } from "pdf-parse";
+import { DOMParser } from "@xmldom/xmldom";
 
 const TEXT_EXTENSIONS = new Set([".txt", ".json", ".xml", ".csv"]);
 const MARKDOWN_EXTENSIONS = new Set([".md", ".markdown"]);
@@ -170,17 +171,35 @@ function guessTitleFromFirstLine(text: string): string | null {
 }
 
 function stripHtmlTags(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/\s+/g, " ");
+  try {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const removeElements = (tagName: string) => {
+      const elements = doc.getElementsByTagName(tagName);
+      while (elements.length > 0) {
+        elements[0].parentNode?.removeChild(elements[0]);
+      }
+    };
+    removeElements("script");
+    removeElements("style");
+    const text = doc.textContent || "";
+    return text
+      .replace(/\s+/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .trim();
+  } catch {
+    let text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/\s+/g, " ");
+    return text.trim();
+  }
 }
 
 function stripFrontmatter(text: string): { body: string; title: string | null } {
