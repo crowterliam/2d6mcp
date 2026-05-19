@@ -29,10 +29,24 @@ export interface Config {
   oglDbPath: string;
   byodChunkSize: number;
   byodChunkOverlap: number;
+  byodMaxFiles: number;
+  byodMaxChunksPerFile: number;
+  byodSyncTimeoutMs: number;
 }
 
 const DEFAULT_CHUNK_SIZE = 8000;
 const DEFAULT_CHUNK_OVERLAP = 400;
+const DEFAULT_MAX_FILES = 2000;
+const DEFAULT_MAX_CHUNKS_PER_FILE = 500;
+const DEFAULT_SYNC_TIMEOUT_MS = 15000;
+
+function parseIntEnv(key: string, fallback: number, min: number, max: number): number {
+  const raw = process.env[key];
+  if (!raw) return fallback;
+  const n = parseInt(raw, 10);
+  if (isNaN(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+}
 
 export function loadConfig(): Config {
   const envAgreed = process.env.AGREE_BYOD_USE === "true";
@@ -41,21 +55,17 @@ export function loadConfig(): Config {
 
   const byodPath = process.env.BYOD_PATH || null;
 
-  const chunkSizeEnv = process.env.BYOD_CHUNK_SIZE;
-  const byodChunkSize = chunkSizeEnv
-    ? Math.max(500, Math.min(50000, parseInt(chunkSizeEnv, 10) || DEFAULT_CHUNK_SIZE))
-    : DEFAULT_CHUNK_SIZE;
-
-  const overlapEnv = process.env.BYOD_CHUNK_OVERLAP;
-  const byodChunkOverlap = overlapEnv
-    ? Math.max(0, Math.min(byodChunkSize / 2, parseInt(overlapEnv, 10) || DEFAULT_CHUNK_OVERLAP))
-    : DEFAULT_CHUNK_OVERLAP;
+  const byodChunkSize = parseIntEnv("BYOD_CHUNK_SIZE", DEFAULT_CHUNK_SIZE, 500, 50000);
+  const byodChunkOverlap = parseIntEnv("BYOD_CHUNK_OVERLAP", DEFAULT_CHUNK_OVERLAP, 0, byodChunkSize / 2);
+  const byodMaxFiles = parseIntEnv("BYOD_MAX_FILES", DEFAULT_MAX_FILES, 1, 50000);
+  const byodMaxChunksPerFile = parseIntEnv("BYOD_MAX_CHUNKS_PER_FILE", DEFAULT_MAX_CHUNKS_PER_FILE, 1, 2000);
+  const byodSyncTimeoutMs = parseIntEnv("BYOD_SYNC_TIMEOUT_MS", DEFAULT_SYNC_TIMEOUT_MS, 1000, 300000);
 
   const oglDbPath =
     process.env.OGL_DB_PATH ||
     resolve(PROJECT_ROOT, "data", "ogl", "cepheus.db");
 
-  return { byodConsented, byodPath, oglDbPath, byodChunkSize, byodChunkOverlap };
+  return { byodConsented, byodPath, oglDbPath, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs };
 }
 
 export function isByodEnabled(): boolean {

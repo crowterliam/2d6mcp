@@ -3,7 +3,6 @@
 
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, extname, resolve } from "node:path";
-import { createHash } from "node:crypto";
 import { PDFParse } from "pdf-parse";
 
 const TEXT_EXTENSIONS = new Set([".txt", ".json", ".xml", ".csv"]);
@@ -37,6 +36,7 @@ export interface IngestedChunk {
 export interface IngestOptions {
   chunkSize: number;
   overlap: number;
+  maxChunksPerFile: number;
 }
 
 interface HeadingSection {
@@ -48,6 +48,26 @@ interface HeadingSection {
 
 function log(message: string): void {
   process.stderr.write(`2d6mcp: ${message}\n`);
+}
+
+function capChunks(
+  chunks: IngestedChunk[],
+  maxChunks: number,
+  fileName: string
+): IngestedChunk[] {
+  if (chunks.length > maxChunks) {
+    log(
+      `${fileName}: capped at ${maxChunks} chunks (${chunks.length} produced)`
+    );
+    return chunks.slice(0, maxChunks);
+  }
+  return chunks;
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
 function walkDirectory(dir: string, baseDir: string): IngestedFile[] {
@@ -74,14 +94,7 @@ function walkDirectory(dir: string, baseDir: string): IngestedFile[] {
             continue;
           }
 
-          let hash = "";
-          try {
-            const buf = readFileSync(fullPath);
-            hash = createHash("sha256").update(buf).digest("hex").slice(0, 16);
-          } catch {
-            log(`Skipping ${entry} — unreadable file`);
-            continue;
-          }
+          const fingerprint = String(stat.mtimeMs) + "-" + String(stat.size);
 
           results.push({
             path: fullPath,
@@ -89,7 +102,7 @@ function walkDirectory(dir: string, baseDir: string): IngestedFile[] {
             name: entry,
             size: stat.size,
             ext,
-            hash,
+            hash: fingerprint,
           });
         }
       }
@@ -315,7 +328,7 @@ function ingestMarkdownFile(
     }
   }
 
-  return chunks;
+  return capChunks(chunks, options.maxChunksPerFile, file.name);
 }
 
 async function ingestPdfFile(
@@ -371,7 +384,7 @@ async function ingestPdfFile(
       }
     }
 
-    return chunks;
+    return capChunks(chunks, options.maxChunksPerFile, file.name);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     log(`Failed to parse PDF ${file.name}: ${msg}`);
@@ -411,7 +424,7 @@ function ingestTextFile(
 
   const chunkTexts = splitTextToChunks(body, options.chunkSize, options.overlap);
 
-  return chunkTexts.map((content, index) => ({
+  const chunks = chunkTexts.map((content, index) => ({
     filePath: file.relativePath,
     fileName: file.name,
     title:
@@ -421,6 +434,8 @@ function ingestTextFile(
     content,
     chunkIndex: index,
   }));
+
+  return capChunks(chunks, options.maxChunksPerFile, file.name);
 }
 
 function ingestHtmlFile(
@@ -444,7 +459,7 @@ function ingestHtmlFile(
   const title = file.name.replace(/\.[^.]+$/, "").replace(/[_-]/g, " ");
   const chunkTexts = splitTextToChunks(cleaned, options.chunkSize, options.overlap);
 
-  return chunkTexts.map((content, index) => ({
+  const chunks = chunkTexts.map((content, index) => ({
     filePath: file.relativePath,
     fileName: file.name,
     title:
@@ -454,6 +469,8 @@ function ingestHtmlFile(
     content,
     chunkIndex: index,
   }));
+
+  return capChunks(chunks, options.maxChunksPerFile, file.name);
 }
 
 export async function ingestFile(

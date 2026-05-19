@@ -29,8 +29,8 @@ import {
   listOglTables,
 } from "./ogl/queries.js";
 import { checkByodConsent, getByodPath } from "./byod/gate.js";
-import { ingestDirectory, type IngestedChunk } from "./byod/ingest.js";
-import { getByodDatabase, indexChunks, rebuildByodFts, searchByodIndex, closeByodDatabase } from "./byod/search.js";
+import { discoverFiles, ingestFile, type IngestedChunk, type IngestedFile } from "./byod/ingest.js";
+import { getByodDatabase, indexChunks, rebuildByodFts, searchByodIndex, closeByodDatabase, getStoredFileHash, markFileFailed, FAILED_HASH, clearByodDatabase, listByodFiles, getFileChunks } from "./byod/search.js";
 import { parseCharacterText, readCharacterFile, type CharacterStats } from "./character/parser.js";
 
 function getServerVersion(): string {
@@ -60,35 +60,172 @@ function resolveSafePath(filePath: string): string | null {
   return null;
 }
 
-async function syncByodIndex(config: Config): Promise<{ message: string }> {
+function yieldToEventLoop(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve));
+}
+
+interface SyncResult {
+  message: string;
+  filesIndexed: number;
+  totalFiles: number;
+  remaining: number;
+  complete: boolean;
+  chunksIndexed: number;
+  elapsedMs: number;
+}
+
+async function syncByodIndex(config: Config): Promise<SyncResult> {
   const consent = checkByodConsent();
-  if (!consent.allowed) return { message: consent.message };
+  if (!consent.allowed) return { message: consent.message, filesIndexed: 0, totalFiles: 0, remaining: 0, complete: true, chunksIndexed: 0, elapsedMs: 0 };
 
   const byodPath = getByodPath();
-  const { files, chunks } = await ingestDirectory(byodPath, {
-    chunkSize: config.byodChunkSize,
-    overlap: config.byodChunkOverlap,
-  });
-  const db = getByodDatabase();
+  let files = discoverFiles(byodPath);
 
-  for (const file of files) {
-    const fileChunks = chunks.filter((c) => c.filePath === file.relativePath);
-    indexChunks(
-      db,
-      file.relativePath,
-      file.name,
-      file.ext,
-      file.size,
-      file.hash,
-      fileChunks.map((c) => ({ title: c.title, content: c.content, chunkIndex: c.chunkIndex }))
-    );
+  if (files.length === 0) {
+    return { message: "No supported files found in BYOD directory.", filesIndexed: 0, totalFiles: 0, remaining: 0, complete: true, chunksIndexed: 0, elapsedMs: 0 };
   }
 
-  rebuildByodFts(db);
+  if (files.length > config.byodMaxFiles) {
+    process.stderr.write(
+      `2d6mcp: BYOD directory has ${files.length} files, limiting to ${config.byodMaxFiles} (set BYOD_MAX_FILES to override)\n`
+    );
+    files = files.slice(0, config.byodMaxFiles);
+  }
+
+  const db = getByodDatabase();
+  const options = {
+    chunkSize: config.byodChunkSize,
+    overlap: config.byodChunkOverlap,
+    maxChunksPerFile: config.byodMaxChunksPerFile,
+  };
+
+  let totalChunks = 0;
+  let indexedFiles = 0;
+  let failedFiles = 0;
+  let skippedByHash = 0;
+  const startTime = Date.now();
+  const logInterval = Math.max(1, Math.floor(files.length / 20));
+  const CONCURRENCY = 3;
+
+  process.stderr.write(`2d6mcp: Indexing ${files.length} files (${(config.byodSyncTimeoutMs / 1000).toFixed(0)}s budget, ${CONCURRENCY} parallel)...\n`);
+
+  let i = 0;
+  while (i < files.length) {
+    const elapsed = Date.now() - startTime;
+    if (elapsed >= config.byodSyncTimeoutMs) {
+      const remaining = files.length - i;
+      if (indexedFiles === 0) {
+        return {
+          message: `NOT COMPLETE. No files indexed yet — the first batch took too long. To continue, call sync_byod again.`,
+          filesIndexed: 0,
+          totalFiles: files.length,
+          remaining,
+          complete: false,
+          chunksIndexed: 0,
+          elapsedMs: elapsed,
+        };
+      }
+      const scanned = i;
+      const upToDate = skippedByHash;
+      return {
+        message: `NOT COMPLETE — ${remaining} files remaining. Scanned ${scanned}/${files.length} (${indexedFiles} newly indexed, ${upToDate} already up to date, ${failedFiles} failed) in ${(elapsed / 1000).toFixed(1)}s. You MUST call sync_byod again to continue.`,
+        filesIndexed: indexedFiles,
+        totalFiles: files.length,
+        remaining,
+        complete: false,
+        chunksIndexed: totalChunks,
+        elapsedMs: elapsed,
+      };
+    }
+
+    const batch: IngestedFile[] = [];
+    while (i < files.length && batch.length < CONCURRENCY) {
+      const file = files[i];
+      const storedHash = getStoredFileHash(db, file.relativePath);
+      if (storedHash === file.hash || storedHash === FAILED_HASH) {
+        skippedByHash++;
+        i++;
+        continue;
+      }
+      batch.push(file);
+      i++;
+    }
+
+    if (batch.length === 0) {
+      await yieldToEventLoop();
+      continue;
+    }
+
+    const chunkResults = await Promise.all(
+      batch.map((f) => ingestFile(f, options))
+    );
+
+    const batchStart = indexedFiles + skippedByHash;
+    for (let k = 0; k < batch.length; k++) {
+      const file = batch[k];
+      const chunks = chunkResults[k];
+
+      if (chunks.length === 0) {
+        failedFiles++;
+        markFileFailed(db, file.relativePath, file.name, file.ext, file.size);
+        continue;
+      }
+
+      indexChunks(
+        db,
+        file.relativePath,
+        file.name,
+        file.ext,
+        file.size,
+        file.hash,
+        chunks.map((c) => ({ title: c.title, content: c.content, chunkIndex: c.chunkIndex }))
+      );
+
+      totalChunks += chunks.length;
+      indexedFiles++;
+    }
+
+    const done = skippedByHash + indexedFiles + failedFiles;
+    if ((done - 1) % logInterval === 0 || done % logInterval === 0 || done >= files.length - batch.length) {
+      const batchSummary =
+        batch.length > 1
+          ? `${batch.length} files (${batch.map((f) => f.name).join(", ")})`
+          : batch[0].name;
+      process.stderr.write(
+        `2d6mcp: [${done}/${files.length}] ${batchSummary} (${formatSizeForLog(
+          batch.reduce((s, f) => s + f.size, 0)
+        )}, ${chunkResults.reduce((s, c) => s + c.length, 0)} chunks)\n`
+      );
+    }
+
+    await yieldToEventLoop();
+  }
+
+  if (indexedFiles > 0) {
+    rebuildByodFts(db);
+  }
+
+  const elapsed = Date.now() - startTime;
+  const parts: string[] = [];
+  if (indexedFiles > 0) parts.push(`${indexedFiles} newly indexed (${totalChunks} chunks)`);
+  if (skippedByHash > 0) parts.push(`${skippedByHash} already up to date`);
+  if (failedFiles > 0) parts.push(`${failedFiles} failed`);
 
   return {
-    message: `Indexed ${files.length} files (${chunks.length} chunks) from BYOD directory.`,
+    message: `COMPLETE. Scanned ${files.length} files: ${parts.join(", ")} in ${(elapsed / 1000).toFixed(1)}s.`,
+    filesIndexed: indexedFiles,
+    totalFiles: files.length,
+    remaining: 0,
+    complete: true,
+    chunksIndexed: totalChunks,
+    elapsedMs: elapsed,
   };
+}
+
+function formatSizeForLog(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
 function ensureOglDb(): { dbPath: string; initialized: boolean } {
@@ -225,10 +362,43 @@ export async function startServer(): Promise<void> {
       {
         name: "sync_byod",
         description:
-          "Re-index all files in the BYOD directory. Use after adding or modifying files in your BYOD path.",
+          "Index files from your BYOD directory. Runs in time-budgeted batches (BYOD_SYNC_TIMEOUT_MS, default 15s). Returns progress with a 'complete' flag — if false, you MUST call this tool again to continue. Already-indexed files (unchanged since last sync) are skipped automatically.",
         inputSchema: {
           type: "object",
           properties: {},
+        },
+      },
+      {
+        name: "clear_byod",
+        description:
+          "Delete the BYOD search index database. Use this to start fresh — all indexed files are forgotten. The database is recreated on the next sync_byod call. Does not affect your source files.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+        },
+      },
+      {
+        name: "list_byod_files",
+        description:
+          "List all files currently in the BYOD database with their status (indexed or failed), chunk count, size, and ingestion date. Use this to understand what content is indexed and available for search.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+        },
+      },
+      {
+        name: "inspect_byod_file",
+        description:
+          "Show detailed information about a specific file in the BYOD database, including all its chunks with titles and sizes. Use the relativePath from list_byod_files as input.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            relative_path: {
+              type: "string",
+              description: "The relative path of the file as shown in list_byod_files",
+            },
+          },
+          required: ["relative_path"],
         },
       },
     ];
@@ -500,6 +670,95 @@ export async function startServer(): Promise<void> {
         const result = await syncByodIndex(config);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case "clear_byod": {
+        const consent = checkByodConsent();
+        if (!consent.allowed) {
+          return {
+            content: [{ type: "text", text: consent.message }],
+            isError: true,
+          };
+        }
+
+        const result = clearByodDatabase();
+        return {
+          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case "list_byod_files": {
+        const consent = checkByodConsent();
+        if (!consent.allowed) {
+          return {
+            content: [{ type: "text", text: consent.message }],
+            isError: true,
+          };
+        }
+
+        const db = getByodDatabase();
+        const files = listByodFiles(db);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  total: files.length,
+                  indexed: files.filter((f) => f.status === "indexed").length,
+                  failed: files.filter((f) => f.status === "failed").length,
+                  files,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+
+      case "inspect_byod_file": {
+        const consent = checkByodConsent();
+        if (!consent.allowed) {
+          return {
+            content: [{ type: "text", text: consent.message }],
+            isError: true,
+          };
+        }
+
+        const relativePath =
+          typeof args?.relative_path === "string" ? args.relative_path : "";
+
+        if (!relativePath) {
+          return {
+            content: [{ type: "text", text: "Error: relative_path is required" }],
+            isError: true,
+          };
+        }
+
+        const db = getByodDatabase();
+        const result = getFileChunks(db, relativePath);
+
+        if (!result.file) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `No file found with path: ${relativePath}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
         };
       }
 
