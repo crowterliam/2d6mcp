@@ -4,6 +4,26 @@
 
 This is a Model Context Protocol (MCP) server that acts as a mechanical engine, dice roller, and rules reference for generic 2d6-based sci-fi tabletop RPGs. The server is system-agnostic and avoids all third-party trademarks.
 
+## Agent Modes
+
+Specialised agent instructions are in `.kilo/agent/`. Load the relevant mode before engaging in domain-specific tasks:
+
+| Agent File | Domain |
+|-----------|--------|
+| `.kilo/agent/2d6mcp.md` | Master reference — all tools, workflows, environment vars |
+| `.kilo/agent/2d6mcp-task-resolution.md` | Dice rolling, effect margins, difficulty, boon/bane |
+| `.kilo/agent/2d6mcp-rules-reference.md` | Rules lookup, table rolling, OGL + BYOD search |
+| `.kilo/agent/2d6mcp-character-creation.md` | UPP, characteristics, career paths, skills |
+| `.kilo/agent/2d6mcp-byod.md` | BYOD sync, listing, inspection, troubleshooting |
+
+Slash commands are in `.kilo/command/`:
+
+| Command | Purpose |
+|---------|---------|
+| `.kilo/command/roll.md` | Quick dice rolling |
+| `.kilo/command/rules-lookup.md` | Quick rules lookup |
+| `.kilo/command/byod-index.md` | BYOD index management |
+
 ## Build & Test Commands
 
 ```bash
@@ -39,7 +59,25 @@ src/
 data/
   ogl/
     cepheus.db      # Bundled OGL SQLite database (Cepheus Engine SRD)
+.kilo/
+  agent/            # Agent mode instructions
+  command/          # Slash command definitions
 ```
+
+## Available Tools
+
+| Tool | Purpose |
+|------|---------|
+| `roll_2d6` | Roll 2d6 with modifier, compare against target |
+| `roll_custom` | Roll any dice notation (`3d6`, `d66`, `4d6+2`) |
+| `roll_table` | Roll on a named table from OGL database |
+| `query_ogl_rules` | Search OGL rules for skills, careers, equipment, tables |
+| `query_local_byod` | Full-text search across personal ingested files |
+| `parse_character` | Parse character sheet into structured data |
+| `sync_byod` | Index/re-index files from BYOD directory |
+| `clear_byod` | Delete BYOD index to start fresh |
+| `list_byod_files` | List indexed files with status and chunk counts |
+| `inspect_byod_file` | Show chunk structure for a specific file |
 
 ## Dual-License Architecture
 

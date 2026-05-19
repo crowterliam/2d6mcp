@@ -53,7 +53,24 @@ npm run start
 | `query_ogl_rules` | Search the OGL database for rules, skills, careers, equipment, or tables |
 | `query_local_byod` | Search your locally ingested BYOD files (requires consent) |
 | `parse_character` | Parse a character sheet file into structured JSON |
-| `sync_byod` | Re-index all files in your BYOD directory |
+| `sync_byod` | Index/re-index all files in your BYOD directory |
+| `clear_byod` | Delete the BYOD index to start fresh |
+| `list_byod_files` | List all indexed files with chunk counts and status |
+| `inspect_byod_file` | Show chunk structure for a specific indexed file |
+
+## Agent Modes
+
+This project includes AI agent instructions for common coding assistants (Kilo, Claude Code). See `.kilo/agent/` for domain-specific modes:
+
+| Agent File | Domain |
+|-----------|--------|
+| `.kilo/agent/2d6mcp.md` | Master reference — all tools, workflows, environment vars |
+| `.kilo/agent/2d6mcp-task-resolution.md` | Dice rolling, effect margins, difficulty, boon/bane |
+| `.kilo/agent/2d6mcp-rules-reference.md` | Rules lookup, table rolling, OGL + BYOD search |
+| `.kilo/agent/2d6mcp-character-creation.md` | UPP, characteristics, career paths, skills |
+| `.kilo/agent/2d6mcp-byod.md` | BYOD sync, listing, inspection, troubleshooting |
+
+Slash commands are in `.kilo/command/` for quick access to common operations.
 
 ## Modes of Operation
 
@@ -73,6 +90,11 @@ Enable by setting `AGREE_BYOD_USE="true"` or running `npm run setup`. Requires a
 |----------|---------|-------------|
 | `AGREE_BYOD_USE` | `"false"` | Set to `"true"` to enable BYOD mode |
 | `BYOD_PATH` | — | Path to directory containing local RPG source files |
+| `BYOD_CHUNK_SIZE` | `8000` | Characters per chunk (500–50000) |
+| `BYOD_CHUNK_OVERLAP` | `400` | Overlap between consecutive chunks |
+| `BYOD_MAX_FILES` | `2000` | Maximum files to process per sync |
+| `BYOD_MAX_CHUNKS_PER_FILE` | `500` | Maximum chunks from any single file |
+| `BYOD_SYNC_TIMEOUT_MS` | `15000` | Milliseconds per sync batch (1000–300000) |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Path to custom OGL SQLite database |
 
 ## CLI Commands
