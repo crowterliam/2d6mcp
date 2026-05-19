@@ -1,6 +1,6 @@
 {
   "name": "2d6mcp",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Generic 2D6 Sci-Fi MCP Server — system-agnostic mechanical engine, dice roller, and rules reference for 2d6-based tabletop RPGs",
   "type": "module",
   "main": "dist/index.js",
