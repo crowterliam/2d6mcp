@@ -3,10 +3,18 @@
 
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, extname, resolve } from "node:path";
+import { createHash } from "node:crypto";
 import { PDFParse } from "pdf-parse";
 
-const TEXT_EXTENSIONS = new Set([".txt", ".md", ".markdown", ".json", ".xml", ".csv", ".html"]);
-const SUPPORTED_EXTENSIONS = new Set([...TEXT_EXTENSIONS, ".pdf"]);
+const TEXT_EXTENSIONS = new Set([".txt", ".json", ".xml", ".csv"]);
+const MARKDOWN_EXTENSIONS = new Set([".md", ".markdown"]);
+const HTML_EXTENSIONS = new Set([".html", ".htm"]);
+const SUPPORTED_EXTENSIONS = new Set([
+  ...TEXT_EXTENSIONS,
+  ...MARKDOWN_EXTENSIONS,
+  ...HTML_EXTENSIONS,
+  ".pdf",
+]);
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 
 export interface IngestedFile {
@@ -15,6 +23,7 @@ export interface IngestedFile {
   name: string;
   size: number;
   ext: string;
+  hash: string;
 }
 
 export interface IngestedChunk {
@@ -23,6 +32,22 @@ export interface IngestedChunk {
   title: string;
   content: string;
   chunkIndex: number;
+}
+
+export interface IngestOptions {
+  chunkSize: number;
+  overlap: number;
+}
+
+interface HeadingSection {
+  level: number;
+  heading: string;
+  breadcrumb: string;
+  lines: string[];
+}
+
+function log(message: string): void {
+  process.stderr.write(`2d6mcp: ${message}\n`);
 }
 
 function walkDirectory(dir: string, baseDir: string): IngestedFile[] {
@@ -44,17 +69,32 @@ function walkDirectory(dir: string, baseDir: string): IngestedFile[] {
       } else if (stat.isFile()) {
         const ext = extname(entry).toLowerCase();
         if (SUPPORTED_EXTENSIONS.has(ext)) {
+          if (stat.size > MAX_FILE_SIZE_BYTES) {
+            log(`Skipping ${entry} — exceeds 50 MB limit`);
+            continue;
+          }
+
+          let hash = "";
+          try {
+            const buf = readFileSync(fullPath);
+            hash = createHash("sha256").update(buf).digest("hex").slice(0, 16);
+          } catch {
+            log(`Skipping ${entry} — unreadable file`);
+            continue;
+          }
+
           results.push({
             path: fullPath,
             relativePath: fullPath.replace(baseDir + "/", ""),
             name: entry,
             size: stat.size,
             ext,
+            hash,
           });
         }
       }
     } catch {
-      // skip files that can't be read
+      log(`Skipping ${entry} — could not stat file`);
     }
   }
 
@@ -79,7 +119,11 @@ function cleanText(text: string): string {
     .trim();
 }
 
-function chunkText(text: string, maxChunkSize = 2000, overlap = 200): string[] {
+function splitTextToChunks(
+  text: string,
+  maxChunkSize: number,
+  overlap: number
+): string[] {
   const paragraphs = text.split(/\n\s*\n/);
   const chunks: string[] = [];
   let current = "";
@@ -104,57 +148,356 @@ function chunkText(text: string, maxChunkSize = 2000, overlap = 200): string[] {
   return chunks;
 }
 
-export async function ingestFile(file: IngestedFile): Promise<IngestedChunk[]> {
-  if (file.size > MAX_FILE_SIZE_BYTES) {
+function guessTitleFromFirstLine(text: string): string | null {
+  const firstLine = text.split("\n")[0].trim();
+  if (firstLine.length >= 3 && firstLine.length <= 120 && firstLine === firstLine.toUpperCase()) {
+    return firstLine;
+  }
+  return null;
+}
+
+function stripHtmlTags(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+function stripFrontmatter(text: string): { body: string; title: string | null } {
+  const lines = text.split("\n");
+  if (lines[0]?.trim() !== "---") return { body: text, title: null };
+
+  let end = -1;
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim() === "---") {
+      end = i;
+      break;
+    }
+  }
+
+  if (end === -1) return { body: text, title: null };
+
+  const fmLines = lines.slice(1, end);
+  let title: string | null = null;
+  for (const line of fmLines) {
+    const m = line.match(/^title:\s*(.+)/i);
+    if (m) {
+      title = m[1].replace(/^["']|["']$/g, "").trim();
+      break;
+    }
+  }
+
+  return { body: lines.slice(end + 1).join("\n"), title };
+}
+
+function extractMarkdownTitle(text: string): string | null {
+  const m = text.match(/^#\s+(.+)/m);
+  return m ? m[1].trim() : null;
+}
+
+function parseMarkdownSections(text: string): HeadingSection[] {
+  const lines = text.split("\n");
+  const sections: HeadingSection[] = [];
+  const breadcrumbStack: string[] = [];
+  let current: HeadingSection | null = null;
+
+  function flushSection() {
+    if (current && current.lines.length > 0) {
+      sections.push({ ...current });
+    }
+    current = null;
+  }
+
+  for (const line of lines) {
+    const headingMatch = line.match(/^(#{1,6})\s+(.+)/);
+    if (headingMatch) {
+      flushSection();
+
+      const level = headingMatch[1].length;
+      const heading = headingMatch[2].trim();
+
+      while (breadcrumbStack.length >= level) {
+        breadcrumbStack.pop();
+      }
+      breadcrumbStack.push(heading);
+
+      const breadcrumb = breadcrumbStack.join(" > ");
+
+      current = { level, heading, breadcrumb, lines: [line] };
+    } else if (current) {
+      current.lines.push(line);
+    } else {
+      current = { level: 0, heading: "(preamble)", breadcrumb: "", lines: [line] };
+    }
+  }
+
+  flushSection();
+
+  return sections;
+}
+
+function sectionToContent(section: HeadingSection, keepHeading: boolean): string {
+  const lines = keepHeading ? section.lines : section.lines.slice(1);
+  return lines.join("\n").trim();
+}
+
+function ingestMarkdownFile(
+  file: IngestedFile,
+  options: IngestOptions
+): IngestedChunk[] {
+  let raw: string;
+  try {
+    raw = readTextFile(file.path);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    log(`Failed to read ${file.name}: ${msg}`);
     return [];
   }
 
+  raw = cleanText(raw);
+  if (!raw) return [];
+
+  const { body, title: fmTitle } = stripFrontmatter(raw);
+  const mdTitle = extractMarkdownTitle(body) ?? fmTitle ?? null;
+
+  const sections = parseMarkdownSections(body);
+  if (sections.length === 0) return [];
+
+  const docTitle =
+    mdTitle ??
+    (sections.length > 0 && sections[0].level === 1 ? sections[0].heading : null) ??
+    file.name.replace(/\.[^.]+$/, "").replace(/[_-]/g, " ");
+
+  const chunks: IngestedChunk[] = [];
+  let chunkIndex = 0;
+
+  for (const section of sections) {
+    const content = sectionToContent(section, section.level > 0);
+    if (!content) continue;
+
+    let label: string;
+    if (section.breadcrumb) {
+      label = `${docTitle} > ${section.breadcrumb}`;
+    } else if (mdTitle) {
+      label = docTitle;
+    } else {
+      label = section.heading !== "(preamble)" ? `${docTitle} > ${section.heading}` : docTitle;
+    }
+
+    if (content.length <= options.chunkSize) {
+      chunks.push({
+        filePath: file.relativePath,
+        fileName: file.name,
+        title: label,
+        content,
+        chunkIndex: chunkIndex++,
+      });
+    } else {
+      const subChunks = splitTextToChunks(content, options.chunkSize, options.overlap);
+      for (let i = 0; i < subChunks.length; i++) {
+        const subLabel =
+          subChunks.length > 1 ? `${label} (part ${i + 1})` : label;
+        chunks.push({
+          filePath: file.relativePath,
+          fileName: file.name,
+          title: subLabel,
+          content: subChunks[i],
+          chunkIndex: chunkIndex++,
+        });
+      }
+    }
+  }
+
+  return chunks;
+}
+
+async function ingestPdfFile(
+  file: IngestedFile,
+  options: IngestOptions
+): Promise<IngestedChunk[]> {
+  const pdf = new PDFParse({ data: readFileSync(file.path) });
+
+  try {
+    const result = await pdf.getText({ pageJoiner: "" });
+    const pages = result.pages || [];
+
+    if (pages.length === 0) {
+      log(`PDF ${file.name}: no extractable text pages`);
+      return [];
+    }
+
+    const title = file.name.replace(/\.[^.]+$/, "").replace(/[_-]/g, " ");
+    const chunks: IngestedChunk[] = [];
+    let chunkIndex = 0;
+
+    for (const page of pages) {
+      const pageText = cleanText(page.text);
+      if (!pageText) continue;
+
+      if (pageText.length <= options.chunkSize) {
+        const label =
+          pages.length > 1
+            ? `${title} (page ${page.num})`
+            : title;
+        chunks.push({
+          filePath: file.relativePath,
+          fileName: file.name,
+          title: label,
+          content: pageText,
+          chunkIndex: chunkIndex++,
+        });
+      } else {
+        const subChunks = splitTextToChunks(pageText, options.chunkSize, options.overlap);
+        for (let i = 0; i < subChunks.length; i++) {
+          const label =
+            subChunks.length > 1
+              ? `${title} (page ${page.num}, part ${i + 1})`
+              : `${title} (page ${page.num})`;
+          chunks.push({
+            filePath: file.relativePath,
+            fileName: file.name,
+            title: label,
+            content: subChunks[i],
+            chunkIndex: chunkIndex++,
+          });
+        }
+      }
+    }
+
+    return chunks;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    log(`Failed to parse PDF ${file.name}: ${msg}`);
+    return [];
+  } finally {
+    await pdf.destroy();
+  }
+}
+
+function ingestTextFile(
+  file: IngestedFile,
+  options: IngestOptions
+): IngestedChunk[] {
   let text: string;
 
-  if (TEXT_EXTENSIONS.has(file.ext)) {
+  try {
     text = readTextFile(file.path);
-  } else if (file.ext === ".pdf") {
-    const pdf = new PDFParse({ data: readFileSync(file.path) });
-    try {
-      const result = await pdf.getText();
-      text = result.text;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
-      process.stderr.write(`2d6mcp: Failed to parse PDF ${file.name}: ${msg}\n`);
-      return [];
-    } finally {
-      await pdf.destroy();
-    }
-  } else {
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    log(`Failed to read ${file.name}: ${msg}`);
     return [];
   }
 
   text = cleanText(text);
   if (!text) return [];
 
-  const chunks = chunkText(text);
-  const title =
+  const firstLineTitle = guessTitleFromFirstLine(text);
+  const displayTitle =
+    firstLineTitle ??
     file.name.replace(/\.[^.]+$/, "").replace(/[_-]/g, " ");
 
-  return chunks.map((content, index) => ({
+  const body = firstLineTitle
+    ? text.split("\n").slice(1).join("\n").trim()
+    : text;
+
+  if (!body) return [];
+
+  const chunkTexts = splitTextToChunks(body, options.chunkSize, options.overlap);
+
+  return chunkTexts.map((content, index) => ({
     filePath: file.relativePath,
     fileName: file.name,
-    title: index === 0 ? title : `${title} (part ${index + 1})`,
+    title:
+      chunkTexts.length > 1
+        ? `${displayTitle} (part ${index + 1})`
+        : displayTitle,
     content,
     chunkIndex: index,
   }));
 }
 
-export async function ingestDirectory(byodPath: string): Promise<{
+function ingestHtmlFile(
+  file: IngestedFile,
+  options: IngestOptions
+): IngestedChunk[] {
+  let html: string;
+
+  try {
+    html = readTextFile(file.path);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    log(`Failed to read ${file.name}: ${msg}`);
+    return [];
+  }
+
+  const text = stripHtmlTags(html);
+  const cleaned = cleanText(text);
+  if (!cleaned) return [];
+
+  const title = file.name.replace(/\.[^.]+$/, "").replace(/[_-]/g, " ");
+  const chunkTexts = splitTextToChunks(cleaned, options.chunkSize, options.overlap);
+
+  return chunkTexts.map((content, index) => ({
+    filePath: file.relativePath,
+    fileName: file.name,
+    title:
+      chunkTexts.length > 1
+        ? `${title} (part ${index + 1})`
+        : title,
+    content,
+    chunkIndex: index,
+  }));
+}
+
+export async function ingestFile(
+  file: IngestedFile,
+  options: IngestOptions
+): Promise<IngestedChunk[]> {
+  if (file.ext === ".pdf") {
+    return ingestPdfFile(file, options);
+  }
+
+  if (MARKDOWN_EXTENSIONS.has(file.ext)) {
+    return ingestMarkdownFile(file, options);
+  }
+
+  if (HTML_EXTENSIONS.has(file.ext)) {
+    return ingestHtmlFile(file, options);
+  }
+
+  if (TEXT_EXTENSIONS.has(file.ext)) {
+    return ingestTextFile(file, options);
+  }
+
+  return [];
+}
+
+export async function ingestDirectory(
+  byodPath: string,
+  options: IngestOptions
+): Promise<{
   files: IngestedFile[];
   chunks: IngestedChunk[];
 }> {
   const files = discoverFiles(byodPath);
   const chunks: IngestedChunk[] = [];
+  let processed = 0;
+
+  log(`Found ${files.length} files in BYOD directory. Ingesting...`);
 
   for (const file of files) {
-    chunks.push(...(await ingestFile(file)));
+    const fileChunks = await ingestFile(file, options);
+    chunks.push(...fileChunks);
+    processed++;
   }
 
+  log(`Ingested ${processed} files (${chunks.length} chunks).`);
   return { files, chunks };
 }

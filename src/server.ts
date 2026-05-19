@@ -11,7 +11,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { loadConfig, BYOD_DISCLAIMER, PROJECT_ROOT } from "./config.js";
+import { loadConfig, BYOD_DISCLAIMER, PROJECT_ROOT, type Config } from "./config.js";
 import { roll2d6, rollCustom } from "./dice/roller.js";
 import { rollD66, rollOnTable, roll2d6Sum, normalizeDiceType, resolveDiceRange } from "./dice/tables.js";
 import { getDatabase, initSchema, closeDatabase } from "./ogl/database.js";
@@ -33,7 +33,14 @@ import { ingestDirectory, type IngestedChunk } from "./byod/ingest.js";
 import { getByodDatabase, indexChunks, rebuildByodFts, searchByodIndex, closeByodDatabase } from "./byod/search.js";
 import { parseCharacterText, readCharacterFile, type CharacterStats } from "./character/parser.js";
 
-let lastSyncHash: string | null = null;
+function getServerVersion(): string {
+  try {
+    const pkg = JSON.parse(readFileSync(resolve(PROJECT_ROOT, "package.json"), "utf-8")) as { version: string };
+    return pkg.version || "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
 
 function resolveSafePath(filePath: string): string | null {
   const resolved = resolve(filePath);
@@ -53,12 +60,15 @@ function resolveSafePath(filePath: string): string | null {
   return null;
 }
 
-async function syncByodIndex(): Promise<{ message: string }> {
+async function syncByodIndex(config: Config): Promise<{ message: string }> {
   const consent = checkByodConsent();
   if (!consent.allowed) return { message: consent.message };
 
   const byodPath = getByodPath();
-  const { files, chunks } = await ingestDirectory(byodPath);
+  const { files, chunks } = await ingestDirectory(byodPath, {
+    chunkSize: config.byodChunkSize,
+    overlap: config.byodChunkOverlap,
+  });
   const db = getByodDatabase();
 
   for (const file of files) {
@@ -69,13 +79,16 @@ async function syncByodIndex(): Promise<{ message: string }> {
       file.name,
       file.ext,
       file.size,
+      file.hash,
       fileChunks.map((c) => ({ title: c.title, content: c.content, chunkIndex: c.chunkIndex }))
     );
   }
 
   rebuildByodFts(db);
 
-  return { message: `Indexed ${files.length} files (${chunks.length} chunks) from BYOD directory.` };
+  return {
+    message: `Indexed ${files.length} files (${chunks.length} chunks) from BYOD directory.`,
+  };
 }
 
 function ensureOglDb(): { dbPath: string; initialized: boolean } {
@@ -90,10 +103,11 @@ function ensureOglDb(): { dbPath: string; initialized: boolean } {
 }
 
 export async function startServer(): Promise<void> {
+  const version = getServerVersion();
   const server = new Server(
     {
       name: "2d6mcp",
-      version: "0.1.0",
+      version,
     },
     {
       capabilities: {
@@ -482,7 +496,8 @@ export async function startServer(): Promise<void> {
           };
         }
 
-        const result = await syncByodIndex();
+        const config = loadConfig();
+        const result = await syncByodIndex(config);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
@@ -497,10 +512,11 @@ export async function startServer(): Promise<void> {
 
   ensureOglDb();
 
+  const config = loadConfig();
   const consent = checkByodConsent();
   if (consent.allowed) {
     setImmediate(() => {
-      syncByodIndex()
+      syncByodIndex(config)
         .then((result) => {
           process.stderr.write(`2d6mcp: ${result.message}\n`);
         })
