@@ -479,7 +479,7 @@ export async function startServer(): Promise<void> {
           };
         }
 
-        const result = syncByodIndex();
+        const result = await syncByodIndex();
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };

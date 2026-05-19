@@ -15,6 +15,15 @@
     "populate-ogl": "node dist/cli.js populate-ogl"
   },
   "license": "AGPL-3.0-only",
+  "author": "Jupiter Industries (https://jupiter.industries)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/crowterliam/2d6mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/crowterliam/2d6mcp/issues"
+  },
+  "homepage": "https://jupiter.industries",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
     "better-sqlite3": "^11.8.0",

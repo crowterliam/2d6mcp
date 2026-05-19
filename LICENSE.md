@@ -1,4 +1,8 @@
-# Dual-License Architecture
+# Copyright & Dual-License Architecture
+
+Copyright © 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
+
+All code in this repository is copyright Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers and licensed as described below.
 
 This repository contains two distinct components governed by different open-source licenses.
 

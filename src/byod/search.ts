@@ -106,8 +106,9 @@ export function searchByodIndex(
   limit = 10
 ): { title: string; snippet: string; fileName: string; filePath: string }[] {
   const stmt = db.prepare(`
-    SELECT title, snippet(byod_fts, 1, '<mark>', '</mark>', '...', 40) AS snippet, file_name, file_path
+    SELECT byod_fts.title, snippet(byod_fts, 1, '<mark>', '</mark>', '...', 40) AS snippet, byod_fts.file_name, byod_chunks.file_path
     FROM byod_fts
+    JOIN byod_chunks ON byod_chunks.id = byod_fts.rowid
     WHERE byod_fts MATCH ?
     ORDER BY rank
     LIMIT ?

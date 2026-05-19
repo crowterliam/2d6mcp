@@ -111,16 +111,16 @@ export async function ingestFile(file: IngestedFile): Promise<IngestedChunk[]> {
   if (TEXT_EXTENSIONS.has(file.ext)) {
     text = readTextFile(file.path);
   } else if (file.ext === ".pdf") {
+    const pdf = new PDFParse({ data: readFileSync(file.path) });
     try {
-      const buffer = readFileSync(file.path);
-      const pdf = new PDFParse({ data: buffer });
       const result = await pdf.getText();
       text = result.text;
-      await pdf.destroy();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       process.stderr.write(`2d6mcp: Failed to parse PDF ${file.name}: ${msg}\n`);
       return [];
+    } finally {
+      await pdf.destroy();
     }
   } else {
     return [];

@@ -129,3 +129,7 @@ This project uses a dual-license architecture:
 
 - **Source code** (`src/**/*.ts`, root-level config files): [AGPL-3.0-only](https://www.gnu.org/licenses/agpl-3.0.en.html)
 - **Game data** (`data/ogl/**`): [OGL v1.0a](OGL-1.0a.txt)
+
+---
+
+Copyright © 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers · https://jupiter.industries
