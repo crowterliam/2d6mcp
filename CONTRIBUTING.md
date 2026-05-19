@@ -49,7 +49,7 @@ New MCP tools should:
 
 ## Questions
 
-Open an issue or contact the maintainer via GitHub: [crowterliam](https://github.com/crowterliam).
+Open an issue or contact the lead maintainer at [liam@evaunit.one](mailto:liam@evaunit.one).
 
 ## Testing
 

@@ -6,6 +6,14 @@ any kind, against any person, for any reason. All interactions must remain
 professional, respectful, and focused on the project. Personal attacks, derogatory
 language, and exclusionary behavior will result in immediate moderation.
 
+## Scope
+
+This Code of Conduct applies to all project spaces, including but not limited to:
+
+- GitHub issues, pull requests, and discussions
+- Project-related communication on any platform
+- Any public or private representation of the project
+
 ---
 
 ## We strive to
@@ -40,7 +48,7 @@ possible, we work transparently and involve interested parties as early as possi
 Disagreements, social and technical, are normal, but we do not allow them to
 persist and fester leaving others uncertain of the agreed direction. We expect
 participants to resolve disagreements constructively. When they cannot, we
-escalate the matter to the maintainer to arbitrate and provide clarity.
+escalate the matter to the maintainers to arbitrate and provide clarity.
 
 ### Ask for help when unsure
 
@@ -62,12 +70,12 @@ We all lead by example, in discussion and in action. We encourage new
 participants to feel empowered to lead, to take action, and to experiment when
 they feel innovation could improve the project.
 
-Responsibility for the project rests with the maintainer. The maintainer will
+Responsibility for the project rests with the maintainers. The maintainers will
 arbitrate in any dispute. We gather opinions and commitments from concerned
 parties before taking a decision. The poorest decision is no decision: clarity
 of direction has value in itself.
 
-We expect the maintainer to be aware of conflicts of interest and to abstain or
+We expect the maintainers to be aware of conflicts of interest and to abstain or
 delegate decisions that may be seen to be self-interested. When in doubt, ask
 for a second opinion.
 
@@ -77,11 +85,19 @@ for a second opinion.
 
 Project maintainers are responsible for clarifying and enforcing standards.
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported by contacting the maintainer via GitHub: [crowterliam](https://github.com/crowterliam).
+reported by contacting the lead maintainer at
+[liam@evaunit.one](mailto:liam@evaunit.one).
 
 All complaints will be reviewed and investigated promptly and fairly. The
-maintainer is obligated to maintain confidentiality with regard to the reporter
+maintainers are obligated to maintain confidentiality with regard to the reporter
 of an incident.
+
+Depending on the severity and nature of the violation, enforcement actions may
+include:
+
+- A written warning, with clarity on the unacceptable behavior
+- Temporary or permanent ban from project spaces
+- Removal of contributions that violate the Code of Conduct
 
 ---
 

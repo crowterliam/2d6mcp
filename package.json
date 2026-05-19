@@ -15,7 +15,7 @@
     "populate-ogl": "node dist/cli.js populate-ogl"
   },
   "license": "AGPL-3.0-only",
-  "author": "Jupiter Industries (https://jupiter.industries)",
+  "author": "Jupiter Industries <liam@evaunit.one> (https://jupiter.industries)",
   "repository": {
     "type": "git",
     "url": "https://github.com/crowterliam/2d6mcp.git"

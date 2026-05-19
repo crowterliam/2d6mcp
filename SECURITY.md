@@ -13,7 +13,7 @@ However, if you discover a security vulnerability in the dependency chain, BYOD 
 parsing, or any other component:
 
 1. **Do not** open a public issue
-2. Contact the maintainer via GitHub: [crowterliam](https://github.com/crowterliam)
+2. Contact the lead maintainer at [liam@evaunit.one](mailto:liam@evaunit.one)
 3. Provide a description of the vulnerability and steps to reproduce
 
 You should receive an acknowledgment within 72 hours. The maintainer will work with

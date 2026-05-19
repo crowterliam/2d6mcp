@@ -22,7 +22,6 @@ Full license text: https://www.gnu.org/licenses/agpl-3.0.en.html
 - `src/**/*.ts`
 - `package.json`
 - `tsconfig.json`
-- `*.sh`
 - `*.js` (build artifacts, scripts)
 
 ---
