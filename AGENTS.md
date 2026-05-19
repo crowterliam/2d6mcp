@@ -6,7 +6,9 @@ This is a Model Context Protocol (MCP) server that acts as a mechanical engine, 
 
 ## Agent Modes
 
-Specialised agent instructions are in `.kilo/agent/`. Load the relevant mode before engaging in domain-specific tasks:
+Specialised agent instructions are available for multiple AI coding harnesses:
+
+### Kilo Code (`.kilo/agent/`)
 
 | Agent File | Domain |
 |-----------|--------|
@@ -23,6 +25,40 @@ Slash commands are in `.kilo/command/`:
 | `.kilo/command/roll.md` | Quick dice rolling |
 | `.kilo/command/rules-lookup.md` | Quick rules lookup |
 | `.kilo/command/byod-index.md` | BYOD index management |
+
+### Claude Code (`.claude/skills/`)
+
+| Skill | Domain |
+|-------|--------|
+| `.claude/skills/2d6mcp/SKILL.md` | Master reference — all tools, workflows, environment vars |
+| `.claude/skills/2d6mcp-task-resolution/SKILL.md` | Dice rolling, effect margins, difficulty, boon/bane |
+| `.claude/skills/2d6mcp-rules-reference/SKILL.md` | Rules lookup, table rolling, OGL + BYOD search |
+| `.claude/skills/2d6mcp-character-creation/SKILL.md` | UPP, characteristics, career paths, skills |
+| `.claude/skills/2d6mcp-byod/SKILL.md` | BYOD sync, listing, inspection, troubleshooting |
+
+### Cursor (`.cursor/rules/`)
+
+| Rule File | Domain |
+|-----------|--------|
+| `.cursor/rules/2d6mcp.md` | Comprehensive reference — all tools, mechanics, workflows |
+
+### Windsurf
+
+| Rule File | Domain |
+|-----------|--------|
+| `.windsurfrules` | Comprehensive reference — all tools, mechanics, workflows |
+
+### Cline (`.cline/rules/`)
+
+| Rule File | Domain |
+|-----------|--------|
+| `.cline/rules/2d6mcp.md` | Comprehensive reference — all tools, mechanics, workflows |
+
+### Aider
+
+| File | Domain |
+|------|--------|
+| `AIDER.md` | Project conventions, MCP tools, environment reference |
 
 ## Build & Test Commands
 
@@ -62,6 +98,14 @@ data/
 .kilo/
   agent/            # Agent mode instructions
   command/          # Slash command definitions
+.claude/
+  skills/           # Claude Code skill definitions (SKILL.md)
+.cursor/
+  rules/            # Cursor rule definitions
+.cline/
+  rules/            # Cline rule definitions
+.windsurfrules      # Windsurf rules file
+AIDER.md            # Aider conventions and MCP tool reference
 ```
 
 ## Available Tools

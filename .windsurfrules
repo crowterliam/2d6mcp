@@ -1,0 +1,36 @@
+# 2D6 MCP Server
+
+You have access to the **2d6mcp** MCP server for generic 2d6-based sci-fi tabletop RPGs. Use system-agnostic language — never use third-party trademarked terms.
+
+## Tools
+
+| Tool | Purpose |
+|------|---------|
+| `roll_2d6` | Roll 2d6 with modifier vs. target. Returns dice, total, effect margin. |
+| `roll_custom` | Roll any dice notation (`3d6`, `1d20`, `4d6+2`, `d66`). |
+| `roll_table` | Roll on a named table from the OGL database. |
+| `query_ogl_rules` | Search OGL rules by term and optional category (skills, careers, equipment, tables, combat, starships, worlds). |
+| `query_local_byod` | Full-text search personal ingested files (requires BYOD consent). |
+| `parse_character` | Parse character sheet into structured data (UPP, characteristics, skills). |
+| `sync_byod` | Index BYOD files in time-budgeted batches. Re-call if `complete: false`. |
+| `clear_byod` | Delete BYOD index to start fresh. |
+| `list_byod_files` | List indexed files with status and chunk counts. |
+| `inspect_byod_file` | Show chunk structure for a specific file. |
+
+## Mechanics
+
+- **2d6 + modifier vs. target** (typically 8+). Effect margin = total - target.
+- **Difficulty**: +6 (simple) to -6 (formidable). Or adjust target: 6+ easy, 8+ average, 10+ difficult, 12+ very difficult, 14+ formidable.
+- **d66 tables**: Two d6s as tens/ones (11–66). Use `roll_table` with `"dice_type": "d66"`.
+- **OGL first, BYOD second**: Query `query_ogl_rules` before falling back to `query_local_byod`.
+- **BYOD requires consent**: Set `AGREE_BYOD_USE="true"` and `BYOD_PATH`.
+
+## Workflows
+
+**Task resolution**: `roll_2d6(modifier, target)` or `roll_custom("Nd6+M")`. Report margin and outcome.
+
+**Rules lookup**: `query_ogl_rules("term", category: "category")`. Use category to narrow: skills, careers, equipment, tables, combat, starships, worlds.
+
+**Character creation**: Roll six `roll_custom("2d6")` for characteristics. Look up careers with `query_ogl_rules("name", category: "careers")`. Parse existing sheets with `parse_character(path)`.
+
+**BYOD**: `list_byod_files` → `sync_byod` (repeat until `complete: true`) → `query_local_byod("term")`. Inspect with `inspect_byod_file(path)`. Clear with `clear_byod`.
