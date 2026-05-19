@@ -23,21 +23,39 @@ export const PROJECT_ROOT = findProjectRoot();
 
 export const BYOD_CONSENT_FILE = resolve(PROJECT_ROOT, ".mcp-byod-consent-accepted");
 
-export function loadConfig(): {
+export interface Config {
   byodConsented: boolean;
   byodPath: string | null;
   oglDbPath: string;
-} {
+  byodChunkSize: number;
+  byodChunkOverlap: number;
+}
+
+const DEFAULT_CHUNK_SIZE = 8000;
+const DEFAULT_CHUNK_OVERLAP = 400;
+
+export function loadConfig(): Config {
   const envAgreed = process.env.AGREE_BYOD_USE === "true";
   const tokenExists = existsSync(BYOD_CONSENT_FILE);
   const byodConsented = envAgreed || tokenExists;
 
   const byodPath = process.env.BYOD_PATH || null;
+
+  const chunkSizeEnv = process.env.BYOD_CHUNK_SIZE;
+  const byodChunkSize = chunkSizeEnv
+    ? Math.max(500, Math.min(50000, parseInt(chunkSizeEnv, 10) || DEFAULT_CHUNK_SIZE))
+    : DEFAULT_CHUNK_SIZE;
+
+  const overlapEnv = process.env.BYOD_CHUNK_OVERLAP;
+  const byodChunkOverlap = overlapEnv
+    ? Math.max(0, Math.min(byodChunkSize / 2, parseInt(overlapEnv, 10) || DEFAULT_CHUNK_OVERLAP))
+    : DEFAULT_CHUNK_OVERLAP;
+
   const oglDbPath =
     process.env.OGL_DB_PATH ||
     resolve(PROJECT_ROOT, "data", "ogl", "cepheus.db");
 
-  return { byodConsented, byodPath, oglDbPath };
+  return { byodConsented, byodPath, oglDbPath, byodChunkSize, byodChunkOverlap };
 }
 
 export function isByodEnabled(): boolean {
