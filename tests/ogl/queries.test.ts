@@ -17,6 +17,7 @@ import {
   searchWorldBuilding,
 } from "../../src/ogl/queries.js";
 import { getDatabase, initSchema, ensureSchema, closeDatabase } from "../../src/ogl/database.js";
+import { populateOglDatabase } from "../../src/ogl/populate.js";
 
 const config = loadConfig();
 const BUNDLED_DB = config.oglDbPath;
@@ -26,7 +27,7 @@ describe("OGL queries against bundled database", () => {
 
   beforeAll(() => {
     if (!existsSync(BUNDLED_DB)) {
-      throw new Error(`Bundled OGL database not found at ${BUNDLED_DB}. Run 'npm run populate-ogl' first.`);
+      populateOglDatabase(BUNDLED_DB);
     }
     db = getDatabase(BUNDLED_DB);
   });

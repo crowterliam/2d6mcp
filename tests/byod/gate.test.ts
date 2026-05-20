@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { existsSync } from "node:fs";
+import { mkdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -16,10 +16,16 @@ afterEach(() => {
   rmSync(TMP, { recursive: true, force: true });
 });
 
-import { mkdirSync, rmSync } from "node:fs";
-
 describe("checkByodConsent", () => {
-  it("returns partially enabled when token exists but no path", async () => {
+  it("returns disallowed when no BYOD_PATH set", async () => {
+    delete process.env.BYOD_PATH;
+    const { checkByodConsent } = await import("../../src/byod/gate.js");
+    const result = checkByodConsent();
+    expect(result.allowed).toBe(false);
+  });
+
+  it("returns disallowed when consented but no path", async () => {
+    process.env.AGREE_BYOD_USE = "true";
     delete process.env.BYOD_PATH;
     const { checkByodConsent } = await import("../../src/byod/gate.js");
     const result = checkByodConsent();
@@ -28,6 +34,7 @@ describe("checkByodConsent", () => {
   });
 
   it("returns allowed when consented with valid path", async () => {
+    process.env.AGREE_BYOD_USE = "true";
     process.env.BYOD_PATH = TMP;
     const { checkByodConsent } = await import("../../src/byod/gate.js");
     const result = checkByodConsent();

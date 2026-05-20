@@ -86,7 +86,8 @@ describe("isByodEnabled", () => {
     expect(isByodEnabled()).toBe(false);
   });
 
-  it("returns true when consented (via token) and path exists", () => {
+  it("returns true when consented (via env) and path exists", () => {
+    process.env.AGREE_BYOD_USE = "true";
     process.env.BYOD_PATH = TMP;
     expect(isByodEnabled()).toBe(true);
   });
