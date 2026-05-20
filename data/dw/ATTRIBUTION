@@ -1,0 +1,29 @@
+Dungeon World Game Data Attribution
+=====================================
+
+The game data stored in the Dungeon World SQLite database (data/dw/dungeon-world.db)
+is derived from the following sources:
+
+1. Dungeon World
+   Copyright (c) 2012, Sage LaTorra and Adam Koebel
+   Licensed under the Creative Commons Attribution 3.0 Unported License (CC-BY-3.0)
+   Source: https://github.com/Sagelt/Dungeon-World
+
+2. Dungeon World Markdown
+   Copyright (c) agude
+   Licensed under the Creative Commons Attribution 3.0 Unported License (CC-BY-3.0)
+   Source: https://github.com/agude/Dungeon-World-Markdown
+
+This work includes material taken from the System Reference Document 5.1 ("SRD 5.1")
+by Wizards of the Coast LLC. The SRD 5.1 is licensed under the Creative Commons
+Attribution 4.0 International License.
+
+License text: see data/dw/CC-BY-3.0.txt
+
+Attribution requirements:
+- You must give appropriate credit to Sage LaTorra and Adam Koebel (Dungeon World)
+- You must provide a link to the CC-BY-3.0 license
+- You must indicate if changes were made
+
+This database is auto-generated at runtime from hardcoded data in src/dw/populate.ts.
+The database file itself is gitignored and never committed to version control.
