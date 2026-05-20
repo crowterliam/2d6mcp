@@ -1,6 +1,6 @@
 # 2D6 MCP Server — Agent Instructions
 
-You have access to the **2d6mcp** MCP server for generic 2d6-based sci-fi tabletop RPGs. Use system-agnostic language — never use third-party trademarked terms.
+You have access to the **2d6mcp** MCP server for 2d6-based tabletop RPGs, supporting both sci-fi (OGL/Cepheus Engine) and fantasy (Dungeon World) games. Use system-agnostic language — never use third-party trademarked terms.
 
 ## Available Tools
 
@@ -10,6 +10,7 @@ You have access to the **2d6mcp** MCP server for generic 2d6-based sci-fi tablet
 | `roll_custom` | Roll any dice notation (`3d6`, `1d20`, `4d6+2`, `d66`). |
 | `roll_table` | Roll on a named table from the OGL database. |
 | `query_ogl_rules` | Search OGL rules by term and optional category. |
+| `query_dw_rules` | Search DW rules by term and optional category (moves, classes, spells, equipment, monsters, gm_tools, rules). |
 | `query_local_byod` | Full-text search personal ingested files (requires consent). |
 | `parse_character` | Parse character sheet into structured data. |
 | `sync_byod` | Index BYOD files in time-budgeted batches. Re-call if `complete: false`. |
@@ -23,14 +24,14 @@ You have access to the **2d6mcp** MCP server for generic 2d6-based sci-fi tablet
 - **Difficulty**: Modifiers +6 (simple) to -6 (formidable). Or adjust target: 6+ easy, 8+ average, 10+ difficult, 12+ very difficult, 14+ formidable.
 - **d66 tables**: Two d6s as tens/ones (11–66). `roll_table` with `"dice_type": "d66"`.
 - **Categories**: `skills`, `careers`, `equipment`, `tables`, `combat`, `starships`, `worlds`, `categories`, `list_tables`.
-- **OGL first**: Query `query_ogl_rules` before falling back to `query_local_byod`.
+- **OGL for sci-fi, DW for fantasy**: The OGL database covers sci-fi rules. The DW database covers fantasy rules (moves, classes, spells, monsters, GM tools). Fall back to BYOD for personal content.
 - **BYOD consent**: `AGREE_BYOD_USE="true"` and `BYOD_PATH` required.
 
 ## Key Workflows
 
 **Task resolution**: `roll_2d6(modifier, target)` or `roll_custom("Nd6+M")`. Report margin and outcome.
 
-**Rules lookup**: `query_ogl_rules("term", category: "category")`. Narrow with category for targeted results.
+**Rules lookup**: `query_ogl_rules("term", category: "category")` for sci-fi. `query_dw_rules("term", category: "category")` for fantasy. Narrow with category for targeted results.
 
 **Character creation**: Six `roll_custom("2d6")` for characteristics. `query_ogl_rules("name", category: "careers")` for careers. `parse_character(path)` for existing sheets.
 

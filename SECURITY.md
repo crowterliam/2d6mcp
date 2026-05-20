@@ -4,7 +4,9 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
+| 0.4.x   | :white_check_mark: |
+| 0.3.x   | :white_check_mark: |
+| < 0.3   | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -25,6 +27,7 @@ you to assess, patch, and disclose the issue responsibly.
 - Dependency supply-chain risks (`npm` packages)
 - SQL injection vectors in FTS5 queries
 - Path traversal in file walking logic
+- Hardcoded data injection in OGL or DW populate modules (`src/ogl/populate.ts`, `src/dw/populate.ts`)
 
 ## Out of Scope
 

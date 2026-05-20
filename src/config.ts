@@ -27,6 +27,7 @@ export interface Config {
   byodConsented: boolean;
   byodPath: string | null;
   oglDbPath: string;
+  dwDbPath: string;
   byodChunkSize: number;
   byodChunkOverlap: number;
   byodMaxFiles: number;
@@ -65,7 +66,11 @@ export function loadConfig(): Config {
     process.env.OGL_DB_PATH ||
     resolve(PROJECT_ROOT, "data", "ogl", "cepheus.db");
 
-  return { byodConsented, byodPath, oglDbPath, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs };
+  const dwDbPath =
+    process.env.DW_DB_PATH ||
+    resolve(PROJECT_ROOT, "data", "dw", "dungeon-world.db");
+
+  return { byodConsented, byodPath, oglDbPath, dwDbPath, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs };
 }
 
 export function isByodEnabled(): boolean {

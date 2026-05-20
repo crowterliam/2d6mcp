@@ -1,12 +1,13 @@
 # 2D6 MCP Server
 
-A system-agnostic Model Context Protocol (MCP) server providing a mechanical engine, dice roller, and rules reference for generic 2d6-based sci-fi tabletop RPGs.
+A system-agnostic Model Context Protocol (MCP) server providing a mechanical engine, dice roller, and rules reference for generic 2d6-based sci-fi tabletop RPGs, plus a Dungeon World rules database.
 
 ## Features
 
 - **Dice Engine** — Parse standard dice notation (`2d6+1`, `3d6`, `d66`), roll against target numbers, and calculate effect margins
 - **Table Lookup** — Roll on named tables (reaction, encounters, patrons) using 1d6, 2d6, or d66 resolution
-- **Rules Database** — Pre-populated SQLite database with Cepheus Engine SRD content under OGL 1.0a
+- **OGL Rules Database** — Pre-populated SQLite database with Cepheus Engine SRD content under OGL 1.0a
+- **Dungeon World Database** — Pre-populated SQLite database with moves, classes, spells, equipment, monsters, and GM tools (CC-BY-3.0)
 - **BYOD Indexing** — Ingest your own PDF, text, and markdown files for local full-text search
 - **Character Parser** — Extract UPP hex strings, characteristics, and skills from character sheets
 - **Offline-First** — All queries run locally; no network calls, no telemetry
@@ -18,6 +19,7 @@ npm install
 npm run build
 npm run setup          # create consent token for BYOD mode
 npm run populate-ogl   # generate the OGL rules database
+npm run populate-dw    # generate the Dungeon World rules database
 ```
 
 ### Run as an MCP Server
@@ -51,6 +53,7 @@ npm run start
 | `roll_custom` | Roll any dice notation (`3d6`, `1d20`, `4d6+2`) |
 | `roll_table` | Roll on a named table (`Reaction Table`, `Personal Encounter`, `Patron Encounter`) |
 | `query_ogl_rules` | Search the OGL database for rules, skills, careers, equipment, or tables |
+| `query_dw_rules` | Search the Dungeon World database for moves, classes, spells, equipment, monsters, GM tools |
 | `query_local_byod` | Search your locally ingested BYOD files (requires consent) |
 | `parse_character` | Parse a character sheet file into structured JSON |
 | `sync_byod` | Index/re-index all files in your BYOD directory |
@@ -74,9 +77,9 @@ Slash commands are in `.kilo/command/` for quick access to common operations.
 
 ## Modes of Operation
 
-### Mode A: OGL Only (Default)
+### Mode A: OGL + DW Only (Default)
 
-Works out of the box with the bundled Cepheus Engine SRD database. All OGL tools are available without any configuration.
+Works out of the box with the bundled Cepheus Engine SRD database and Dungeon World database. All OGL and DW tools are available without any configuration.
 
 ### Mode B: BYOD Engine
 
@@ -96,6 +99,7 @@ Enable by setting `AGREE_BYOD_USE="true"` or running `npm run setup`. Requires a
 | `BYOD_MAX_CHUNKS_PER_FILE` | `500` | Maximum chunks from any single file |
 | `BYOD_SYNC_TIMEOUT_MS` | `15000` | Milliseconds per sync batch (1000–300000) |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Path to custom OGL SQLite database |
+| `DW_DB_PATH` | `data/dw/dungeon-world.db` | Path to custom DW SQLite database |
 
 ## CLI Commands
 
@@ -103,6 +107,8 @@ Enable by setting `AGREE_BYOD_USE="true"` or running `npm run setup`. Requires a
 npm run setup                    # create .mcp-byod-consent-accepted token
 npm run populate-ogl             # generate OGL database
 npm run populate-ogl -- --force  # regenerate OGL database
+npm run populate-dw              # generate Dungeon World database
+npm run populate-dw -- --force   # regenerate Dungeon World database
 ```
 
 ## Architecture
@@ -121,6 +127,11 @@ src/
     schema.sql.ts   Schema DDL
     populate.ts     Populate DB with Cepheus Engine SRD data
     queries.ts      Rule search queries
+  dw/
+    database.ts     DW SQLite connection + schema setup
+    schema.sql.ts   DW Schema DDL
+    populate.ts     Populate DB with Dungeon World data (CC-BY-3.0)
+    queries.ts      DW rule search queries
   byod/
     gate.ts         Consent gate check
     ingest.ts       File walking, text/markdown parsing
@@ -129,6 +140,7 @@ src/
     parser.ts       UPP extraction, stat parsing
 data/
   ogl/cepheus.db    Bundled OGL SQLite database
+  dw/dungeon-world.db  Bundled Dungeon World SQLite database
 ```
 
 ## Open Game Content
@@ -141,7 +153,15 @@ This product includes game rules and data derived from the **Cepheus Engine Syst
 
 **Non-Affiliation:** This product is not affiliated with, endorsed by, or sponsored by Jason "Flynn" Kemp, Samardan Press, Mongoose Publishing, Far Future Enterprises, Moon Toad Publishing, or Wizards of the Coast, Inc. The use of Open Game Content from these sources does not convey endorsement.
 
-[Full OGL license text](OGL-1.0a.txt) | [Full license documentation](LICENSE.md)
+## Dungeon World Content
+
+This product includes game rules and data derived from **Dungeon World** by Sage LaTorra and Adam Koebel, converted to Markdown by agude, licensed under the Creative Commons Attribution 3.0 Unported License (CC-BY-3.0).
+
+**Designation:** All text within the `data/dw/` directory is governed by CC-BY-3.0. The database includes moves, classes, spells, equipment, monsters, and GM tools. Attribution details are in `data/dw/ATTRIBUTION`.
+
+**Non-Affiliation:** This product is not affiliated with, endorsed by, or sponsored by Sage LaTorra, Adam Koebel, or agude.
+
+[Full OGL license text](OGL-1.0a.txt) | [Full CC-BY-3.0 license text](data/dw/CC-BY-3.0.txt) | [Full license documentation](LICENSE.md)
 
 ---
 
@@ -150,7 +170,8 @@ This product includes game rules and data derived from the **Cepheus Engine Syst
 This project uses a dual-license architecture:
 
 - **Source code** (`src/**/*.ts`, root-level config files): [AGPL-3.0-only](https://www.gnu.org/licenses/agpl-3.0.en.html)
-- **Game data** (`data/ogl/**`): [OGL v1.0a](OGL-1.0a.txt)
+- **OGL game data** (`data/ogl/**`): [OGL v1.0a](OGL-1.0a.txt)
+- **Dungeon World data** (`data/dw/**`): [CC-BY-3.0](data/dw/CC-BY-3.0.txt)
 
 ---
 

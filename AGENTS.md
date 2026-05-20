@@ -2,7 +2,7 @@
 
 ## Project Identity
 
-This is a Model Context Protocol (MCP) server that acts as a mechanical engine, dice roller, and rules reference for generic 2d6-based sci-fi tabletop RPGs. The server is system-agnostic and avoids all third-party trademarks.
+This is a Model Context Protocol (MCP) server that acts as a mechanical engine, dice roller, and rules reference for 2d6-based tabletop RPGs. The server is system-agnostic and avoids all third-party trademarks. It includes an OGL rules database (Cepheus Engine SRD) for sci-fi games and a Dungeon World rules database (CC-BY-3.0) with moves, classes, spells, equipment, monsters, and GM tools for fantasy games.
 
 ## Agent Modes
 
@@ -68,6 +68,7 @@ npm run build        # compile TypeScript to dist/
 npm run start        # run the MCP server (stdio transport)
 npm run setup        # run first-time setup (consent token)
 npm run populate-ogl # regenerate the OGL SQLite database
+npm run populate-dw  # regenerate the Dungeon World SQLite database
 ```
 
 ## Architecture
@@ -86,6 +87,11 @@ src/
     schema.sql.ts   # Schema DDL strings
     populate.ts     # Populate DB with Cepheus Engine SRD data
     queries.ts      # Rule search queries
+  dw/
+    database.ts     # DW SQLite connection + schema setup
+    schema.sql.ts   # DW Schema DDL
+    populate.ts     # Populate DB with Dungeon World data (CC-BY-3.0)
+    queries.ts      # DW rule search queries
   byod/
     gate.ts         # Consent gate check
     ingest.ts       # File walking, PDF/text/md parsing
@@ -95,6 +101,8 @@ src/
 data/
   ogl/
     cepheus.db      # Bundled OGL SQLite database (Cepheus Engine SRD)
+  dw/
+    dungeon-world.db  # Bundled DW SQLite database (Dungeon World, CC-BY-3.0)
 .kilo/
   agent/            # Agent mode instructions
   command/          # Slash command definitions
@@ -117,6 +125,7 @@ MCP_SETUP.md         # User guide for connecting to AI harnesses
 | `roll_custom` | Roll any dice notation (`3d6`, `d66`, `4d6+2`) |
 | `roll_table` | Roll on a named table from OGL database |
 | `query_ogl_rules` | Search OGL rules for skills, careers, equipment, tables |
+| `query_dw_rules` | Search DW rules for moves, classes, spells, equipment, monsters, GM tools |
 | `query_local_byod` | Full-text search across personal ingested files |
 | `parse_character` | Parse character sheet into structured data |
 | `sync_byod` | Index/re-index files from BYOD directory |
@@ -128,8 +137,11 @@ MCP_SETUP.md         # User guide for connecting to AI harnesses
 
 - All `.ts` source files: AGPL-3.0
 - All files under `data/ogl/`: OGL v1.0a
+- All files under `data/dw/`: CC-BY-3.0
 - `LICENSE.md` describes the firewall in detail
 - `OGL-1.0a.txt` contains the full OGL text with Cepheus SRD copyright attributions
+- `data/dw/CC-BY-3.0.txt` contains the full Creative Commons Attribution 3.0 license text
+- `data/dw/ATTRIBUTION` contains Dungeon World derivation and attribution details
 
 ## BYOD Consent Gate
 
@@ -137,4 +149,4 @@ The server checks for `AGREE_BYOD_USE="true"` env var OR the presence of a `.mcp
 
 ## Naming Conventions
 
-Never reference any third-party game system or trademarked terms. Use generic descriptors: "2d6 sci-fi RPG", "starship", "star system", "characteristic", etc.
+Never reference any third-party game system or trademarked terms. Use generic descriptors: "2d6 sci-fi RPG", "2d6 fantasy RPG", "starship", "star system", "characteristic", "move", "front", "monster", etc.

@@ -1,6 +1,6 @@
 # 2D6 MCP — Setup Guide
 
-This guide covers connecting the 2d6mcp server to common AI coding harnesses. After setup, your AI assistant gains dice rolling, rules lookup, character parsing, and BYOD file search capabilities for generic 2d6-based sci-fi tabletop RPGs.
+This guide covers connecting the 2d6mcp server to common AI coding harnesses. After setup, your AI assistant gains dice rolling, rules lookup, character parsing, and BYOD file search capabilities for 2d6-based tabletop RPGs (sci-fi via OGL, fantasy via Dungeon World).
 
 ## Prerequisites
 
@@ -204,8 +204,9 @@ All BYOD features require consent and a file path. The server also supports tuni
 | `BYOD_MAX_CHUNKS_PER_FILE` | `500` | Maximum chunks produced from a single file |
 | `BYOD_SYNC_TIMEOUT_MS` | `15000` | Time budget per `sync_byod` call in milliseconds (1000–300000) |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Path to a custom OGL SQLite database |
+| `DW_DB_PATH` | `data/dw/dungeon-world.db` | Path to a custom DW SQLite database |
 
-**OGL-only mode**: No environment variables are needed. The bundled Cepheus Engine SRD database (`data/ogl/cepheus.db`) is used automatically.
+**OGL+DW mode**: No environment variables are needed. The bundled Cepheus Engine SRD database (`data/ogl/cepheus.db`) and Dungeon World database (`data/dw/dungeon-world.db`) are used automatically.
 
 **BYOD mode**: At minimum, set `AGREE_BYOD_USE=true` and `BYOD_PATH`. Run `npm run setup` as a convenience — it creates the consent token file so you don't need the env var.
 

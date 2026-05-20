@@ -1,13 +1,13 @@
 # Aider Convention: 2D6 MCP Server
 
-This project is a Model Context Protocol (MCP) server for generic 2d6-based sci-fi TTRPGs.
+This project is a Model Context Protocol (MCP) server for 2d6-based TTRPGs, supporting both sci-fi (OGL/Cepheus Engine) and fantasy (Dungeon World) games.
 
 ## Project Conventions
 
-- **Naming**: Use system-agnostic language. Never reference third-party trademarks. Say "2d6 sci-fi RPG", "starship", "star system", "characteristic".
+- **Naming**: Use system-agnostic language. Never reference third-party trademarks. Say "2d6 sci-fi RPG", "2d6 fantasy RPG", "starship", "star system", "characteristic", "move", "front", "monster".
 - **Build**: `npm run build` (TypeScript → `dist/`). Test with `npm run start`.
-- **License**: Source code is AGPL-3.0. Game data under `data/ogl/` is OGL v1.0a. See `LICENSE.md`.
-- **Structure**: `src/dice/` (mechanics), `src/ogl/` (rule database), `src/byod/` (file ingestion), `src/character/` (parsing). Agent instructions in `.kilo/agent/`, `.claude/skills/`, `.cursor/rules/`, `.cline/rules/`, `.windsurfrules`.
+- **License**: Source code is AGPL-3.0. Game data under `data/ogl/` is OGL v1.0a. Game data under `data/dw/` is CC-BY-3.0. See `LICENSE.md`.
+- **Structure**: `src/dice/` (mechanics), `src/ogl/` (sci-fi rule database), `src/dw/` (fantasy rule database), `src/byod/` (file ingestion), `src/character/` (parsing). Agent instructions in `.kilo/agent/`, `.claude/skills/`, `.cursor/rules/`, `.cline/rules/`, `.windsurfrules`.
 
 ## Available MCP Tools
 
@@ -17,6 +17,7 @@ This project is a Model Context Protocol (MCP) server for generic 2d6-based sci-
 | `roll_custom` | Any dice notation |
 | `roll_table` | Named table from OGL database |
 | `query_ogl_rules` | Search OGL rules (skills, careers, equipment, combat, starships, worlds) |
+| `query_dw_rules` | Search DW rules (moves, classes, spells, equipment, monsters, GM tools) |
 | `query_local_byod` | Search personal ingested files |
 | `parse_character` | Parse character sheet to structured data |
 | `sync_byod` | Index BYOD files (time-budgeted, re-call until complete) |
@@ -34,3 +35,4 @@ This project is a Model Context Protocol (MCP) server for generic 2d6-based sci-
 | `BYOD_SYNC_TIMEOUT_MS` | `15000` | Sync batch time limit |
 | `BYOD_MAX_FILES` | `2000` | Max files per sync |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | OGL database path |
+| `DW_DB_PATH` | `data/dw/dungeon-world.db` | DW database path |

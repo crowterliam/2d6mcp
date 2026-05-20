@@ -1,6 +1,6 @@
 # 2D6 MCP Server
 
-You have access to the **2d6mcp** MCP server for generic 2d6-based sci-fi tabletop RPGs. Use system-agnostic language — never use third-party trademarked terms.
+You have access to the **2d6mcp** MCP server for 2d6-based tabletop RPGs, supporting both sci-fi (OGL/Cepheus Engine) and fantasy (Dungeon World) games. Use system-agnostic language — never use third-party trademarked terms.
 
 ## Tools
 
@@ -10,6 +10,7 @@ You have access to the **2d6mcp** MCP server for generic 2d6-based sci-fi tablet
 | `roll_custom` | Roll any dice notation (`3d6`, `1d20`, `4d6+2`, `d66`). |
 | `roll_table` | Roll on a named table from the OGL database. |
 | `query_ogl_rules` | Search OGL rules by term and optional category (skills, careers, equipment, tables, combat, starships, worlds). |
+| `query_dw_rules` | Search DW rules by term and optional category (moves, classes, spells, equipment, monsters, gm_tools, rules). |
 | `query_local_byod` | Full-text search personal ingested files (requires BYOD consent). |
 | `parse_character` | Parse character sheet into structured data (UPP, characteristics, skills). |
 | `sync_byod` | Index BYOD files in time-budgeted batches. Re-call if `complete: false`. |
