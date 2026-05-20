@@ -43,7 +43,8 @@ import {
 } from "./dw/queries.js";
 import { checkByodConsent, getByodPath } from "./byod/gate.js";
 import { discoverFiles, ingestFile, type IngestedChunk, type IngestedFile } from "./byod/ingest.js";
-import { getByodDatabase, indexChunks, rebuildByodFts, searchByodIndex, closeByodDatabase, getStoredFileHash, markFileFailed, FAILED_HASH, clearByodDatabase, listByodFiles, getFileChunks } from "./byod/search.js";
+import { getByodDatabase, indexChunks, rebuildByodFts, searchByodIndex, closeByodDatabase, getStoredFileHash, markFileFailed, FAILED_HASH, clearByodDatabase, listByodFiles, getFileChunks, getChunkContent } from "./byod/search.js";
+import { getContentCache, hasCachedChunks, getCachedChunks, storeCachedChunks, closeContentCache, computeContentHash } from "./byod/content-cache.js";
 import { parseCharacterText, readCharacterFile, type CharacterStats } from "./character/parser.js";
 import {
   listWebhooks,
@@ -180,7 +181,7 @@ async function syncFile(
 
   const fingerprint = String(stat.mtimeMs) + "-" + String(stat.size);
 
-  const db = getByodDatabase();
+  const db = getByodDatabase(byodPath);
   const storedHash = getStoredFileHash(db, relativePath);
   if (storedHash === fingerprint) {
     return {
@@ -196,6 +197,41 @@ async function syncFile(
   }
 
   const startTime = Date.now();
+
+  let contentHash: string | null = null;
+  try {
+    const buf = readFileSync(resolved);
+    contentHash = computeContentHash(buf);
+  } catch {
+  }
+
+  if (contentHash && hasCachedChunks(contentHash)) {
+    const cached = getCachedChunks(contentHash);
+    indexChunks(
+      db,
+      relativePath,
+      name,
+      ext,
+      stat.size,
+      fingerprint,
+      contentHash,
+      cached
+    );
+    rebuildByodFts(db);
+
+    const elapsed = Date.now() - startTime;
+    return {
+      relativePath,
+      fileName: name,
+      ext,
+      size: stat.size,
+      status: "indexed",
+      chunks: cached.length,
+      elapsedMs: elapsed,
+      message: `Indexed ${name} from content cache (${cached.length} chunks, ${formatSizeForLog(stat.size)}) in ${(elapsed / 1000).toFixed(1)}s.`,
+    };
+  }
+
   const file: IngestedFile = {
     path: resolved,
     relativePath,
@@ -203,6 +239,7 @@ async function syncFile(
     size: stat.size,
     ext,
     hash: fingerprint,
+    contentHash,
   };
 
   const options = {
@@ -228,6 +265,12 @@ async function syncFile(
     };
   }
 
+  const chunkData = chunks.map((c) => ({ title: c.title, content: c.content, chunkIndex: c.chunkIndex }));
+
+  if (contentHash) {
+    storeCachedChunks(contentHash, chunkData);
+  }
+
   indexChunks(
     db,
     relativePath,
@@ -235,7 +278,8 @@ async function syncFile(
     ext,
     stat.size,
     fingerprint,
-    chunks.map((c) => ({ title: c.title, content: c.content, chunkIndex: c.chunkIndex }))
+    contentHash,
+    chunkData
   );
 
   rebuildByodFts(db);
@@ -281,7 +325,7 @@ async function syncByodIndex(config: Config): Promise<SyncResult> {
     files = files.slice(0, config.byodMaxFiles);
   }
 
-  const db = getByodDatabase();
+  const db = getByodDatabase(byodPath);
   const options = {
     chunkSize: config.byodChunkSize,
     overlap: config.byodChunkOverlap,
@@ -292,6 +336,7 @@ async function syncByodIndex(config: Config): Promise<SyncResult> {
   let indexedFiles = 0;
   let failedFiles = 0;
   let skippedByHash = 0;
+  let reusedFromCache = 0;
   const startTime = Date.now();
   const logInterval = Math.max(1, Math.floor(files.length / 20));
   const CONCURRENCY = 3;
@@ -345,19 +390,40 @@ async function syncByodIndex(config: Config): Promise<SyncResult> {
       continue;
     }
 
-    const chunkResults = await Promise.all(
-      batch.map((f) => ingestFile(f, options))
+    const batchResults: { chunks: IngestedChunk[]; fromCache: boolean }[] = await Promise.all(
+      batch.map(async (f) => {
+        if (f.contentHash && hasCachedChunks(f.contentHash)) {
+          const cached = getCachedChunks(f.contentHash);
+          return {
+            chunks: cached.map((c) => ({
+              filePath: f.relativePath,
+              fileName: f.name,
+              title: c.title,
+              content: c.content,
+              chunkIndex: c.chunkIndex,
+            })),
+            fromCache: true,
+          };
+        }
+        const chunks = await ingestFile(f, options);
+        return { chunks, fromCache: false };
+      })
     );
 
-    const batchStart = indexedFiles + skippedByHash;
     for (let k = 0; k < batch.length; k++) {
       const file = batch[k];
-      const chunks = chunkResults[k];
+      const { chunks, fromCache } = batchResults[k];
 
       if (chunks.length === 0) {
         failedFiles++;
         markFileFailed(db, file.relativePath, file.name, file.ext, file.size);
         continue;
+      }
+
+      const chunkData = chunks.map((c) => ({ title: c.title, content: c.content, chunkIndex: c.chunkIndex }));
+
+      if (!fromCache && file.contentHash) {
+        storeCachedChunks(file.contentHash, chunkData);
       }
 
       indexChunks(
@@ -367,9 +433,11 @@ async function syncByodIndex(config: Config): Promise<SyncResult> {
         file.ext,
         file.size,
         file.hash,
-        chunks.map((c) => ({ title: c.title, content: c.content, chunkIndex: c.chunkIndex }))
+        file.contentHash,
+        chunkData
       );
 
+      if (fromCache) reusedFromCache++;
       totalChunks += chunks.length;
       indexedFiles++;
     }
@@ -383,7 +451,7 @@ async function syncByodIndex(config: Config): Promise<SyncResult> {
       process.stderr.write(
         `2d6mcp: [${done}/${files.length}] ${batchSummary} (${formatSizeForLog(
           batch.reduce((s, f) => s + f.size, 0)
-        )}, ${chunkResults.reduce((s, c) => s + c.length, 0)} chunks)\n`
+        )}, ${batchResults.reduce((s, c) => s + c.chunks.length, 0)} chunks)\n`
       );
     }
 
@@ -396,7 +464,7 @@ async function syncByodIndex(config: Config): Promise<SyncResult> {
 
   const elapsed = Date.now() - startTime;
   const parts: string[] = [];
-  if (indexedFiles > 0) parts.push(`${indexedFiles} newly indexed (${totalChunks} chunks)`);
+  if (indexedFiles > 0) parts.push(`${indexedFiles} newly indexed (${totalChunks} chunks${reusedFromCache > 0 ? `, ${reusedFromCache} from content cache` : ""})`);
   if (skippedByHash > 0) parts.push(`${skippedByHash} already up to date`);
   if (failedFiles > 0) parts.push(`${failedFiles} failed`);
 
@@ -614,6 +682,25 @@ export async function startServer(): Promise<void> {
             },
           },
           required: ["relative_path"],
+        },
+      },
+      {
+        name: "get_byod_chunk",
+        description:
+          "Retrieve the full content of a specific chunk from the BYOD index by file path and chunk index. Use after query_local_byod to get complete text for relevant chunks. Returns the full chunk content (up to 8KB) rather than the search snippet.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            relative_path: {
+              type: "string",
+              description: "The relative path of the file as shown in search results or list_byod_files",
+            },
+            chunk_index: {
+              type: "integer",
+              description: "The chunk index (0-based) to retrieve",
+            },
+          },
+          required: ["relative_path", "chunk_index"],
         },
       },
       {
@@ -967,7 +1054,8 @@ export async function startServer(): Promise<void> {
           };
         }
 
-        const db = getByodDatabase();
+        const byodPath = getByodPath();
+        const db = getByodDatabase(byodPath);
         const results = searchByodIndex(db, searchTerm);
 
         return {
@@ -1103,7 +1191,8 @@ export async function startServer(): Promise<void> {
           };
         }
 
-        const result = clearByodDatabase();
+        const byodPath = getByodPath();
+        const result = clearByodDatabase(byodPath);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
@@ -1118,7 +1207,8 @@ export async function startServer(): Promise<void> {
           };
         }
 
-        const db = getByodDatabase();
+        const byodPath = getByodPath();
+        const db = getByodDatabase(byodPath);
         const files = listByodFiles(db);
         return {
           content: [
@@ -1158,7 +1248,8 @@ export async function startServer(): Promise<void> {
           };
         }
 
-        const db = getByodDatabase();
+        const byodPath = getByodPath();
+        const db = getByodDatabase(byodPath);
         const result = getFileChunks(db, relativePath);
 
         if (!result.file) {
@@ -1167,6 +1258,60 @@ export async function startServer(): Promise<void> {
               {
                 type: "text",
                 text: `No file found with path: ${relativePath}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "get_byod_chunk": {
+        const consent = checkByodConsent();
+        if (!consent.allowed) {
+          return {
+            content: [{ type: "text", text: consent.message }],
+            isError: true,
+          };
+        }
+
+        const relativePath =
+          typeof args?.relative_path === "string" ? args.relative_path : "";
+        const chunkIndex =
+          typeof args?.chunk_index === "number" ? args.chunk_index : -1;
+
+        if (!relativePath) {
+          return {
+            content: [{ type: "text", text: "Error: relative_path is required" }],
+            isError: true,
+          };
+        }
+
+        if (chunkIndex < 0) {
+          return {
+            content: [{ type: "text", text: "Error: chunk_index is required and must be >= 0" }],
+            isError: true,
+          };
+        }
+
+        const byodPath = getByodPath();
+        const db = getByodDatabase(byodPath);
+        const result = getChunkContent(db, relativePath, chunkIndex);
+
+        if (!result) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `No chunk found: ${relativePath} [index ${chunkIndex}]`,
               },
             ],
             isError: true,

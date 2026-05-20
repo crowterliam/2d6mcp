@@ -14,6 +14,12 @@ Indexes all supported files from your `BYOD_PATH` directory. Runs in time-budget
 
 **Startup behaviour**: The server runs an automatic sync on startup. If your BYOD directory is large, the initial sync may be incomplete. Check `list_byod_files` to verify coverage.
 
+### Syncing a Single File
+```
+sync_file(relative_path)
+```
+Indexes a single file by its relative path within `BYOD_PATH`. Useful for large PDFs that timeout during bulk sync, or to selectively re-index a modified file without running a full sync.
+
 ### Listing Indexed Files
 ```
 list_byod_files
@@ -35,6 +41,12 @@ Shows how a specific file was split into chunks:
 - Each chunk with `title`, `size`, `chunkIndex`
 
 Titles reveal the document structure: PDF pages, markdown heading breadcrumbs, or plain text part numbers.
+
+### Retrieving Full Chunk Content
+```
+get_byod_chunk(relative_path, chunk_index)
+```
+Retrieves the full content of a specific chunk by file path and chunk index. Use after `query_local_byod` returns snippets — the search tool returns 64-character highlighted snippets, but this tool returns the complete chunk text (up to 8KB) for full inference.
 
 ### Searching BYOD Content
 ```
@@ -69,14 +81,25 @@ Deletes the entire BYOD database. Use this to start fresh — all indexed files 
 | `BYOD_MAX_FILES` | `2000` | Maximum files to process per sync |
 | `BYOD_MAX_CHUNKS_PER_FILE` | `500` | Maximum chunks from any single file |
 | `BYOD_SYNC_TIMEOUT_MS` | `15000` | Milliseconds per sync batch (1000–300000) |
+| `BYOD_CONTENT_CACHE_PATH` | `data/byod/content_cache.db` | Shared content-addressable cache path |
+
+## Workspace Isolation
+
+Each `BYOD_PATH` directory gets its own isolated database (`byod_ws_<hash>.db`). Multiple workspaces pointing to different directories never cross-pollinate. However, a shared content-addressable cache (`content_cache.db`, keyed by SHA-256 of file bytes) stores parsed chunks that are reused across all workspaces. Identical files in different workspaces are parsed only once.
+
+The sync process uses a 3-tier check to avoid unnecessary work:
+1. **Fingerprint skip** — mtime + size comparison (fast, no file read)
+2. **Content cache hit** — SHA-256 lookup (skip parsing, reuse cached chunks)
+3. **Full parse** — read and parse the file, store in content cache
 
 ## Typical Session Workflow
 
 1. **Start of session**: Run `list_byod_files` to check what's indexed
 2. **Added new files?**: Run `sync_byod`. Repeat if `complete` is `false`
 3. **Need a rule?**: Try `query_ogl_rules` first, then `query_local_byod`
-4. **Index seems stale?**: Files whose mtime or size changed are automatically re-ingested on sync
-5. **Start fresh after reorganisation?**: `clear_byod` then `sync_byod`
+4. **Need full text?**: Use `get_byod_chunk(path, index)` to retrieve complete chunk content after search returns snippets
+5. **Index seems stale?**: Files whose mtime or size changed are automatically re-ingested on sync
+6. **Start fresh after reorganisation?**: `clear_byod` then `sync_byod`
 
 ## Troubleshooting
 
