@@ -44,5 +44,8 @@ jobs:
 
       - run: npm run build
 
+      - run: npm run populate-ogl
+      - run: npm run populate-dw
+
       - name: Run tests
         run: npm test
