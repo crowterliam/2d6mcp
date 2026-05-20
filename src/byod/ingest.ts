@@ -3,6 +3,7 @@
 
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, extname, resolve } from "node:path";
+import { createHash } from "node:crypto";
 import { PDFParse } from "pdf-parse";
 import { DOMParser } from "@xmldom/xmldom";
 
@@ -24,6 +25,7 @@ export interface IngestedFile {
   size: number;
   ext: string;
   hash: string;
+  contentHash: string | null;
 }
 
 export interface IngestedChunk {
@@ -97,6 +99,13 @@ function walkDirectory(dir: string, baseDir: string): IngestedFile[] {
 
           const fingerprint = String(stat.mtimeMs) + "-" + String(stat.size);
 
+          let contentHash: string | null = null;
+          try {
+            const buf = readFileSync(fullPath);
+            contentHash = createHash("sha256").update(buf).digest("hex");
+          } catch {
+          }
+
           results.push({
             path: fullPath,
             relativePath: fullPath.replace(baseDir + "/", ""),
@@ -104,6 +113,7 @@ function walkDirectory(dir: string, baseDir: string): IngestedFile[] {
             size: stat.size,
             ext,
             hash: fingerprint,
+            contentHash,
           });
         }
       }

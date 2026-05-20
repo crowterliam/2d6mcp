@@ -17,6 +17,13 @@ You have access to a Model Context Protocol (MCP) server called **2d6mcp**. It p
 | `clear_byod` | Delete the BYOD index to start fresh. |
 | `list_byod_files` | List all indexed files with chunk counts and status (indexed/failed). |
 | `inspect_byod_file` | Show chunk structure for a specific indexed file (relative_path required). |
+| `sync_file` | Index a single file by relative path (for large files or selective indexing). |
+| `get_byod_chunk` | Retrieve full chunk content by file path + chunk index. |
+| `discord_post` | Post messages to Discord webhooks with smart routing based on context tags. |
+| `discord_add_webhook` | Add a Discord webhook with name, URL, tags, and description. |
+| `discord_remove_webhook` | Remove a stored Discord webhook by name. |
+| `discord_list_webhooks` | List all configured webhooks (URLs partially masked). |
+| `discord_test_webhook` | Send a test message to verify webhook connectivity. |
 
 ## Core Mechanics
 
@@ -50,7 +57,9 @@ You have access to a Model Context Protocol (MCP) server called **2d6mcp**. It p
 2. Sync new/changed files: `sync_byod` (re-call until `complete: true`)
 3. Inspect structure: `inspect_byod_file(relative_path)`
 4. Search personal content: `query_local_byod("search term")`
-5. Start fresh: `clear_byod`
+5. Index a single file: `sync_file(relative_path)`
+6. Get full chunk content: `get_byod_chunk(file_path, chunk_index)` (after search returns snippets)
+7. Start fresh: `clear_byod`
 
 ## Configuration
 
@@ -60,6 +69,7 @@ You have access to a Model Context Protocol (MCP) server called **2d6mcp**. It p
 | `BYOD_PATH` | — | Directory of local RPG source files |
 | `BYOD_CHUNK_SIZE` | `8000` | Characters per chunk |
 | `BYOD_SYNC_TIMEOUT_MS` | `15000` | Max ms per sync batch |
+| `BYOD_CONTENT_CACHE_PATH` | — | Shared content cache path (deduplicates across workspaces) |
 | `BYOD_MAX_FILES` | `2000` | Max files per sync |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Custom OGL database path |
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | Custom DW database path |

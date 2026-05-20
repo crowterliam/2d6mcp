@@ -17,6 +17,8 @@ You are an AI assistant with access to a Model Context Protocol (MCP) server cal
 | `clear_byod` | Delete the BYOD index to start fresh |
 | `list_byod_files` | List all indexed files with chunk counts and status |
 | `inspect_byod_file` | Show chunks for a specific indexed file |
+| `sync_file` | Index a single file by relative path (for large files that timeout in bulk sync) |
+| `get_byod_chunk` | Retrieve full chunk content (up to 8KB) by file path + chunk index |
 
 ## Key Principles
 
@@ -25,7 +27,7 @@ You are an AI assistant with access to a Model Context Protocol (MCP) server cal
 - **d66 tables**: Roll two d6s and treat them as tens (first die) and ones (second die), producing 11-66. Use `roll_table` with `"dice_type": "d66"`.
 - **The OGL database** is pre-populated with Cepheus Engine SRD content. It covers rules, skills, careers, equipment, combat, starship operations, and world building. Always try `query_ogl_rules` before falling back to BYOD search.
 - **The DW database** is pre-populated with Dungeon World content (CC-BY-3.0, by Sage LaTorra and Adam Koebel). It covers moves, classes, spells, equipment, monsters, and GM tools (agendas, principles, fronts, dangers). Use `query_dw_rules` for fantasy RPG content.
-- **BYOD search** is for your personal files. It requires consent (`AGREE_BYOD_USE="true"`) and a configured `BYOD_PATH`. Files must be synced before they are searchable.
+- **BYOD search** is for your personal files. It requires consent (`AGREE_BYOD_USE="true"`) and a configured `BYOD_PATH`. Files must be synced before they are searchable. Each `BYOD_PATH` gets its own isolated database (`byod_ws_<hash>.db`), so multiple workspaces don't cross-pollinate. A shared content-addressable cache (`content_cache.db`) avoids re-parsing identical files across workspaces.
 
 ## When to Use Each Tool
 
@@ -45,8 +47,10 @@ You are an AI assistant with access to a Model Context Protocol (MCP) server cal
 
 ### BYOD Management
 - Use `sync_byod` after adding or modifying files in your BYOD directory
+- Use `sync_file` for selective indexing of large files that timeout during bulk sync
 - Use `list_byod_files` to see what's indexed and available for search
 - Use `inspect_byod_file` to see how a file was chunked (page breaks, heading structure)
+- Use `get_byod_chunk` to retrieve full chunk content after `query_local_byod` returns snippets
 - Use `clear_byod` to reset the index completely
 
 ## Common Workflows
@@ -87,5 +91,6 @@ When starting a session, ensure knowledge is available:
 | `BYOD_MAX_FILES` | `2000` | Max files per sync |
 | `BYOD_MAX_CHUNKS_PER_FILE` | `500` | Max chunks per file |
 | `BYOD_SYNC_TIMEOUT_MS` | `15000` | Max ms per sync batch |
+| `BYOD_CONTENT_CACHE_PATH` | `data/byod/content_cache.db` | Shared content-addressable cache path |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Custom OGL database path |
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | Custom DW database path |

@@ -96,6 +96,7 @@ src/
     gate.ts         # Consent gate check
     ingest.ts       # File walking, PDF/text/md parsing
     search.ts       # FTS5 search against BYOD index
+    content-cache.ts # Content-addressable chunk cache (shared across workspaces)
   character/
     parser.ts       # UPP extraction, stat parsing
   discord/
@@ -135,6 +136,8 @@ MCP_SETUP.md         # User guide for connecting to AI harnesses
 | `clear_byod` | Delete BYOD index to start fresh |
 | `list_byod_files` | List indexed files with status and chunk counts |
 | `inspect_byod_file` | Show chunk structure for a specific file |
+| `sync_file` | Index a single file by relative path (for large files that timeout in bulk sync) |
+| `get_byod_chunk` | Retrieve full chunk content by file path + chunk index (for getting complete text after search snippets) |
 | `discord_post` | Post messages to Discord webhooks with smart routing based on context tags |
 | `discord_add_webhook` | Add a Discord webhook with name, URL, tags, and description |
 | `discord_remove_webhook` | Remove a stored Discord webhook by name |

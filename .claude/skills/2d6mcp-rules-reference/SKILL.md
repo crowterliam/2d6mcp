@@ -50,7 +50,13 @@ Roll on a named table using the specified dice type. Available tables include Re
 query_local_byod(search_term)
 ```
 
-Searches your personally ingested PDFs, text files, and markdown files. Requires BYOD consent and a configured `BYOD_PATH`. Files must be synced with `sync_byod` first. Multi-word queries try AND first, then OR for broad matching. Prefix searches with `*` (e.g., `combat*`). Max 20 results.
+Searches your personally ingested PDFs, text files, and markdown files. Requires BYOD consent and a configured `BYOD_PATH`. Files must be synced with `sync_byod` first. Multi-word queries try AND first, then OR for broad matching. Prefix searches with `*` (e.g., `combat*`). Max 20 results. Returns snippets — use `get_byod_chunk` for full content.
+
+```
+get_byod_chunk(file_path, chunk_index)
+```
+
+Retrieves the full chunk content for a specific file and chunk index. Use after `query_local_byod` returns snippets and you need the complete text for inference.
 
 ## Search Strategy
 
@@ -59,3 +65,4 @@ Searches your personally ingested PDFs, text files, and markdown files. Requires
 3. **Try categories**: If a broad search returns too much, narrow with a `category`
 4. **Fall back to BYOD**: If OGL doesn't have what you need, try `query_local_byod`
 5. **Combine searches**: For a complete picture, query both OGL and BYOD
+6. **Get full content**: `query_local_byod` returns snippets. Use `get_byod_chunk(file_path, chunk_index)` to retrieve the full chunk for inference
