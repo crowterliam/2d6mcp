@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
 import { readFileSync, existsSync } from "node:fs";
-import { resolve, dirname } from "node:path";
+import { resolve, dirname, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -54,7 +54,10 @@ export function loadConfig(): Config {
   const tokenExists = existsSync(BYOD_CONSENT_FILE);
   const byodConsented = envAgreed || tokenExists;
 
-  const byodPath = process.env.BYOD_PATH || null;
+  const rawByodPath = process.env.BYOD_PATH || null;
+  const byodPath = rawByodPath
+    ? (isAbsolute(rawByodPath) ? rawByodPath : resolve(PROJECT_ROOT, rawByodPath))
+    : null;
 
   const byodChunkSize = parseIntEnv("BYOD_CHUNK_SIZE", DEFAULT_CHUNK_SIZE, 500, 50000);
   const byodChunkOverlap = parseIntEnv("BYOD_CHUNK_OVERLAP", DEFAULT_CHUNK_OVERLAP, 0, byodChunkSize / 2);
