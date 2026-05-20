@@ -66,6 +66,9 @@ Slash commands are in `.kilo/command/`:
 npm install          # install dependencies
 npm run build        # compile TypeScript to dist/
 npm run start        # run the MCP server (stdio transport)
+npm test             # run the test suite (vitest)
+npm run test:watch   # run tests in watch mode
+npm run test:coverage # run tests with coverage report
 npm run setup        # run first-time setup (consent token)
 npm run populate-ogl # regenerate the OGL SQLite database
 npm run populate-dw  # regenerate the Dungeon World SQLite database
@@ -107,6 +110,14 @@ data/
     cepheus.db      # Bundled OGL SQLite database (Cepheus Engine SRD)
   dw/
     dungeon-world.db  # Bundled DW SQLite database (Dungeon World, CC-BY-3.0)
+tests/                # Vitest test suite
+  config/             # Config module tests
+  dice/               # Dice roller and table tests
+  ogl/                # OGL database and query tests
+  dw/                 # DW database and query tests
+  byod/               # BYOD gate, ingest, search, cache tests
+  character/          # Character parser tests
+  discord/            # Discord config and webhook tests
 .kilo/
   agent/            # Agent mode instructions
   command/          # Slash command definitions

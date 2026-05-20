@@ -191,7 +191,7 @@ function stripHtmlTags(html: string): string {
     };
     removeElements("script");
     removeElements("style");
-    const text = doc.textContent || "";
+    const text = (doc.documentElement?.textContent ?? "") || "";
     return text
       .replace(/\s+/g, " ")
       .replace(/&nbsp;/g, " ")
