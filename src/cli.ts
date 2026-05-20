@@ -6,6 +6,7 @@ import { writeFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { PROJECT_ROOT, BYOD_CONSENT_FILE } from "./config.js";
 import { populateOglDatabase } from "./ogl/populate.js";
+import { populateDwDatabase } from "./dw/populate.js";
 
 function cmdSetup(): void {
   if (existsSync(BYOD_CONSENT_FILE)) {
@@ -60,13 +61,33 @@ Usage:
   2d6mcp setup         Create the BYOD consent token
   2d6mcp populate-ogl  Generate or regenerate the OGL SQLite database
   2d6mcp populate-ogl --force  Force regeneration of OGL database
+  2d6mcp populate-dw   Generate or regenerate the Dungeon World SQLite database
+  2d6mcp populate-dw --force   Force regeneration of DW database
   2d6mcp help          Show this help
 
 Environment:
   AGREE_BYOD_USE=true   Enable BYOD via env var
   BYOD_PATH=/path/to/files       Directory of local RPG source files
   OGL_DB_PATH=/path/to/db        Custom OGL database path (optional)
+  DW_DB_PATH=/path/to/db         Custom DW database path (optional)
 `);
+}
+
+function cmdPopulateDw(): void {
+  const dbPath = resolve(PROJECT_ROOT, "data", "dw", "dungeon-world.db");
+  const force = process.argv.includes("--force");
+
+  if (existsSync(dbPath) && !force) {
+    console.log("DW database already exists. Use --force to overwrite.");
+    return;
+  }
+
+  if (force && existsSync(dbPath)) {
+    unlinkSync(dbPath);
+  }
+
+  const result = populateDwDatabase(dbPath);
+  console.log(result.message);
 }
 
 const command = process.argv[2]?.toLowerCase() || "help";
@@ -77,6 +98,9 @@ switch (command) {
     break;
   case "populate-ogl":
     cmdPopulate();
+    break;
+  case "populate-dw":
+    cmdPopulateDw();
     break;
   case "help":
   case "--help":

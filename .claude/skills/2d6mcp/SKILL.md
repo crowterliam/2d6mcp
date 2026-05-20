@@ -1,11 +1,11 @@
 ---
 name: 2d6-mcp-core
-description: Master reference for the 2d6mcp MCP server — all tools, workflows, and environment configuration for generic 2d6 sci-fi TTRPGs.
+description: Master reference for the 2d6mcp MCP server — all tools, workflows, and environment configuration for 2d6 TTRPGs (sci-fi and fantasy).
 ---
 
 # 2D6 MCP Server — Agent Instructions
 
-You have access to the **2d6mcp** MCP server. It provides a mechanical engine, dice roller, and rules reference for generic 2d6-based sci-fi tabletop RPGs.
+You have access to the **2d6mcp** MCP server. It provides a mechanical engine, dice roller, and rules reference for 2d6-based tabletop RPGs, supporting both sci-fi (OGL/Cepheus Engine) and fantasy (Dungeon World) games.
 
 ## Available Tools
 
@@ -15,6 +15,7 @@ You have access to the **2d6mcp** MCP server. It provides a mechanical engine, d
 | `roll_custom` | Roll any dice notation (`3d6`, `1d20`, `4d6+2`, `d66`) |
 | `roll_table` | Roll on a named table (Reaction, Encounters, Patrons) |
 | `query_ogl_rules` | Search OGL rules database for skills, careers, equipment, combat |
+| `query_dw_rules` | Search DW rules database for moves, classes, spells, equipment, monsters, GM tools |
 | `query_local_byod` | Full-text search across your locally ingested files |
 | `parse_character` | Parse a character sheet file into structured data |
 | `sync_byod` | Index/re-index files from your BYOD directory |
@@ -24,10 +25,12 @@ You have access to the **2d6mcp** MCP server. It provides a mechanical engine, d
 
 ## Key Principles
 
-- **System-agnostic language**: Use generic descriptors — "2d6 sci-fi RPG", "starship", "star system", "characteristic". Never use third-party trademarked terms.
+- **System-agnostic language**: Use generic descriptors — "2d6 sci-fi RPG", "2d6 fantasy RPG", "starship", "star system", "characteristic", "move", "front", "monster". Never use third-party trademarked terms.
 - **Task resolution**: The core mechanic is 2d6 + modifier vs. target number (typically 8+). Effect margin = total - target. Margin 0+ = success, margin 6+ = exceptional success.
 - **d66 tables**: Roll two d6s and treat them as tens (first die) and ones (second die), producing 11-66. Use `roll_table` with `"dice_type": "d66"`.
 - **The OGL database** is pre-populated with Cepheus Engine SRD content. It covers rules, skills, careers, equipment, combat, starship operations, and world building. Always try `query_ogl_rules` before falling back to BYOD search.
+- **The DW database** is pre-populated with Dungeon World content (CC-BY-3.0, by Sage LaTorra and Adam Koebel). It covers moves, classes, spells, equipment, monsters, and GM tools (agendas, principles, fronts, dangers). Use `query_dw_rules` for fantasy RPG content.
+- **BYOD search** is for your personal files. It requires consent (`AGREE_BYOD_USE="true"`) and a configured `BYOD_PATH`. Files must be synced before they are searchable.
 - **BYOD search** is for your personal files. It requires consent (`AGREE_BYOD_USE="true"`) and a configured `BYOD_PATH`. Files must be synced before they are searchable.
 
 ## When to Use Each Tool
@@ -38,7 +41,8 @@ You have access to the **2d6mcp** MCP server. It provides a mechanical engine, d
 - Use `roll_table` for random tables — this looks up the result in the OGL database
 
 ### Rules Lookup
-- Use `query_ogl_rules` as primary rules reference. Specify a `category` for targeted results (skills, careers, equipment, combat, starships, worlds, tables, categories, list_tables)
+- Use `query_ogl_rules` as primary sci-fi rules reference. Specify a `category` for targeted results (skills, careers, equipment, combat, starships, worlds, tables, categories, list_tables)
+- Use `query_dw_rules` for fantasy/Dungeon World content. Specify a `category` for targeted results (moves, classes, spells, equipment, monsters, gm_tools, rules)
 - Use `query_local_byod` when you need content from your personal files (supplements, house rules, campaign notes)
 - Use `roll_table` with a table name to both roll on it AND see the full table entries
 
@@ -61,10 +65,12 @@ You have access to the **2d6mcp** MCP server. It provides a mechanical engine, d
 5. Interpret: margin 0–5 = marginal success, 6+ = exceptional success; margin -1 to -5 = marginal failure, -6 or worse = exceptional failure
 
 ### Looking Up Rules
-1. Call `query_ogl_rules` with a descriptive `search_term`
-2. If the result is empty or insufficient, try a different search term or add a `category`
-3. For combat mechanics, use `category: "combat"`. For starships, use `category: "starships"`. For world building, use `category: "worlds"`
-4. For specific tables, use `category: "tables"` or `roll_table` directly
+1. Call `query_ogl_rules` with a descriptive `search_term` for sci-fi content
+2. Call `query_dw_rules` with a descriptive `search_term` for fantasy content
+3. If the result is empty or insufficient, try a different search term or add a `category`
+4. For combat mechanics, use `category: "combat"`. For starships, use `category: "starships"`. For world building, use `category: "worlds"`
+5. For DW monsters, use `category: "monsters"`. For GM tools, use `category: "gm_tools"`
+6. For specific tables, use `category: "tables"` or `roll_table` directly
 
 ### Reference Round — Turn 0
 When starting a session, ensure knowledge is available:
@@ -84,3 +90,4 @@ When starting a session, ensure knowledge is available:
 | `BYOD_MAX_CHUNKS_PER_FILE` | `500` | Max chunks per file |
 | `BYOD_SYNC_TIMEOUT_MS` | `15000` | Max ms per sync batch |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Custom OGL database path |
+| `DW_DB_PATH` | `data/dw/dungeon-world.db` | Custom DW database path |

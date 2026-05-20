@@ -1,6 +1,6 @@
 # 2D6 MCP Server — Agent Instructions
 
-You have access to a Model Context Protocol (MCP) server called **2d6mcp**. It provides a mechanical engine, dice roller, and rules reference for generic 2d6-based sci-fi tabletop RPGs. Use system-agnostic language: "2d6 sci-fi RPG", "starship", "star system", "characteristic". Never use third-party trademarked terms.
+You have access to a Model Context Protocol (MCP) server called **2d6mcp**. It provides a mechanical engine, dice roller, and rules reference for 2d6-based tabletop RPGs, supporting both sci-fi (OGL/Cepheus Engine) and fantasy (Dungeon World) games. Use system-agnostic language: "2d6 sci-fi RPG", "2d6 fantasy RPG", "starship", "star system", "characteristic", "move", "front", "monster". Never use third-party trademarked terms.
 
 ## Available Tools
 
@@ -10,6 +10,7 @@ You have access to a Model Context Protocol (MCP) server called **2d6mcp**. It p
 | `roll_custom` | Roll any dice notation (`3d6`, `1d20`, `4d6+2`, `d66`). |
 | `roll_table` | Roll on a named table (Reaction, Encounters, Patrons) from the OGL database. |
 | `query_ogl_rules` | Search OGL rules database. Use `category` for targeted results: skills, careers, equipment, tables, combat, starships, worlds, categories, list_tables. |
+| `query_dw_rules` | Search DW rules database. Use `category` for targeted results: moves, classes, spells, equipment, monsters, gm_tools, rules. |
 | `query_local_byod` | Full-text search across your locally ingested files. Requires BYOD consent. |
 | `parse_character` | Parse a character sheet file into structured data (UPP, characteristics, skills, name, career). |
 | `sync_byod` | Index/re-index files from BYOD directory. Runs in time-budgeted batches. Returns `complete: false` if more remain — re-call. |
@@ -22,7 +23,7 @@ You have access to a Model Context Protocol (MCP) server called **2d6mcp**. It p
 - **Task resolution**: 2d6 + modifier vs. target number (typically 8+). Effect margin = total - target. Margin 0+ = success, 6+ = exceptional success.
 - **d66 tables**: Two d6s as tens and ones (11–66). Use `roll_table` with `"dice_type": "d66"`.
 - **Difficulty**: Modifiers range from +6 (simple) to -6 (formidable). Or adjust target: easy = 6+, average = 8+, difficult = 10+, very difficult = 12+, formidable = 14+.
-- **OGL first, BYOD second**: The OGL database covers core rules. Fall back to BYOD for supplements and house rules.
+- **OGL for sci-fi, DW for fantasy, BYOD for personal content**: The OGL database covers sci-fi core rules. The DW database covers fantasy rules (moves, classes, spells, monsters, GM tools). Fall back to BYOD for supplements and house rules.
 - **BYOD requires consent**: Set `AGREE_BYOD_USE="true"` and configure `BYOD_PATH`. Files must be synced before searchable.
 
 ## Key Workflows
@@ -33,9 +34,10 @@ You have access to a Model Context Protocol (MCP) server called **2d6mcp**. It p
 3. Report total, individual dice, effect margin, and narrative outcome
 
 ### Rules Lookup
-1. Call `query_ogl_rules("search term", category: "category_name")`
-2. Narrow with category if results are broad
-3. For tables, use `roll_table("Table Name")` or `query_ogl_rules("", category: "tables")`
+1. Call `query_ogl_rules("search term", category: "category_name")` for sci-fi content
+2. Call `query_dw_rules("search term", category: "category_name")` for fantasy content
+3. Narrow with category if results are broad
+4. For tables, use `roll_table("Table Name")` or `query_ogl_rules("", category: "tables")`
 
 ### Character Creation
 1. Roll six characteristics: `roll_custom("2d6")` × 6
@@ -60,3 +62,4 @@ You have access to a Model Context Protocol (MCP) server called **2d6mcp**. It p
 | `BYOD_SYNC_TIMEOUT_MS` | `15000` | Max ms per sync batch |
 | `BYOD_MAX_FILES` | `2000` | Max files per sync |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Custom OGL database path |
+| `DW_DB_PATH` | `data/dw/dungeon-world.db` | Custom DW database path |

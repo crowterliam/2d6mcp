@@ -28,6 +28,19 @@ import {
   listOglCategories,
   listOglTables,
 } from "./ogl/queries.js";
+import { ensureDwSchema, closeDwDatabase } from "./dw/database.js";
+import { populateDwDatabase } from "./dw/populate.js";
+import {
+  searchDwRules,
+  searchDwMoves,
+  searchDwClasses,
+  searchDwSpells,
+  searchDwEquipment,
+  searchDwMonsters,
+  searchDwGmTools,
+  listDwMoveCategories,
+  listDwMonsterSettings,
+} from "./dw/queries.js";
 import { checkByodConsent, getByodPath } from "./byod/gate.js";
 import { discoverFiles, ingestFile, type IngestedChunk, type IngestedFile } from "./byod/ingest.js";
 import { getByodDatabase, indexChunks, rebuildByodFts, searchByodIndex, closeByodDatabase, getStoredFileHash, markFileFailed, FAILED_HASH, clearByodDatabase, listByodFiles, getFileChunks } from "./byod/search.js";
@@ -405,6 +418,17 @@ function ensureOglDb(): { dbPath: string; initialized: boolean } {
   return { dbPath: oglDbPath, initialized: false };
 }
 
+function ensureDwDb(): { dbPath: string; initialized: boolean } {
+  const { dwDbPath } = loadConfig();
+
+  if (!existsSync(dwDbPath)) {
+    populateDwDatabase(dwDbPath);
+    return { dbPath: dwDbPath, initialized: true };
+  }
+
+  return { dbPath: dwDbPath, initialized: false };
+}
+
 export async function startServer(): Promise<void> {
   const version = getServerVersion();
   const server = new Server(
@@ -580,6 +604,25 @@ export async function startServer(): Promise<void> {
             },
           },
           required: ["relative_path"],
+        },
+      },
+      {
+        name: "query_dw_rules",
+        description:
+          "Search the Dungeon World rules database for moves, classes, spells, equipment, monsters, or GM tools. DW data is derived from Dungeon World by Sage LaTorra and Adam Koebel (CC-BY-3.0), converted to Markdown by agude. See data/dw/ATTRIBUTION for full attribution.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            search_term: {
+              type: "string",
+              description: "Search term (e.g., 'hack and slash', 'wizard', 'goblin', 'front', 'armor')",
+            },
+            category: {
+              type: "string",
+              description: "Optional category filter: 'moves', 'classes', 'spells', 'equipment', 'monsters', 'gm_tools', 'rules'",
+            },
+          },
+          required: ["search_term"],
         },
       },
     ];
@@ -969,6 +1012,57 @@ export async function startServer(): Promise<void> {
         };
       }
 
+      case "query_dw_rules": {
+        const searchTerm =
+          typeof args?.search_term === "string" ? args.search_term : "";
+        const category =
+          typeof args?.category === "string" ? args.category : "";
+
+        const { dbPath } = ensureDwDb();
+        const db = ensureDwSchema(dbPath);
+
+        const response: Record<string, unknown> = {};
+
+        switch (category.toLowerCase()) {
+          case "moves":
+            response.moves = searchDwMoves(db, searchTerm);
+            response.move_categories = listDwMoveCategories(db);
+            break;
+          case "classes":
+            response.classes = searchDwClasses(db, searchTerm);
+            break;
+          case "spells":
+            response.spells = searchDwSpells(db, searchTerm);
+            break;
+          case "equipment":
+            response.equipment = searchDwEquipment(db, searchTerm);
+            break;
+          case "monsters":
+            response.monsters = searchDwMonsters(db, searchTerm);
+            response.monster_settings = listDwMonsterSettings(db);
+            break;
+          case "gm_tools":
+          case "gm":
+            response.gm_tools = searchDwGmTools(db, searchTerm);
+            break;
+          case "rules":
+            response.rules = searchDwRules(db, searchTerm);
+            break;
+          default:
+            response.moves = searchDwMoves(db, searchTerm);
+            response.classes = searchDwClasses(db, searchTerm);
+            response.spells = searchDwSpells(db, searchTerm);
+            response.equipment = searchDwEquipment(db, searchTerm);
+            response.monsters = searchDwMonsters(db, searchTerm);
+            response.gm_tools = searchDwGmTools(db, searchTerm);
+            break;
+        }
+
+        return {
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+        };
+      }
+
       default:
         throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
     }
@@ -977,6 +1071,7 @@ export async function startServer(): Promise<void> {
   const transport = new StdioServerTransport();
 
   ensureOglDb();
+  ensureDwDb();
 
   const config = loadConfig();
   const consent = checkByodConsent();
