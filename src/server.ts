@@ -45,6 +45,16 @@ import { checkByodConsent, getByodPath } from "./byod/gate.js";
 import { discoverFiles, ingestFile, type IngestedChunk, type IngestedFile } from "./byod/ingest.js";
 import { getByodDatabase, indexChunks, rebuildByodFts, searchByodIndex, closeByodDatabase, getStoredFileHash, markFileFailed, FAILED_HASH, clearByodDatabase, listByodFiles, getFileChunks } from "./byod/search.js";
 import { parseCharacterText, readCharacterFile, type CharacterStats } from "./character/parser.js";
+import {
+  listWebhooks,
+  getWebhook,
+  addWebhook,
+  removeWebhook,
+  resolveWebhooks,
+  parseRoutingContext,
+  type WebhookEntry,
+} from "./discord/config.js";
+import { sendDiscordMessage, colorFromName, type DiscordMessage, type DiscordEmbed, type PostResult } from "./discord/webhook.js";
 
 function getServerVersion(): string {
   try {
@@ -625,6 +635,167 @@ export async function startServer(): Promise<void> {
           required: ["search_term"],
         },
       },
+      {
+        name: "discord_post",
+        description:
+          "Post a message to one or more Discord webhooks. Supports rich embeds with fields, colours, and footers. Uses smart routing: provide context tags (e.g. 'gm', 'combat', 'narrative') to automatically select the best webhook(s), or explicitly name which webhooks to post to.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            content: {
+              type: "string",
+              description: "Plain text message content (max 2000 chars)",
+            },
+            webhook_names: {
+              type: "array",
+              items: { type: "string" },
+              description: "Explicit webhook names to post to. If provided, overrides smart routing.",
+            },
+            context: {
+              type: "object",
+              description: "Context for smart webhook routing. The system matches tags to find the best webhook(s).",
+              properties: {
+                channel_type: {
+                  type: "string",
+                  description: "Comma-separated channel types: 'gm', 'player', 'ooc', 'starship'",
+                },
+                visibility: {
+                  type: "string",
+                  description: "Comma-separated visibility: 'public', 'private', 'secret'",
+                },
+                game_context: {
+                  type: "string",
+                  description: "Comma-separated game contexts: 'combat', 'narrative', 'exploration', 'trade', 'social', 'stealth', 'magic', 'dice'",
+                },
+                character: {
+                  type: "string",
+                  description: "Character name(s) involved (comma-separated)",
+                },
+                location: {
+                  type: "string",
+                  description: "In-game location(s) (comma-separated)",
+                },
+              },
+            },
+            username: {
+              type: "string",
+              description: "Override the webhook's displayed username for this message",
+            },
+            avatar_url: {
+              type: "string",
+              description: "Override the webhook's avatar for this message",
+            },
+            embeds: {
+              type: "array",
+              description: "Rich embed objects (max 10). Each embed can have title, description, color, fields, footer.",
+              items: {
+                type: "object",
+                properties: {
+                  title: { type: "string", description: "Embed title (max 256 chars)" },
+                  description: { type: "string", description: "Embed description (max 4096 chars)" },
+                  color: {
+                    type: "string",
+                    description: "Embed colour: name ('red', 'gold', 'teal') or hex ('#ff0000')",
+                  },
+                  fields: {
+                    type: "array",
+                    description: "Embed fields (max 25)",
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: { type: "string" },
+                        value: { type: "string" },
+                        inline: { type: "boolean" },
+                      },
+                      required: ["name", "value"],
+                    },
+                  },
+                  footer: {
+                    type: "object",
+                    properties: {
+                      text: { type: "string" },
+                      icon_url: { type: "string" },
+                    },
+                    required: ["text"],
+                  },
+                },
+              },
+            },
+            tts: {
+              type: "boolean",
+              description: "Use text-to-speech for this message (default: false)",
+              default: false,
+            },
+          },
+        },
+      },
+      {
+        name: "discord_add_webhook",
+        description:
+          "Add a Discord webhook to the stored configuration. Webhooks are saved to .mcp-discord-webhooks.json (gitignored). Each webhook needs a unique name, a Discord webhook URL, and optional tags for smart routing.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "Unique name for this webhook (e.g., 'gm-tower', 'main-table', 'ooc-channel')",
+            },
+            url: {
+              type: "string",
+              description: "Discord webhook URL (https://discord.com/api/webhooks/...)",
+            },
+            tags: {
+              type: "array",
+              items: { type: "string" },
+              description: "Tags for smart routing: 'gm', 'player', 'public', 'private', 'combat', 'narrative', 'ooc', 'dice', 'starship', 'exploration', 'trade', 'social', 'stealth', 'magic'",
+            },
+            description: {
+              type: "string",
+              description: "Human-readable description of this webhook's purpose",
+            },
+          },
+          required: ["name", "url"],
+        },
+      },
+      {
+        name: "discord_remove_webhook",
+        description:
+          "Remove a stored Discord webhook by name.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "Name of the webhook to remove",
+            },
+          },
+          required: ["name"],
+        },
+      },
+      {
+        name: "discord_list_webhooks",
+        description:
+          "List all configured Discord webhooks with their names, tags, and descriptions. URLs are partially masked for security.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+        },
+      },
+      {
+        name: "discord_test_webhook",
+        description:
+          "Send a test message to a specific Discord webhook to verify connectivity. Posts a simple '2d6mcp connection test' message.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "Name of the webhook to test",
+            },
+          },
+          required: ["name"],
+        },
+      },
     ];
 
     return { tools };
@@ -1060,6 +1231,227 @@ export async function startServer(): Promise<void> {
 
         return {
           content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+        };
+      }
+
+      case "discord_post": {
+        const content = typeof args?.content === "string" ? args.content : undefined;
+        const webhookNames = Array.isArray(args?.webhook_names)
+          ? (args.webhook_names as string[])
+          : undefined;
+        const contextObj =
+          args?.context && typeof args.context === "object"
+            ? (args.context as Record<string, string>)
+            : {};
+        const username = typeof args?.username === "string" ? args.username : undefined;
+        const avatarUrl = typeof args?.avatar_url === "string" ? args.avatar_url : undefined;
+        const tts = args?.tts === true;
+        const rawEmbeds = Array.isArray(args?.embeds) ? (args.embeds as Record<string, unknown>[]) : undefined;
+
+        const contextTags = parseRoutingContext(contextObj);
+        const { webhooks, routing } = resolveWebhooks(contextTags, webhookNames);
+
+        if (webhooks.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(
+                  {
+                    success: false,
+                    routing,
+                    results: [],
+                    error: "No webhooks matched. Use discord_add_webhook to configure webhooks, or provide explicit webhook_names.",
+                  },
+                  null,
+                  2
+                ),
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        const embeds: DiscordEmbed[] | undefined = rawEmbeds?.map((e) => {
+          const embed: DiscordEmbed = {};
+          if (typeof e.title === "string") embed.title = e.title;
+          if (typeof e.description === "string") embed.description = e.description;
+          if (typeof e.color === "string") embed.color = colorFromName(e.color);
+          if (Array.isArray(e.fields)) {
+            embed.fields = (e.fields as Record<string, unknown>[]).map((f) => ({
+              name: String(f.name ?? ""),
+              value: String(f.value ?? ""),
+              ...(f.inline === true ? { inline: true } : {}),
+            }));
+          }
+          if (e.footer && typeof e.footer === "object") {
+            const footer = e.footer as Record<string, unknown>;
+            embed.footer = { text: String(footer.text ?? "") };
+          }
+          return embed;
+        });
+
+        const message: DiscordMessage = {
+          ...(content ? { content } : {}),
+          ...(username ? { username } : {}),
+          ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
+          ...(embeds && embeds.length > 0 ? { embeds } : {}),
+          ...(tts ? { tts: true } : {}),
+        };
+
+        if (!message.content && (!message.embeds || message.embeds.length === 0)) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(
+                  { success: false, error: "Message must have content or at least one embed." },
+                  null,
+                  2
+                ),
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        const results: PostResult[] = await Promise.all(
+          webhooks.map((w) => sendDiscordMessage(w.url, w.name, { ...message }))
+        );
+
+        const allSuccess = results.every((r) => r.success);
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  success: allSuccess,
+                  routing,
+                  results,
+                  posted_to: results.map((r) => r.webhook_name),
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+
+      case "discord_add_webhook": {
+        const name = typeof args?.name === "string" ? args.name : "";
+        const url = typeof args?.url === "string" ? args.url : "";
+        const tags = Array.isArray(args?.tags) ? (args.tags as string[]) : [];
+        const description = typeof args?.description === "string" ? args.description : "";
+
+        if (!name) {
+          return {
+            content: [{ type: "text", text: "Error: name is required" }],
+            isError: true,
+          };
+        }
+        if (!url) {
+          return {
+            content: [{ type: "text", text: "Error: url is required" }],
+            isError: true,
+          };
+        }
+        if (!url.startsWith("https://discord.com/api/webhooks/") && !url.startsWith("https://discordapp.com/api/webhooks/")) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: 'Error: URL must be a valid Discord webhook URL (https://discord.com/api/webhooks/... or https://discordapp.com/api/webhooks/...)',
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        const entry: WebhookEntry = { name, url, tags, description };
+        const result = addWebhook(entry);
+        return {
+          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          isError: !result.success,
+        };
+      }
+
+      case "discord_remove_webhook": {
+        const name = typeof args?.name === "string" ? args.name : "";
+        if (!name) {
+          return {
+            content: [{ type: "text", text: "Error: name is required" }],
+            isError: true,
+          };
+        }
+        const result = removeWebhook(name);
+        return {
+          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          isError: !result.success,
+        };
+      }
+
+      case "discord_list_webhooks": {
+        const webhooks = listWebhooks();
+        const masked = webhooks.map((w) => ({
+          name: w.name,
+          url: w.url.replace(/\/[^/]+$/, "/***masked***"),
+          tags: w.tags,
+          description: w.description,
+        }));
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                { total: masked.length, webhooks: masked },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+
+      case "discord_test_webhook": {
+        const name = typeof args?.name === "string" ? args.name : "";
+        if (!name) {
+          return {
+            content: [{ type: "text", text: "Error: name is required" }],
+            isError: true,
+          };
+        }
+
+        const webhook = getWebhook(name);
+        if (!webhook) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Webhook "${name}" not found. Use discord_list_webhooks to see available webhooks.`,
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        const result = await sendDiscordMessage(webhook.url, webhook.name, {
+          content: "2d6mcp connection test — webhook is working!",
+          embeds: [
+            {
+              title: "Connection Test",
+              description: "If you see this message, your webhook is correctly configured.",
+              color: 0x2d6,
+              footer: { text: "2d6mcp" },
+            },
+          ],
+        });
+
+        return {
+          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          isError: !result.success,
         };
       }
 

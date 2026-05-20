@@ -6,4 +6,5 @@ dist/
 *.db-shm
 .env
 .mcp-byod-consent-accepted
+.mcp-discord-webhooks.json
 .reference
