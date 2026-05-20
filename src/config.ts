@@ -56,7 +56,7 @@ export function loadConfig(): Config {
 
   const rawByodPath = process.env.BYOD_PATH || null;
   const byodPath = rawByodPath
-    ? (isAbsolute(rawByodPath) ? rawByodPath : resolve(PROJECT_ROOT, rawByodPath))
+    ? (isAbsolute(rawByodPath) ? rawByodPath : resolve(process.cwd(), rawByodPath))
     : null;
 
   const byodChunkSize = parseIntEnv("BYOD_CHUNK_SIZE", DEFAULT_CHUNK_SIZE, 500, 50000);
