@@ -98,6 +98,9 @@ src/
     search.ts       # FTS5 search against BYOD index
   character/
     parser.ts       # UPP extraction, stat parsing
+  discord/
+    config.ts       # Webhook storage, smart routing, tag matching
+    webhook.ts      # HTTP posting, embed validation, colour helpers
 data/
   ogl/
     cepheus.db      # Bundled OGL SQLite database (Cepheus Engine SRD)
@@ -132,6 +135,11 @@ MCP_SETUP.md         # User guide for connecting to AI harnesses
 | `clear_byod` | Delete BYOD index to start fresh |
 | `list_byod_files` | List indexed files with status and chunk counts |
 | `inspect_byod_file` | Show chunk structure for a specific file |
+| `discord_post` | Post messages to Discord webhooks with smart routing based on context tags |
+| `discord_add_webhook` | Add a Discord webhook with name, URL, tags, and description |
+| `discord_remove_webhook` | Remove a stored Discord webhook by name |
+| `discord_list_webhooks` | List all configured webhooks (URLs partially masked) |
+| `discord_test_webhook` | Send a test message to verify webhook connectivity |
 
 ## Dual-License Architecture
 
