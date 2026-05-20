@@ -16,6 +16,7 @@ import {
   listDwMonsterSettings,
 } from "../../src/dw/queries.js";
 import { ensureDwSchema, closeDwDatabase } from "../../src/dw/database.js";
+import { populateDwDatabase } from "../../src/dw/populate.js";
 
 const config = loadConfig();
 const BUNDLED_DB = config.dwDbPath;
@@ -25,7 +26,7 @@ describe("DW queries against bundled database", () => {
 
   beforeAll(() => {
     if (!existsSync(BUNDLED_DB)) {
-      throw new Error(`Bundled DW database not found at ${BUNDLED_DB}. Run 'npm run populate-dw' first.`);
+      populateDwDatabase(BUNDLED_DB);
     }
     db = ensureDwSchema(BUNDLED_DB);
   });
