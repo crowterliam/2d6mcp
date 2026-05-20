@@ -13,7 +13,10 @@
     "dev": "tsc --watch",
     "setup": "node dist/cli.js setup",
     "populate-ogl": "node dist/cli.js populate-ogl",
-    "populate-dw": "node dist/cli.js populate-dw"
+    "populate-dw": "node dist/cli.js populate-dw",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "license": "AGPL-3.0-only",
   "author": "Jupiter Industries <liam@evaunit.one> (https://jupiter.industries)",
@@ -35,6 +38,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.14.0",
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "vitest": "^4.1.7"
   }
 }
