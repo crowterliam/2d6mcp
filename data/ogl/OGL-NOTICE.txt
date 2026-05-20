@@ -3,6 +3,9 @@ OPEN GAME CONTENT — NOTICE OF LICENSE
 All files in this directory are designated as Open Game Content under the
 Open Game License v1.0a and may only be Used under its terms.
 
+A copy of the Open Game License v1.0a is included in this directory as
+OGL-1.0a.txt. It is also available in the repository root as OGL-1.0a.txt.
+
 This Open Game Content is derived from:
 
   - Cepheus Engine System Reference Document, Copyright 2016, Samardan Press;
@@ -10,8 +13,6 @@ This Open Game Content is derived from:
   - Cepheus Engine Core SRD, Copyright 2022, Moon Toad Publishing;
     Authors Jason Kemp, Paul Elliott, Ian Stead
   - Traveller System Reference Document, Copyright 2008, Mongoose Publishing
-
-The full OGL text is available at: OGL-1.0a.txt in the repository root.
 
 Product Identity: "Cepheus Engine", "Samardan Press", "Moon Toad Publishing",
 "Mongoose Publishing", and "Traveller" are trademarks of their respective owners

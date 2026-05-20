@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
+//
+// OGL SCOPE NOTICE:
+// This file manages the SQLite database that stores Open Game Content. The code
+// is AGPL-3.0-only. The database it manages is governed by the Open Game License
+// v1.0a and its output in data/ogl/ is designated as Open Game Content.
 
 import Database from "better-sqlite3";
 import { existsSync, mkdirSync } from "node:fs";

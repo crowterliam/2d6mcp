@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
+//
+// OGL SCOPE NOTICE:
+// This file contains code that queries Open Game Content from the OGL database.
+// The code itself is AGPL-3.0-only. The data it retrieves is governed by the
+// Open Game License v1.0a.
 
 import Database from "better-sqlite3";
 
