@@ -4,6 +4,7 @@
 import Database from "better-sqlite3";
 import { existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { createHash } from "node:crypto";
 import { PROJECT_ROOT } from "../config.js";
 
 function sanitizeFts5Query(term: string): string {
@@ -24,26 +25,34 @@ function sanitizeFts5Query(term: string): string {
   return cleaned.trim();
 }
 
-const BYOD_DB_NAME = "byod_index.db";
+const BYOD_DB_PREFIX = "byod_ws_";
+const BYOD_DB_SUFFIX = ".db";
 
-function getByodDbPath(): string {
+function hashByodPath(byodPath: string): string {
+  return createHash("sha256").update(byodPath).digest("hex").slice(0, 16);
+}
+
+export function getByodDbPath(byodPath: string): string {
   const byodDir = resolve(PROJECT_ROOT, "data", "byod");
   if (!existsSync(byodDir)) {
     mkdirSync(byodDir, { recursive: true });
   }
-  return resolve(byodDir, BYOD_DB_NAME);
+  const slug = hashByodPath(byodPath);
+  return resolve(byodDir, `${BYOD_DB_PREFIX}${slug}${BYOD_DB_SUFFIX}`);
 }
 
-let byodDb: Database.Database | null = null;
+const workspaceDbs = new Map<string, Database.Database>();
 
-export function getByodDatabase(): Database.Database {
-  if (byodDb) return byodDb;
+export function getByodDatabase(byodPath: string): Database.Database {
+  const dbPath = getByodDbPath(byodPath);
 
-  const dbPath = getByodDbPath();
-  byodDb = new Database(dbPath);
-  byodDb.pragma("journal_mode = WAL");
+  const existing = workspaceDbs.get(dbPath);
+  if (existing) return existing;
 
-  byodDb.exec(`
+  const db = new Database(dbPath);
+  db.pragma("journal_mode = WAL");
+
+  db.exec(`
     CREATE TABLE IF NOT EXISTS byod_files (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       relative_path TEXT NOT NULL UNIQUE,
@@ -54,14 +63,17 @@ export function getByodDatabase(): Database.Database {
     );
   `);
 
-  const cols = byodDb
+  const cols = db
     .prepare("PRAGMA table_info(byod_files)")
     .all() as { name: string }[];
   if (!cols.some((c) => c.name === "file_hash")) {
-    byodDb.exec("ALTER TABLE byod_files ADD COLUMN file_hash TEXT;");
+    db.exec("ALTER TABLE byod_files ADD COLUMN file_hash TEXT;");
+  }
+  if (!cols.some((c) => c.name === "content_hash")) {
+    db.exec("ALTER TABLE byod_files ADD COLUMN content_hash TEXT;");
   }
 
-  byodDb.exec(`
+  db.exec(`
     CREATE VIRTUAL TABLE IF NOT EXISTS byod_fts USING fts5(
       title,
       content,
@@ -82,7 +94,8 @@ export function getByodDatabase(): Database.Database {
     );
   `);
 
-  return byodDb;
+  workspaceDbs.set(dbPath, db);
+  return db;
 }
 
 export function indexChunks(
@@ -92,11 +105,12 @@ export function indexChunks(
   ext: string,
   size: number,
   fileHash: string,
+  contentHash: string | null,
   chunks: { title: string; content: string; chunkIndex: number }[]
 ): void {
   const insertFile = db.prepare(`
-    INSERT OR REPLACE INTO byod_files (relative_path, file_name, ext, size, file_hash, ingested_at)
-    VALUES (?, ?, ?, ?, ?, datetime('now'))
+    INSERT OR REPLACE INTO byod_files (relative_path, file_name, ext, size, file_hash, content_hash, ingested_at)
+    VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
   `);
 
   const existing = db
@@ -110,7 +124,7 @@ export function indexChunks(
     db.prepare("DELETE FROM byod_chunks WHERE file_id = ?").run(existing.id);
   }
 
-  const result = insertFile.run(filePath, fileName, ext, size, fileHash);
+  const result = insertFile.run(filePath, fileName, ext, size, fileHash, contentHash);
   const fileId = Number(result.lastInsertRowid);
 
   const insertChunk = db.prepare(`
@@ -260,6 +274,62 @@ export function getFileChunks(
   return { file, chunks };
 }
 
+export function getChunkContent(
+  db: Database.Database,
+  relativePath: string,
+  chunkIndex: number
+): { file: ByodFileEntry; chunk: { title: string; content: string; chunkIndex: number } } | null {
+  const fileRow = db.prepare(`
+    SELECT f.file_name, f.relative_path, f.ext, f.size, f.file_hash, f.ingested_at,
+           COUNT(c.id) AS chunks
+    FROM byod_files f
+    LEFT JOIN byod_chunks c ON c.file_id = f.id
+    WHERE f.relative_path = ?
+    GROUP BY f.id
+  `).get(relativePath) as {
+    file_name: string;
+    relative_path: string;
+    ext: string;
+    size: number;
+    file_hash: string;
+    ingested_at: string;
+    chunks: number;
+  } | undefined;
+
+  if (!fileRow) return null;
+
+  const file: ByodFileEntry = {
+    fileName: fileRow.file_name,
+    relativePath: fileRow.relative_path,
+    ext: fileRow.ext,
+    size: fileRow.size,
+    chunks: fileRow.chunks,
+    ingestedAt: fileRow.ingested_at,
+    status: fileRow.file_hash === FAILED_HASH ? "failed" : "indexed",
+  };
+
+  const chunkRow = db.prepare(`
+    SELECT title, content, chunk_index
+    FROM byod_chunks
+    WHERE file_path = ? AND chunk_index = ?
+  `).get(relativePath, chunkIndex) as {
+    title: string;
+    content: string;
+    chunk_index: number;
+  } | undefined;
+
+  if (!chunkRow) return null;
+
+  return {
+    file,
+    chunk: {
+      title: chunkRow.title,
+      content: chunkRow.content,
+      chunkIndex: chunkRow.chunk_index,
+    },
+  };
+}
+
 export interface SearchResult {
   title: string;
   snippet: string;
@@ -333,17 +403,27 @@ export function searchByodIndex(
   return results;
 }
 
-export function closeByodDatabase(): void {
-  if (byodDb) {
-    byodDb.close();
-    byodDb = null;
+export function closeByodDatabase(byodPath?: string): void {
+  if (byodPath) {
+    const dbPath = getByodDbPath(byodPath);
+    const db = workspaceDbs.get(dbPath);
+    if (db) {
+      db.close();
+      workspaceDbs.delete(dbPath);
+    }
+    return;
   }
+
+  for (const [, db] of workspaceDbs) {
+    db.close();
+  }
+  workspaceDbs.clear();
 }
 
-export function clearByodDatabase(): { deleted: boolean; message: string } {
-  closeByodDatabase();
+export function clearByodDatabase(byodPath: string): { deleted: boolean; message: string } {
+  closeByodDatabase(byodPath);
 
-  const dbPath = resolve(PROJECT_ROOT, "data", "byod", BYOD_DB_NAME);
+  const dbPath = getByodDbPath(byodPath);
 
   if (!existsSync(dbPath)) {
     return { deleted: false, message: "BYOD database does not exist (already clear)." };

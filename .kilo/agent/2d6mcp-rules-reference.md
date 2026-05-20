@@ -70,7 +70,8 @@ query_local_byod(search_term)
 Searches your personally ingested PDFs, text files, and markdown files. Requires BYOD consent and a configured `BYOD_PATH`. Files must be synced with `sync_byod` first.
 
 ### Search Details
-- Returns matching chunks with highlighted snippets
+- Returns matching chunks with highlighted snippets (64-character highlights)
+- Use `get_byod_chunk(relative_path, chunk_index)` to retrieve the full chunk text (up to 8KB) for results that matter
 - Multi-word queries try AND first, then OR for broad matching
 - Use prefix searches with `*` (e.g., `combat*` matches combat, combative, etc.)
 - Maximum 20 results returned per query
@@ -82,6 +83,7 @@ Searches your personally ingested PDFs, text files, and markdown files. Requires
 3. **Try categories**: If a broad search returns too much, narrow with a `category`
 4. **Fall back to BYOD**: If OGL doesn't have what you need, try `query_local_byod`
 5. **Combine searches**: For a complete picture, query both OGL and BYOD
+6. **Get full content**: Use `get_byod_chunk` to retrieve complete chunk text for results that matter
 
 ## Content Coverage
 

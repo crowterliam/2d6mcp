@@ -17,6 +17,13 @@ You have access to the **2d6mcp** MCP server for 2d6-based tabletop RPGs, suppor
 | `clear_byod` | Delete BYOD index to start fresh. |
 | `list_byod_files` | List indexed files with status and chunk counts. |
 | `inspect_byod_file` | Show chunk structure for a specific file. |
+| `sync_file` | Index a single file by relative path. |
+| `get_byod_chunk` | Retrieve full chunk content by file path + chunk index. |
+| `discord_post` | Post messages to Discord webhooks with smart routing. |
+| `discord_add_webhook` | Add a Discord webhook. |
+| `discord_remove_webhook` | Remove a stored Discord webhook. |
+| `discord_list_webhooks` | List configured webhooks. |
+| `discord_test_webhook` | Test webhook connectivity. |
 
 ## Core Mechanics
 
@@ -35,7 +42,7 @@ You have access to the **2d6mcp** MCP server for 2d6-based tabletop RPGs, suppor
 
 **Character creation**: Six `roll_custom("2d6")` for characteristics. `query_ogl_rules("name", category: "careers")` for careers. `parse_character(path)` for existing sheets.
 
-**BYOD**: `list_byod_files` to check indexed content → `sync_byod` (repeat until `complete: true`) → `query_local_byod("term")` to search. Inspect with `inspect_byod_file(path)`. Reset with `clear_byod`.
+**BYOD**: `list_byod_files` to check indexed content → `sync_byod` (repeat until `complete: true`) → `query_local_byod("term")` to search → `get_byod_chunk(file_path, chunk_index)` for full content from snippets. Single file: `sync_file(relative_path)`. Inspect with `inspect_byod_file(path)`. Reset with `clear_byod`.
 
 ## Configuration
 
@@ -45,4 +52,5 @@ You have access to the **2d6mcp** MCP server for 2d6-based tabletop RPGs, suppor
 | `BYOD_PATH` | — | RPG files directory |
 | `BYOD_CHUNK_SIZE` | `8000` | Chars per chunk |
 | `BYOD_SYNC_TIMEOUT_MS` | `15000` | Max ms per sync batch |
+| `BYOD_CONTENT_CACHE_PATH` | — | Shared content cache (deduplicates across workspaces) |
 | `BYOD_MAX_FILES` | `2000` | Max files per sync |

@@ -60,6 +60,13 @@ npm run start
 | `clear_byod` | Delete the BYOD index to start fresh |
 | `list_byod_files` | List all indexed files with chunk counts and status |
 | `inspect_byod_file` | Show chunk structure for a specific indexed file |
+| `sync_file` | Index a single file by relative path (for large files that timeout in bulk sync) |
+| `get_byod_chunk` | Retrieve full chunk content by file path + chunk index |
+| `discord_post` | Post messages to Discord webhooks with smart routing based on context tags |
+| `discord_add_webhook` | Add a Discord webhook with name, URL, tags, and description |
+| `discord_remove_webhook` | Remove a stored Discord webhook by name |
+| `discord_list_webhooks` | List all configured webhooks (URLs partially masked) |
+| `discord_test_webhook` | Send a test message to verify webhook connectivity |
 
 ## Agent Modes
 
@@ -83,7 +90,7 @@ Works out of the box with the bundled Cepheus Engine SRD database and Dungeon Wo
 
 ### Mode B: BYOD Engine
 
-Enable by setting `AGREE_BYOD_USE="true"` or running `npm run setup`. Requires a `BYOD_PATH` pointing to a directory of PDF/text/markdown files. Ingested content is indexed into a local SQLite FTS5 database and searchable via `query_local_byod`.
+Enable by setting `AGREE_BYOD_USE="true"` or running `npm run setup`. Requires a `BYOD_PATH` pointing to a directory of PDF/text/markdown files. Ingested content is indexed into a local SQLite FTS5 database and searchable via `query_local_byod`. Each `BYOD_PATH` gets its own isolated database, with a shared content cache that deduplicates identical files across workspaces.
 
 **Disclaimer:** By enabling local file ingestion, you confirm that you are the legal owner of the imported files or hold a valid license to use them. The developers of this software do not condone piracy or the unauthorized distribution of copyrighted tabletop roleplaying materials.
 
@@ -98,6 +105,7 @@ Enable by setting `AGREE_BYOD_USE="true"` or running `npm run setup`. Requires a
 | `BYOD_MAX_FILES` | `2000` | Maximum files to process per sync |
 | `BYOD_MAX_CHUNKS_PER_FILE` | `500` | Maximum chunks from any single file |
 | `BYOD_SYNC_TIMEOUT_MS` | `15000` | Milliseconds per sync batch (1000–300000) |
+| `BYOD_CONTENT_CACHE_PATH` | `data/byod/content_cache.db` | Path to shared content cache database |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Path to custom OGL SQLite database |
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | Path to custom DW SQLite database |
 
@@ -136,6 +144,7 @@ src/
     gate.ts         Consent gate check
     ingest.ts       File walking, text/markdown parsing
     search.ts       FTS5 search against BYOD index
+    content-cache.ts Content-addressable chunk cache (shared across workspaces)
   character/
     parser.ts       UPP extraction, stat parsing
 data/

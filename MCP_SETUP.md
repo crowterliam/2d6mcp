@@ -203,6 +203,7 @@ All BYOD features require consent and a file path. The server also supports tuni
 | `BYOD_MAX_FILES` | `2000` | Maximum files processed per sync call |
 | `BYOD_MAX_CHUNKS_PER_FILE` | `500` | Maximum chunks produced from a single file |
 | `BYOD_SYNC_TIMEOUT_MS` | `15000` | Time budget per `sync_byod` call in milliseconds (1000–300000) |
+| `BYOD_CONTENT_CACHE_PATH` | `data/byod/content_cache.db` | Path to shared content cache database |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Path to a custom OGL SQLite database |
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | Path to a custom DW SQLite database |
 
@@ -244,3 +245,5 @@ To test BYOD (if configured):
 **"Table not found" on `roll_table`**: Use `query_ogl_rules("", category: "list_tables")` to see all available tables.
 
 **Server crashes with "Cannot find module"**: Run `npm install` to ensure all dependencies are present, then `npm run build`.
+
+**Workspace isolation**: Each `BYOD_PATH` gets its own isolated database. If you change `BYOD_PATH` to a different directory, a separate index is created. The shared content cache (`BYOD_CONTENT_CACHE_PATH`) deduplicates identical files across workspaces, so changing `BYOD_PATH` does not re-ingest files that were already processed.
