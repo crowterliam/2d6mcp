@@ -55,9 +55,20 @@ export function loadConfig(): Config {
   const byodConsented = envAgreed || tokenExists;
 
   const rawByodPath = process.env.BYOD_PATH || null;
-  const byodPath = rawByodPath
-    ? (isAbsolute(rawByodPath) ? rawByodPath : resolve(process.cwd(), rawByodPath))
-    : null;
+  let byodPath: string | null = null;
+  if (rawByodPath) {
+    if (isAbsolute(rawByodPath)) {
+      byodPath = rawByodPath;
+    } else {
+      const cwdResolved = resolve(process.cwd(), rawByodPath);
+      if (existsSync(cwdResolved)) {
+        byodPath = cwdResolved;
+      } else {
+        const rootResolved = resolve(PROJECT_ROOT, rawByodPath);
+        byodPath = existsSync(rootResolved) ? rootResolved : cwdResolved;
+      }
+    }
+  }
 
   const byodChunkSize = parseIntEnv("BYOD_CHUNK_SIZE", DEFAULT_CHUNK_SIZE, 500, 50000);
   const byodChunkOverlap = parseIntEnv("BYOD_CHUNK_OVERLAP", DEFAULT_CHUNK_OVERLAP, 0, byodChunkSize / 2);
