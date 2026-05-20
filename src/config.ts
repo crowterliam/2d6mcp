@@ -33,12 +33,14 @@ export interface Config {
   byodMaxFiles: number;
   byodMaxChunksPerFile: number;
   byodSyncTimeoutMs: number;
+  byodMaxFileSize: number;
 }
 
 const DEFAULT_CHUNK_SIZE = 8000;
 const DEFAULT_CHUNK_OVERLAP = 400;
 const DEFAULT_MAX_FILES = 2000;
 const DEFAULT_MAX_CHUNKS_PER_FILE = 500;
+const DEFAULT_MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 const DEFAULT_SYNC_TIMEOUT_MS = 15000;
 
 function parseIntEnv(key: string, fallback: number, min: number, max: number): number {
@@ -59,15 +61,22 @@ export function loadConfig(): Config {
   if (rawByodPath) {
     if (isAbsolute(rawByodPath)) {
       byodPath = rawByodPath;
+      process.stderr.write(`2d6mcp: BYOD_PATH is absolute: ${byodPath}\n`);
     } else {
       const cwdResolved = resolve(process.cwd(), rawByodPath);
+      process.stderr.write(`2d6mcp: BYOD_PATH is relative. cwd=${process.cwd()}, cwdResolved=${cwdResolved}, exists=${existsSync(cwdResolved)}\n`);
       if (existsSync(cwdResolved)) {
         byodPath = cwdResolved;
+        process.stderr.write(`2d6mcp: Resolved BYOD_PATH via cwd: ${byodPath}\n`);
       } else {
         const rootResolved = resolve(PROJECT_ROOT, rawByodPath);
+        process.stderr.write(`2d6mcp: cwdResolved not found. PROJECT_ROOT=${PROJECT_ROOT}, rootResolved=${rootResolved}, exists=${existsSync(rootResolved)}\n`);
         byodPath = existsSync(rootResolved) ? rootResolved : cwdResolved;
+        process.stderr.write(`2d6mcp: Resolved BYOD_PATH via fallback: ${byodPath}\n`);
       }
     }
+  } else {
+    process.stderr.write(`2d6mcp: BYOD_PATH not set\n`);
   }
 
   const byodChunkSize = parseIntEnv("BYOD_CHUNK_SIZE", DEFAULT_CHUNK_SIZE, 500, 50000);
@@ -75,6 +84,7 @@ export function loadConfig(): Config {
   const byodMaxFiles = parseIntEnv("BYOD_MAX_FILES", DEFAULT_MAX_FILES, 1, 50000);
   const byodMaxChunksPerFile = parseIntEnv("BYOD_MAX_CHUNKS_PER_FILE", DEFAULT_MAX_CHUNKS_PER_FILE, 1, 2000);
   const byodSyncTimeoutMs = parseIntEnv("BYOD_SYNC_TIMEOUT_MS", DEFAULT_SYNC_TIMEOUT_MS, 1000, 300000);
+  const byodMaxFileSize = parseIntEnv("BYOD_MAX_FILE_SIZE", DEFAULT_MAX_FILE_SIZE_BYTES, 1024 * 1024, 1024 * 1024 * 1024);
 
   const oglDbPath =
     process.env.OGL_DB_PATH ||
@@ -84,7 +94,7 @@ export function loadConfig(): Config {
     process.env.DW_DB_PATH ||
     resolve(PROJECT_ROOT, "data", "dw", "dungeon-world.db");
 
-  return { byodConsented, byodPath, oglDbPath, dwDbPath, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs };
+  return { byodConsented, byodPath, oglDbPath, dwDbPath, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs, byodMaxFileSize };
 }
 
 export function isByodEnabled(): boolean {

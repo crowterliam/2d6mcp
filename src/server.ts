@@ -299,23 +299,25 @@ async function syncFile(
 
 interface SyncResult {
   message: string;
+  byodPath: string;
   filesIndexed: number;
   totalFiles: number;
   remaining: number;
   complete: boolean;
   chunksIndexed: number;
   elapsedMs: number;
+  files: { path: string; status: string }[];
 }
 
 async function syncByodIndex(config: Config): Promise<SyncResult> {
   const consent = checkByodConsent();
-  if (!consent.allowed) return { message: consent.message, filesIndexed: 0, totalFiles: 0, remaining: 0, complete: true, chunksIndexed: 0, elapsedMs: 0 };
+  if (!consent.allowed) return { message: consent.message, byodPath: "", filesIndexed: 0, totalFiles: 0, remaining: 0, complete: true, chunksIndexed: 0, elapsedMs: 0, files: [] };
 
   const byodPath = getByodPath();
-  let files = discoverFiles(byodPath);
+  let files = discoverFiles(byodPath, config.byodMaxFileSize);
 
   if (files.length === 0) {
-    return { message: "No supported files found in BYOD directory.", filesIndexed: 0, totalFiles: 0, remaining: 0, complete: true, chunksIndexed: 0, elapsedMs: 0 };
+    return { message: "No supported files found in BYOD directory.", byodPath, filesIndexed: 0, totalFiles: 0, remaining: 0, complete: true, chunksIndexed: 0, elapsedMs: 0, files: [] };
   }
 
   if (files.length > config.byodMaxFiles) {
@@ -337,6 +339,7 @@ async function syncByodIndex(config: Config): Promise<SyncResult> {
   let failedFiles = 0;
   let skippedByHash = 0;
   let reusedFromCache = 0;
+  const fileStatuses: { path: string; status: string }[] = [];
   const startTime = Date.now();
   const logInterval = Math.max(1, Math.floor(files.length / 20));
   const CONCURRENCY = 3;
@@ -351,24 +354,28 @@ async function syncByodIndex(config: Config): Promise<SyncResult> {
       if (indexedFiles === 0) {
         return {
           message: `NOT COMPLETE. No files indexed yet — the first batch took too long. To continue, call sync_byod again.`,
+          byodPath,
           filesIndexed: 0,
           totalFiles: files.length,
           remaining,
           complete: false,
           chunksIndexed: 0,
           elapsedMs: elapsed,
+          files: fileStatuses,
         };
       }
       const scanned = i;
       const upToDate = skippedByHash;
       return {
         message: `NOT COMPLETE — ${remaining} files remaining. Scanned ${scanned}/${files.length} (${indexedFiles} newly indexed, ${upToDate} already up to date, ${failedFiles} failed) in ${(elapsed / 1000).toFixed(1)}s. You MUST call sync_byod again to continue.`,
+        byodPath,
         filesIndexed: indexedFiles,
         totalFiles: files.length,
         remaining,
         complete: false,
         chunksIndexed: totalChunks,
         elapsedMs: elapsed,
+        files: fileStatuses,
       };
     }
 
@@ -378,6 +385,7 @@ async function syncByodIndex(config: Config): Promise<SyncResult> {
       const storedHash = getStoredFileHash(db, file.relativePath);
       if (storedHash === file.hash || storedHash === FAILED_HASH) {
         skippedByHash++;
+        fileStatuses.push({ path: file.relativePath, status: storedHash === FAILED_HASH ? "skipped_failed" : "up_to_date" });
         i++;
         continue;
       }
@@ -417,6 +425,7 @@ async function syncByodIndex(config: Config): Promise<SyncResult> {
       if (chunks.length === 0) {
         failedFiles++;
         markFileFailed(db, file.relativePath, file.name, file.ext, file.size);
+        fileStatuses.push({ path: file.relativePath, status: "failed" });
         continue;
       }
 
@@ -440,6 +449,7 @@ async function syncByodIndex(config: Config): Promise<SyncResult> {
       if (fromCache) reusedFromCache++;
       totalChunks += chunks.length;
       indexedFiles++;
+      fileStatuses.push({ path: file.relativePath, status: fromCache ? "indexed_cached" : "indexed" });
     }
 
     const done = skippedByHash + indexedFiles + failedFiles;
@@ -470,12 +480,14 @@ async function syncByodIndex(config: Config): Promise<SyncResult> {
 
   return {
     message: `COMPLETE. Scanned ${files.length} files: ${parts.join(", ")} in ${(elapsed / 1000).toFixed(1)}s.`,
+    byodPath,
     filesIndexed: indexedFiles,
     totalFiles: files.length,
     remaining: 0,
     complete: true,
     chunksIndexed: totalChunks,
     elapsedMs: elapsed,
+    files: fileStatuses,
   };
 }
 

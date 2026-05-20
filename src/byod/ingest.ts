@@ -73,7 +73,7 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
-function walkDirectory(dir: string, baseDir: string): IngestedFile[] {
+function walkDirectory(dir: string, baseDir: string, maxFileSize: number = MAX_FILE_SIZE_BYTES): IngestedFile[] {
   const results: IngestedFile[] = [];
   if (!existsSync(dir)) return results;
 
@@ -88,12 +88,12 @@ function walkDirectory(dir: string, baseDir: string): IngestedFile[] {
       const stat = statSync(fullPath);
 
       if (stat.isDirectory()) {
-        results.push(...walkDirectory(fullPath, baseDir));
+        results.push(...walkDirectory(fullPath, baseDir, maxFileSize));
       } else if (stat.isFile()) {
         const ext = extname(entry).toLowerCase();
         if (SUPPORTED_EXTENSIONS.has(ext)) {
-          if (stat.size > MAX_FILE_SIZE_BYTES) {
-            log(`Skipping ${entry} — exceeds 50 MB limit`);
+          if (stat.size > maxFileSize) {
+            log(`Skipping ${entry} — exceeds ${formatSize(maxFileSize)} limit`);
             continue;
           }
 
@@ -125,9 +125,12 @@ function walkDirectory(dir: string, baseDir: string): IngestedFile[] {
   return results;
 }
 
-export function discoverFiles(byodPath: string): IngestedFile[] {
+export function discoverFiles(byodPath: string, maxFileSize: number = MAX_FILE_SIZE_BYTES): IngestedFile[] {
   const resolved = resolve(byodPath);
-  return walkDirectory(resolved, resolved);
+  log(`discoverFiles: byodPath=${byodPath}, resolved=${resolved}, exists=${existsSync(resolved)}, maxFileSize=${maxFileSize}`);
+  const files = walkDirectory(resolved, resolved, maxFileSize);
+  log(`discoverFiles: found ${files.length} files`);
+  return files;
 }
 
 function readTextFile(filePath: string): string {
@@ -527,12 +530,13 @@ export async function ingestFile(
 
 export async function ingestDirectory(
   byodPath: string,
-  options: IngestOptions
+  options: IngestOptions,
+  maxFileSize: number = MAX_FILE_SIZE_BYTES
 ): Promise<{
   files: IngestedFile[];
   chunks: IngestedChunk[];
 }> {
-  const files = discoverFiles(byodPath);
+  const files = discoverFiles(byodPath, maxFileSize);
   const chunks: IngestedChunk[] = [];
   let processed = 0;
 
