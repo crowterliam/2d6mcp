@@ -1,5 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
+//
+// OGL SCOPE NOTICE:
+// The code in this file (functions, control flow, SQL logic) is AGPL-3.0-only.
+// The string literals containing game mechanics, rule descriptions, equipment
+// stats, career data, and table entries are derivative material of Open Game
+// Content from the Cepheus Engine System Reference Document and are governed
+// exclusively by the Open Game License v1.0a (see OGL-1.0a.txt). These strings
+// are AGPL-licensed code *structure* but OGL-licensed *content*. The resulting
+// database output in data/ogl/ is designated as Open Game Content.
 
 import Database from "better-sqlite3";
 import { existsSync } from "node:fs";

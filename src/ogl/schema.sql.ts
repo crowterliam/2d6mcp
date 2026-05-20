@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
+//
+// OGL SCOPE NOTICE:
+// The code in this file is AGPL-3.0-only. The database schema and default values
+// (e.g. source attribution strings) are designed to store Open Game Content
+// governed by the Open Game License v1.0a. The database output in data/ogl/ is
+// designated as Open Game Content.
 
 export const SCHEMA_DDL = `
 CREATE TABLE IF NOT EXISTS rules_categories (
@@ -13,7 +19,7 @@ CREATE TABLE IF NOT EXISTS rules_text (
   category_id INTEGER,
   title TEXT NOT NULL,
   content TEXT NOT NULL,
-  source TEXT DEFAULT 'Cepheus Engine SRD',
+  source TEXT DEFAULT 'OGC',
   FOREIGN KEY (category_id) REFERENCES rules_categories(id)
 );
 
