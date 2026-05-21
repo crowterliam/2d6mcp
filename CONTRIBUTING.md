@@ -36,7 +36,7 @@ By submitting a pull request, you agree to license your contribution under the
 same terms.
 
 Do not contribute content that would violate the Open Game License firewall.
-See `LICENSE.md` for details on the dual-license architecture.
+See `LICENSE.md` for details on the multi-license architecture.
 
 ## Adding Tools
 

@@ -17,5 +17,5 @@
 - [ ] Follows naming conventions (no third-party trademarks)
 - [ ] New tools use Zod schemas for input validation
 - [ ] New tools are offline-first (no network calls)
-- [ ] License-compatible (see `LICENSE.md` for dual-license rules)
+- [ ] License-compatible (see `LICENSE.md` for multi-license rules)
 - [ ] Tested against an MCP client

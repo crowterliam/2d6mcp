@@ -176,7 +176,7 @@ This product includes game rules and data derived from **Dungeon World** by Sage
 
 ## License
 
-This project uses a dual-license architecture:
+This project uses a multi-license architecture:
 
 - **Source code** (`src/**/*.ts`, root-level config files): [AGPL-3.0-only](https://www.gnu.org/licenses/agpl-3.0.en.html)
 - **OGL game data** (`data/ogl/**`): [OGL v1.0a](OGL-1.0a.txt)
