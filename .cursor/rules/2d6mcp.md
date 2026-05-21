@@ -2,6 +2,8 @@
 
 You have access to a Model Context Protocol (MCP) server called **2d6mcp**. It provides a mechanical engine, dice roller, and rules reference for 2d6-based tabletop RPGs, supporting both sci-fi (OGL/Cepheus Engine) and fantasy (Dungeon World) games. Use system-agnostic language: "2d6 sci-fi RPG", "2d6 fantasy RPG", "starship", "star system", "characteristic", "move", "front", "monster". Never use third-party trademarked terms.
 
+**Tool loyalty**: Once you invoke 2d6mcp tools (particularly BYOD), continue using them for all game content. Do not switch to external file-reading MCP tools (PDF readers, etc.) unless the user explicitly asks you to examine a file outside the indexed BYOD content.
+
 ## Available Tools
 
 | Tool | Purpose |
@@ -24,6 +26,16 @@ You have access to a Model Context Protocol (MCP) server called **2d6mcp**. It p
 | `discord_remove_webhook` | Remove a stored Discord webhook by name. |
 | `discord_list_webhooks` | List all configured webhooks (URLs partially masked). |
 | `discord_test_webhook` | Send a test message to verify webhook connectivity. |
+| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM. Auto-looks up OGL/DW/BYOD rules, returns a cited ruling. Requires `mlx_lm.generate`. |
+| `resolve_from_context` | Full producer pipeline: take recent session transcript, detect rules question, look up rules, synthesize ruling, log it. |
+| `session_start` | Start a new game session for transcript logging, rulings tracking, and context. Returns a session ID. |
+| `session_end` | End the active game session. |
+| `session_list` | List all recorded game sessions, most recent first. |
+| `session_summarize` | Generate an AI summary for a session using the full transcript via MLX LLM. |
+| `log_transcript` | Log a transcript segment to the current session — what was just said at the table. |
+| `get_session_context` | Get recent transcript segments and rulings from a session — the last N minutes of game context. |
+| `search_transcript` | Full-text search across session transcripts — find what was said about a topic. |
+| `transcribe_audio` | Transcribe an audio file using local MLX Whisper. Requires `mlx_whisper` to be installed. |
 
 ## Core Mechanics
 
@@ -61,6 +73,27 @@ You have access to a Model Context Protocol (MCP) server called **2d6mcp**. It p
 6. Get full chunk content: `get_byod_chunk(file_path, chunk_index)` (after search returns snippets)
 7. Start fresh: `clear_byod`
 
+### Session Management
+1. Start session: `session_start("Session Name")` — returns session ID
+2. Log table talk: `log_transcript(session_id, text, speaker, source, intent)`
+3. Get recent context: `get_session_context(session_id, minutes)` — returns transcripts and rulings
+4. Search history: `search_transcript(session_id, "query")` — find past mentions
+5. List sessions: `session_list(limit)`
+6. End session: `session_end(session_id)`
+7. Summarize: `session_summarize(session_id)` (requires MLX LLM)
+
+### Ruling Synthesis
+1. Ask a question: `synthesize_ruling("question", rules_system: "auto")` — AI ruling with citations
+2. Context resolution: `resolve_from_context(session_id)` — auto-detect question from recent transcript
+3. Audio: `transcribe_audio(file_path)` — voice-to-text (requires `mlx_whisper`)
+
+### Discord Posting
+1. Post: `discord_post(content, webhook_names, context)` — smart routing, rich embeds
+2. Configure: `discord_add_webhook(name, url, tags, description)`
+3. Inspect: `discord_list_webhooks`
+4. Verify: `discord_test_webhook(name)`
+5. Remove: `discord_remove_webhook(name)`
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -73,3 +106,6 @@ You have access to a Model Context Protocol (MCP) server called **2d6mcp**. It p
 | `BYOD_MAX_FILES` | `2000` | Max files per sync |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Custom OGL database path |
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | Custom DW database path |
+| `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
+| `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
+| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |

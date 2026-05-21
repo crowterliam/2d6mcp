@@ -7,6 +7,8 @@ description: Master reference for the 2d6mcp MCP server — all tools, workflows
 
 You have access to the **2d6mcp** MCP server. It provides a mechanical engine, dice roller, and rules reference for 2d6-based tabletop RPGs, supporting both sci-fi (OGL/Cepheus Engine) and fantasy (Dungeon World) games.
 
+**Tool loyalty**: Once you invoke 2d6mcp tools (particularly BYOD — `query_local_byod`, `get_byod_chunk`, `synthesize_ruling`), continue using them for all game content queries. Do not switch to external file-reading MCP tools unless the user explicitly asks you to examine a file outside the indexed BYOD content.
+
 ## Available Tools
 
 | Tool | Purpose |
@@ -29,6 +31,16 @@ You have access to the **2d6mcp** MCP server. It provides a mechanical engine, d
 | `discord_remove_webhook` | Remove a stored Discord webhook by name |
 | `discord_list_webhooks` | List all configured webhooks (URLs partially masked) |
 | `discord_test_webhook` | Send a test message to verify webhook connectivity |
+| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM. Auto-looks up OGL/DW/BYOD rules, returns a cited ruling. Requires `mlx_lm.generate`. |
+| `resolve_from_context` | Full producer pipeline: take recent session transcript, detect rules question, look up rules, synthesize ruling, log it. |
+| `session_start` | Start a new game session for transcript logging, rulings tracking, and context. Returns a session ID. |
+| `session_end` | End the active game session. |
+| `session_list` | List all recorded game sessions, most recent first. |
+| `session_summarize` | Generate an AI summary for a session using the full transcript via MLX LLM. |
+| `log_transcript` | Log a transcript segment to the current session — what was just said at the table. |
+| `get_session_context` | Get recent transcript segments and rulings from a session — the last N minutes of game context. |
+| `search_transcript` | Full-text search across session transcripts — find what was said about a topic. |
+| `transcribe_audio` | Transcribe an audio file using local MLX Whisper. Requires `mlx_whisper` to be installed. |
 
 ## Key Principles
 
@@ -63,6 +75,27 @@ You have access to the **2d6mcp** MCP server. It provides a mechanical engine, d
 - Use `sync_file` to index a single file by relative path (for large files that timeout in bulk sync, or selective indexing)
 - Use `get_byod_chunk` to retrieve full chunk content after `query_local_byod` returns snippets — pass file path and chunk index
 
+### Session Management
+- Use `session_start` to begin a new game session — logs transcripts, rulings, and context for continuity
+- Use `log_transcript` to record what was said at the table during play (with speaker, source, and intent)
+- Use `get_session_context` to recall the last N minutes of game context (transcripts + rulings)
+- Use `search_transcript` to search what was said about a specific topic across the full session
+- Use `session_list` to browse all recorded sessions
+- Use `session_end` to close the active session
+- Use `session_summarize` to generate an AI summary of the full session transcript (requires MLX LLM)
+
+### Ruling Synthesis
+- Use `synthesize_ruling` to ask a rules question and get an AI-generated ruling with OGL/DW/BYOD citations (requires `mlx_lm.generate`)
+- Use `resolve_from_context` to run the full producer pipeline: take recent transcript, detect rules question, look up rules, synthesize ruling, and log it to the session
+- Use `transcribe_audio` to convert recorded audio to text using local MLX Whisper (requires `mlx_whisper`)
+
+### Discord Posting
+- Use `discord_post` to send messages to Discord webhooks — supports smart routing based on context tags and rich embeds
+- Use `discord_add_webhook` to configure a new webhook with name, URL, and routing tags
+- Use `discord_remove_webhook` to remove a stored webhook
+- Use `discord_list_webhooks` to view all configured webhooks
+- Use `discord_test_webhook` to verify connectivity to a specific webhook
+
 ## Common Workflows
 
 ### Resolving a Task
@@ -91,12 +124,15 @@ When starting a session, ensure knowledge is available:
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `AGREE_BYOD_USE` | `"false"` | Enable BYOD mode |
-| `BYOD_PATH` | — | Directory of local source files |
+| `BYOD_PATH` | `.reference/` (auto-discovered in project root if not set) | Directory of local source files |
 | `BYOD_CHUNK_SIZE` | `8000` | Characters per chunk (500–50000) |
 | `BYOD_CHUNK_OVERLAP` | `400` | Overlap between chunks |
 | `BYOD_MAX_FILES` | `2000` | Max files per sync |
 | `BYOD_MAX_CHUNKS_PER_FILE` | `500` | Max chunks per file |
 | `BYOD_SYNC_TIMEOUT_MS` | `15000` | Max ms per sync batch |
-| `BYOD_CONTENT_CACHE_PATH` | — | Shared content cache path (deduplicates across workspaces) |
+| `BYOD_CONTENT_CACHE_PATH` | `data/byod/content_cache.db` | Shared content-addressable cache path |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Custom OGL database path |
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | Custom DW database path |
+| `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
+| `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
+| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |

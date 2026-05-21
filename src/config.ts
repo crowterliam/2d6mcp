@@ -3,6 +3,7 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import { resolve, dirname, isAbsolute } from "node:path";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -28,6 +29,13 @@ export interface Config {
   byodPath: string | null;
   oglDbPath: string;
   dwDbPath: string;
+  sessionDbPath: string;
+  mlxWhisperModel: string;
+  mlxLLMModel: string;
+  whisperCppModel: string;
+  llamaCppModel: string;
+  sttBackend: "mlx" | "whispercpp";
+  llmBackend: "mlx" | "llamacpp";
   byodChunkSize: number;
   byodChunkOverlap: number;
   byodMaxFiles: number;
@@ -76,7 +84,18 @@ export function loadConfig(): Config {
       }
     }
   } else {
-    process.stderr.write(`2d6mcp: BYOD_PATH not set\n`);
+    // Auto-discovery: check for .reference directory in project root (skip in test env)
+    if (process.env.NODE_ENV !== "test" && process.env.VITEST === undefined) {
+      const autoPath = resolve(PROJECT_ROOT, ".reference");
+      if (existsSync(autoPath)) {
+        byodPath = autoPath;
+        process.stderr.write(`2d6mcp: BYOD_PATH not set — auto-discovered .reference in project root: ${autoPath}\n`);
+      } else {
+        process.stderr.write(`2d6mcp: BYOD_PATH not set\n`);
+      }
+    } else {
+      process.stderr.write(`2d6mcp: BYOD_PATH not set\n`);
+    }
   }
 
   const byodChunkSize = parseIntEnv("BYOD_CHUNK_SIZE", DEFAULT_CHUNK_SIZE, 500, 50000);
@@ -94,7 +113,30 @@ export function loadConfig(): Config {
     process.env.DW_DB_PATH ||
     resolve(PROJECT_ROOT, "data", "dw", "dungeon-world.db");
 
-  return { byodConsented, byodPath, oglDbPath, dwDbPath, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs, byodMaxFileSize };
+  const sessionDbPath =
+    process.env.SESSION_DB_PATH ||
+    resolve(homedir(), ".2d6mcp", "sessions.db");
+
+  const mlxWhisperModel =
+    process.env.MLX_WHISPER_MODEL ||
+    "mlx-community/whisper-large-v3-turbo";
+
+  const mlxLLMModel =
+    process.env.MLX_LLM_MODEL ||
+    "mlx-community/Llama-3.2-3B-Instruct-4bit";
+
+  const whisperCppModel =
+    process.env.WHISPERCPP_MODEL ||
+    "ggml-large-v3-turbo.bin";
+
+  const llamaCppModel =
+    process.env.LLAMACPP_MODEL ||
+    "Llama-3.2-3B-Instruct.Q4_K_M.gguf";
+
+  const sttBackend = (process.env.STT_BACKEND === "whispercpp") ? "whispercpp" : "mlx";
+  const llmBackend = (process.env.LLM_BACKEND === "llamacpp") ? "llamacpp" : "mlx";
+
+  return { byodConsented, byodPath, oglDbPath, dwDbPath, sessionDbPath, mlxWhisperModel, mlxLLMModel, whisperCppModel, llamaCppModel, sttBackend, llmBackend, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs, byodMaxFileSize };
 }
 
 export function isByodEnabled(): boolean {

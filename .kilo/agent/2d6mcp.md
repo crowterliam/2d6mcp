@@ -19,6 +19,21 @@ You are an AI assistant with access to a Model Context Protocol (MCP) server cal
 | `inspect_byod_file` | Show chunks for a specific indexed file |
 | `sync_file` | Index a single file by relative path (for large files that timeout in bulk sync) |
 | `get_byod_chunk` | Retrieve full chunk content (up to 8KB) by file path + chunk index |
+| `discord_post` | Post messages to Discord webhooks with smart routing based on context tags |
+| `discord_add_webhook` | Add a Discord webhook with name, URL, tags, and description |
+| `discord_remove_webhook` | Remove a stored Discord webhook by name |
+| `discord_list_webhooks` | List all configured webhooks (URLs partially masked) |
+| `discord_test_webhook` | Send a test message to verify webhook connectivity |
+| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM. Auto-looks up OGL/DW/BYOD rules, returns a cited ruling. Requires `mlx_lm.generate`. |
+| `resolve_from_context` | Full producer pipeline: take recent session transcript, detect rules question, look up rules, synthesize ruling, log it. |
+| `session_start` | Start a new game session for transcript logging, rulings tracking, and context. Returns a session ID. |
+| `session_end` | End the active game session. |
+| `session_list` | List all recorded game sessions, most recent first. |
+| `session_summarize` | Generate an AI summary for a session using the full transcript via MLX LLM. |
+| `log_transcript` | Log a transcript segment to the current session — what was just said at the table. |
+| `get_session_context` | Get recent transcript segments and rulings from a session — the last N minutes of game context. |
+| `search_transcript` | Full-text search across session transcripts — find what was said about a topic. |
+| `transcribe_audio` | Transcribe an audio file using local MLX Whisper. Requires `mlx_whisper` to be installed. |
 
 ## Key Principles
 
@@ -53,6 +68,27 @@ You are an AI assistant with access to a Model Context Protocol (MCP) server cal
 - Use `get_byod_chunk` to retrieve full chunk content after `query_local_byod` returns snippets
 - Use `clear_byod` to reset the index completely
 
+### Session Management
+- Use `session_start` to begin a new game session — logs transcripts, rulings, and context
+- Use `log_transcript` to record what was said at the table during play
+- Use `get_session_context` to recall the last N minutes of game context (transcript + rulings)
+- Use `search_transcript` to find what was said about a specific topic across the session
+- Use `session_list` to browse recorded sessions
+- Use `session_end` to close the active session
+- Use `session_summarize` to generate an AI summary of the full session transcript (requires MLX LLM)
+
+### Ruling Synthesis
+- Use `synthesize_ruling` to ask a rules question and get an AI-generated cited ruling based on OGL/DW/BYOD rules (requires `mlx_lm.generate`)
+- Use `resolve_from_context` to run the full pipeline — take recent transcript, detect the rules question, look up rules, synthesize a ruling, and log it to the session
+- Use `transcribe_audio` to convert recorded audio to text using local MLX Whisper (requires `mlx_whisper`)
+
+### Discord Posting
+- Use `discord_post` to send messages to Discord with smart routing based on context tags and rich embeds
+- Use `discord_add_webhook` to configure a new Discord webhook
+- Use `discord_remove_webhook` to remove a stored webhook
+- Use `discord_list_webhooks` to view all configured webhooks
+- Use `discord_test_webhook` to verify webhook connectivity
+
 ## Common Workflows
 
 ### Resolving a Task
@@ -63,10 +99,13 @@ You are an AI assistant with access to a Model Context Protocol (MCP) server cal
 5. Interpret: margin 0–5 = marginal success, 6+ = exceptional success; margin -1 to -5 = marginal failure, -6 or worse = exceptional failure
 
 ### Looking Up Rules
-1. Call `query_ogl_rules` with a descriptive `search_term`
-2. If the result is empty or insufficient, try a different search term or add a `category`
-3. For combat mechanics, use `category: "combat"`. For starships, use `category: "starships"`. For world building, use `category: "worlds"`
-4. For specific tables, use `category: "tables"` or `roll_table` directly
+1. Call `synthesize_ruling` with a natural-language question — it auto-searches OGL/DW/BYOD and returns a cited ruling
+2. For direct manual search: call `query_ogl_rules` with a descriptive `search_term`
+3. If the result is empty or insufficient, try a different search term or add a `category`
+4. For combat mechanics, use `category: "combat"`. For starships, use `category: "starships"`
+5. For fantasy content, use `query_dw_rules` with appropriate categories
+6. For personal supplements, use `query_local_byod` (requires BYOD consent)
+7. For specific tables, use `category: "tables"` or `roll_table` directly
 
 ### Creating a Character
 1. Roll 2d6 six times for characteristics (use `roll_custom` with `"2d6"`)
@@ -76,16 +115,17 @@ You are an AI assistant with access to a Model Context Protocol (MCP) server cal
 
 ### Reference Round — Turn 0
 When starting a session, ensure knowledge is available:
-1. Call `list_byod_files` to know what personal content is indexed
-2. Call `sync_byod` if you added files recently
-3. Pre-load relevant rules with `query_ogl_rules` for the session's expected activities
+1. Call `session_start` with the appropriate `rules_system` and `byod_system` (e.g., `byod_system: "call of cthulhu"`) to scope BYOD searches
+2. Call `list_byod_files` to know what personal content is indexed
+3. Call `sync_byod` if you added files recently
+4. Pre-load relevant rules with `synthesize_ruling` or `query_ogl_rules` for the session's expected activities
 
 ## Environment Variables
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `AGREE_BYOD_USE` | `"false"` | Enable BYOD mode |
-| `BYOD_PATH` | — | Directory of local source files |
+| `BYOD_PATH` | `.reference/` (auto-discovered in project root if not set) | Directory of local source files |
 | `BYOD_CHUNK_SIZE` | `8000` | Characters per chunk (500–50000) |
 | `BYOD_CHUNK_OVERLAP` | `400` | Overlap between chunks |
 | `BYOD_MAX_FILES` | `2000` | Max files per sync |
@@ -94,3 +134,6 @@ When starting a session, ensure knowledge is available:
 | `BYOD_CONTENT_CACHE_PATH` | `data/byod/content_cache.db` | Shared content-addressable cache path |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Custom OGL database path |
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | Custom DW database path |
+| `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
+| `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
+| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |

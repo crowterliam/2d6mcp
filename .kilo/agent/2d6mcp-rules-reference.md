@@ -1,6 +1,27 @@
 # 2D6 Rules Reference
 
-You have access to a pre-populated OGL rules database (Cepheus Engine SRD) and optionally your own BYOD files. Use these tools to look up game mechanics.
+You have access to a pre-populated OGL rules database (Cepheus Engine SRD), a Dungeon World database (CC-BY-3.0), optionally your own BYOD files, and AI ruling synthesis. Use these tools to look up game mechanics and generate cited rulings.
+
+## AI Ruling Synthesis
+
+```
+synthesize_ruling(question, rules_system?, session_id?, rules_context?)
+```
+
+Take a natural-language rules question, auto-look up relevant rules from OGL, DW, and BYOD databases, then synthesize a cited ruling using the local MLX LLM. Requires `mlx_lm.generate` to be installed.
+
+**Key behaviour:**
+- If `rules_context` is provided, uses it directly (skip auto-lookup)
+- If omitted, searches OGL (sci-fi) and/or DW (fantasy) based on `rules_system` ("ogl", "dw", or "auto")
+- BYOD is searched if consent is given — search is scoped by `byod_system` if the session was started with one
+- Returns: question, ruling text with `[Source]` citations, model used, latency, and snippet of the rules context used
+- Rulings include `[Verify: ...]` warnings when numbers in the ruling don't appear in the source text (quality filter)
+
+```
+resolve_from_context(session_id, context_minutes?)
+```
+
+Full producer pipeline: takes the last N minutes of session transcript, searches rules, synthesizes a ruling, and logs it. Use when the GM wants a ruling on what was just discussed — no need to formulate the question.
 
 ## OGL Database Search
 
@@ -32,6 +53,35 @@ query_ogl_rules("combat", category: "rules")      → combat rules only
 query_ogl_rules("navy", category: "careers")      → navy career path
 query_ogl_rules("Astrogation", category: "skills") → skill description
 query_ogl_rules("critical hit", category: "starships") → ship damage tables
+```
+
+## Dungeon World Database Search
+
+```
+query_dw_rules(search_term, category?)
+```
+
+Search the Dungeon World rules database for moves, classes, spells, equipment, monsters, or GM tools.
+
+### Categories
+
+| Category | Contains |
+|----------|----------|
+| `moves` | Basic and special moves, descriptions, stat, 10+/7-9/6- results |
+| `classes` | Class descriptions, starting moves, gear, base HP, damage |
+| `spells` | Wizard and cleric spells, level, tags, descriptions |
+| `equipment` | Weapons, armour, gear, tags, cost, weight, damage |
+| `monsters` | Monster stat blocks, tags, damage, HP, armour, instinct, moves |
+| `gm_tools` | GM agendas, principles, fronts, dangers, steadings |
+| `rules` | Core rules, play examples |
+
+### Examples
+```
+query_dw_rules("hack and slash")              → basic move
+query_dw_rules("wizard", category: "classes") → wizard class
+query_dw_rules("fireball", category: "spells") → wizard spell
+query_dw_rules("goblin", category: "monsters") → monster stat block
+query_dw_rules("front", category: "gm_tools")  → campaign front rules
 ```
 
 ## Table Rolling
@@ -69,21 +119,48 @@ query_local_byod(search_term)
 
 Searches your personally ingested PDFs, text files, and markdown files. Requires BYOD consent and a configured `BYOD_PATH`. Files must be synced with `sync_byod` first.
 
+### BYOD System Filter
+
+When you start a session with `byod_system` set (e.g., `"call of cthulhu"`, `"traveller"`), all BYOD searches in `synthesize_ruling` and `resolve_from_context` are automatically filtered to files whose names contain that system. This prevents cross-system contamination — Trail of Cthulhu results won't appear when you're running Call of Cthulhu.
+
+Start a session with the filter:
+```
+session_start(name: "Session 1", byod_system: "call of cthulhu")
+```
+
 ### Search Details
-- Returns matching chunks with highlighted snippets (64-character highlights)
+- Returns matching chunks with highlighted snippets
 - Use `get_byod_chunk(relative_path, chunk_index)` to retrieve the full chunk text (up to 8KB) for results that matter
 - Multi-word queries try AND first, then OR for broad matching
 - Use prefix searches with `*` (e.g., `combat*` matches combat, combative, etc.)
 - Maximum 20 results returned per query
+- When `byod_system` is set, results are filtered to filenames containing all words from the system name
+
+## Audio Transcription
+
+```
+transcribe_audio(file_path, session_id?, chunk_size_seconds?)
+```
+
+Transcribe an audio file (WAV, MP3, M4A, FLAC) using local MLX Whisper. Requires `mlx_whisper` and `ffmpeg` to be installed.
+
+**Chunked mode** (files over 3 minutes): The tool processes audio in 2-minute chunks. Each call transcribes one chunk and returns incremental results. Call again with the same `file_path` and `session_id` to continue until `complete` is true.
+
+- Response includes `complete: false` with a note telling you to call again
+- If `session_id` is provided, each chunk is auto-logged as a transcript segment with `source: "voice"`
+- Progress is tracked per file — interrupted transcriptions can be resumed
+- On completion, the full text is rebuilt from session transcript segments (no re-transcription)
 
 ## Search Strategy
 
-1. **Always start with OGL**: `query_ogl_rules` is faster and covers the core rules
+1. **Always start with OGL or DW**: The built-in databases are faster and cover the core rules
 2. **Be specific**: Search for the exact mechanic name or equipment item
 3. **Try categories**: If a broad search returns too much, narrow with a `category`
-4. **Fall back to BYOD**: If OGL doesn't have what you need, try `query_local_byod`
-5. **Combine searches**: For a complete picture, query both OGL and BYOD
-6. **Get full content**: Use `get_byod_chunk` to retrieve complete chunk text for results that matter
+4. **Use AI synthesis for natural questions**: `synthesize_ruling` auto-looks up rules and produces a cited answer
+5. **Fall back to BYOD**: If OGL/DW doesn't have what you need, try `query_local_byod`
+6. **Scope BYOD with byod_system**: Start sessions with the correct system name to avoid wrong-system results
+7. **Combine searches**: For a complete picture, query both OGL/DW and BYOD — `synthesize_ruling` does this automatically
+8. **Get full content**: Use `get_byod_chunk` to retrieve complete chunk text for results that matter
 
 ## Content Coverage
 
@@ -97,3 +174,12 @@ The OGL database covers:
 - **World Building**: UWP generation, starports, trade codes, government types, law levels, passenger and freight tables
 - **Encounters**: Personal, starship, starport, patron, animal encounter tables
 - **Trade & Commerce**: Trade goods, freight, passenger types
+
+The Dungeon World database covers:
+
+- **Moves**: Basic moves (Hack and Slash, Volley, Defy Danger, Defend, Spout Lore, Discern Realities, Parley), special moves, 10+/7-9/6- results for each
+- **Classes**: Bard, Cleric, Druid, Fighter, Paladin, Ranger, Thief, Wizard — starting moves, gear, base HP, damage, alignment
+- **Spells**: Cleric and Wizard spells by level, tags, full descriptions
+- **Equipment**: Weapons, armour, dungeon gear, poison, services — tags, cost, weight, damage
+- **Monsters**: Full stat blocks with tags, HP, armour, damage, instinct, moves, organisation
+- **GM Tools**: Agendas, principles, fronts, dangers (types, impulses, moves), steadings

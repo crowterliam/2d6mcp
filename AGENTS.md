@@ -105,6 +105,23 @@ src/
   discord/
     config.ts       # Webhook storage, smart routing, tag matching
     webhook.ts      # HTTP posting, embed validation, colour helpers
+  audio/
+    mlx-transcribe.ts  # MLX Whisper + whisper.cpp backend dispatch
+    backends/
+      whispercpp.ts    # whisper.cpp STT backend (Win/Linux)
+    chunker.ts         # ffmpeg chunking, repetition cleanup
+    speakers.ts        # silence-gap speaker diarization
+  rulings/
+    mlx-synthesize.ts  # MLX LM + llama.cpp backend dispatch, quality filter
+    backends/
+      llamacpp.ts      # llama.cpp LLM backend (Win/Linux)
+  session/
+    database.ts        # Session SQLite (transcripts, rulings, progress)
+    schema.sql.ts      # DDL for sessions, segments, rulings, transcription_progress
+  tools/               # Componentised tool handlers
+    helpers.ts         # Shared helpers, keyword extraction, fuzzy matching
+    definitions.ts     # All tool JSON schemas
+    index.ts           # Handler dispatch table
 data/
   ogl/
     cepheus.db      # Bundled OGL SQLite database (Cepheus Engine SRD)
@@ -154,8 +171,46 @@ MCP_SETUP.md         # User guide for connecting to AI harnesses
 | `discord_remove_webhook` | Remove a stored Discord webhook by name |
 | `discord_list_webhooks` | List all configured webhooks (URLs partially masked) |
 | `discord_test_webhook` | Send a test message to verify webhook connectivity |
+| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM. Auto-looks up OGL/DW/BYOD rules, returns a cited ruling. Requires `mlx_lm.generate`. |
+| `resolve_from_context` | Full producer pipeline: take recent session transcript, detect rules question, look up rules, synthesize ruling, log it. |
+| `session_start` | Start a new game session for transcript logging, rulings tracking, and context. Returns a session ID. |
+| `session_end` | End the active game session. |
+| `session_list` | List all recorded game sessions, most recent first. |
+| `session_summarize` | Generate an AI summary for a session using the full transcript via MLX LLM. |
+| `log_transcript` | Log a transcript segment to the current session — what was just said at the table. |
+| `get_session_context` | Get recent transcript segments and rulings from a session — the last N minutes of game context. |
+| `search_transcript` | Full-text search across session transcripts — find what was said about a topic. |
+| `transcribe_audio` | Transcribe an audio file using local MLX Whisper. Requires `mlx_whisper` to be installed. |
+| `list_transcriptions` | List all in-progress audio transcriptions with chunk progress. |
+| `clear_transcription` | Reset transcription progress for a specific file, or clear all state. |
+| `delete_session` | Permanently delete a session and all its transcript segments and rulings. |
 
-## Dual-License Architecture
+## Session Management & Ruling Synthesis
+
+The server supports full game session logging and AI-assisted rules rulings:
+
+- **Session lifecycle**: Start a session with `session_start`, log transcript segments with `log_transcript` throughout play, then end with `session_end`.
+- **BYOD system scoping**: Pass `byod_system` to `session_start` (e.g., `"call of cthulhu"`) to filter all subsequent BYOD searches to files matching that system name. Prevents wrong-system contamination.
+- **Context retrieval**: Use `get_session_context` to fetch recent transcript and rulings from the last N minutes — useful for catching up or recalling what just happened.
+- **Transcript search**: Use `search_transcript` to find what was said about a specific topic across the entire session.
+- **Ruling synthesis**: Use `synthesize_ruling` to ask a rules question and get an AI-generated cited ruling based on OGL/DW/BYOD rules. Requires MLX LM (`mlx_lm.generate`) to be installed locally.
+- **Context-based resolution**: Use `resolve_from_context` to run the full pipeline — take recent transcript, detect the rules question, look up rules, synthesize a ruling, and log it to the session.
+- **Session summaries**: Use `session_summarize` to generate an AI summary of the full session transcript via MLX LLM.
+- **Audio transcription**: Use `transcribe_audio` to convert recorded audio files to text using local MLX Whisper. Files over 3 minutes are processed in 2-minute chunks with progress tracking — call repeatedly with the same `file_path` and `session_id` until `complete: true`. Each chunk is auto-logged to the session.
+- **Transcription management**: Use `list_transcriptions` to see in-progress files and `clear_transcription` to reset stuck state.
+
+## Cross-Platform Backends
+
+The audio transcription and ruling synthesis use pluggable backends. On macOS, the default is Apple MLX. On Windows/Linux, swap to whisper.cpp and llama.cpp by setting environment variables:
+
+| Platform | STT Backend | LLM Backend |
+|---|---|---|
+| macOS (default) | `mlx` (MLX Whisper) | `mlx` (MLX LM) |
+| Windows/Linux | `whispercpp` (whisper.cpp) | `llamacpp` (llama.cpp) |
+
+The server detects the backend via `STT_BACKEND` and `LLM_BACKEND` env vars. All tools, session management, and search work identically regardless of backend — only the underlying CLI binary changes.
+
+## Multi-License Architecture
 
 - All `.ts` source files: AGPL-3.0
 - All files under `data/ogl/`: OGL v1.0a
@@ -172,3 +227,27 @@ The server checks for `AGREE_BYOD_USE="true"` env var OR the presence of a `.mcp
 ## Naming Conventions
 
 Never reference any third-party game system or trademarked terms. Use generic descriptors: "2d6 sci-fi RPG", "2d6 fantasy RPG", "starship", "star system", "characteristic", "move", "front", "monster", etc.
+
+**Tool loyalty**: Once 2d6mcp tools are invoked (particularly BYOD — `query_local_byod`, `get_byod_chunk`, `synthesize_ruling`), continue using them for all game content. Do not switch to external file-reading MCP tools unless the user explicitly asks.
+
+## Environment Variables
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `AGREE_BYOD_USE` | `"false"` | Enable BYOD mode |
+| `BYOD_PATH` | `.reference/` (auto-discovered in project root if not set) | Directory of local source files |
+| `BYOD_CHUNK_SIZE` | `8000` | Characters per chunk (500–50000) |
+| `BYOD_CHUNK_OVERLAP` | `400` | Overlap between chunks |
+| `BYOD_MAX_FILES` | `2000` | Max files per sync |
+| `BYOD_MAX_CHUNKS_PER_FILE` | `500` | Max chunks per file |
+| `BYOD_SYNC_TIMEOUT_MS` | `15000` | Max ms per sync batch |
+| `BYOD_CONTENT_CACHE_PATH` | `data/byod/content_cache.db` | Shared content-addressable cache path |
+| `OGL_DB_PATH` | `data/ogl/cepheus.db` | Custom OGL database path |
+| `DW_DB_PATH` | `data/dw/dungeon-world.db` | Custom DW database path |
+| `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
+| `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
+| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
+| `STT_BACKEND` | `mlx` | STT backend: `mlx` (macOS) or `whispercpp` (Win/Linux) |
+| `LLM_BACKEND` | `mlx` | LLM backend: `mlx` (macOS) or `llamacpp` (Win/Linux) |
+| `WHISPERCPP_MODEL` | `ggml-large-v3-turbo.bin` | whisper.cpp model path (Win/Linux) |
+| `LLAMACPP_MODEL` | `Llama-3.2-3B-Instruct.Q4_K_M.gguf` | llama.cpp model path (Win/Linux) |
