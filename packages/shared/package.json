@@ -1,0 +1,25 @@
+{
+  "name": "@2d6mcp/shared",
+  "version": "0.4.0",
+  "description": "Shared utilities, types, dice roller, prompt templates, and quality filters for 2d6mcp",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./dice": "./dist/dice.js",
+    "./tables": "./dist/tables.js",
+    "./prompts": "./dist/prompts.js",
+    "./keywords": "./dist/keywords.js",
+    "./types": "./dist/types.js",
+    "./helpers": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "AGPL-3.0-only",
+  "dependencies": {
+    "zod": "^3.24.3"
+  }
+}

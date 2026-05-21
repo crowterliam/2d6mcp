@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { loadConfig, isByodEnabled, BYOD_DISCLAIMER } from "../../src/config.js";
+import { loadConfig, isByodEnabled, BYOD_DISCLAIMER } from "../../packages/server/src/config.js";
 
 const originalEnv = { ...process.env };
 const TMP = join(tmpdir(), `2d6mcp-test-config-${Date.now()}`);

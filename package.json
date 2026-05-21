@@ -1,22 +1,24 @@
 {
   "name": "2d6mcp",
   "version": "0.4.0",
-  "description": "Generic 2D6 MCP Server — system-agnostic mechanical engine, dice roller, and rules reference for 2d6-based tabletop RPGs with Dungeon World support",
-  "type": "module",
-  "main": "dist/index.js",
-  "bin": {
-    "2d6mcp": "./dist/cli.js"
-  },
+  "private": true,
+  "description": "2d6mcp — system-agnostic mechanical engine, dice roller, rules reference, and AI GM assistant for 2d6-based tabletop RPGs",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "tsc --watch",
-    "setup": "node dist/cli.js setup",
-    "populate-ogl": "node dist/cli.js populate-ogl",
-    "populate-dw": "node dist/cli.js populate-dw",
+    "build": "tsc --build",
+    "start": "node packages/server/dist/index.js",
+    "dev": "tsc --build --watch",
+    "setup": "node packages/server/dist/cli.js setup",
+    "populate-ogl": "node packages/server/dist/cli.js populate-ogl",
+    "populate-dw": "node packages/server/dist/cli.js populate-dw",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --build --noEmit",
+    "lint": "echo 'lint not configured'"
   },
   "license": "AGPL-3.0-only",
   "author": "Jupiter Industries <liam@evaunit.one> (https://jupiter.industries)",
@@ -28,13 +30,6 @@
     "url": "https://github.com/crowterliam/2d6mcp/issues"
   },
   "homepage": "https://jupiter.industries",
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0",
-    "@xmldom/xmldom": "^0.9.10",
-    "better-sqlite3": "^11.8.0",
-    "pdf-parse": "^2.4.5",
-    "zod": "^3.24.3"
-  },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.19.19",

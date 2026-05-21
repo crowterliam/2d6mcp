@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { discoverFiles, ingestFile, type IngestedFile, type IngestOptions } from "../../src/byod/ingest.js";
+import { discoverFiles, ingestFile, type IngestedFile, type IngestOptions } from "../../packages/server/src/byod/ingest.js";
 
 const TMP = join(tmpdir(), `2d6mcp-test-ingest-${Date.now()}`);
 const DEFAULT_OPTIONS: IngestOptions = {

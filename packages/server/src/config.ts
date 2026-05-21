@@ -14,10 +14,10 @@ function findProjectRoot(): string {
   while (true) {
     const parent = resolve(dir, "..");
     if (parent === dir) break;
-    if (existsSync(resolve(dir, "package.json"))) return dir;
+    if (existsSync(resolve(dir, "data", "ogl"))) return dir;
     dir = parent;
   }
-  return resolve(__dirname, "..");
+  return resolve(__dirname, "..", "..");
 }
 
 export const PROJECT_ROOT = findProjectRoot();

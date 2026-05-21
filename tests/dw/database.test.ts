@@ -3,7 +3,7 @@ import Database from "better-sqlite3";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { tmpdir } from "node:os";
-import { getDwDatabase, initDwSchema, ensureDwSchema, closeDwDatabase } from "../../src/dw/database.js";
+import { getDwDatabase, initDwSchema, ensureDwSchema, closeDwDatabase } from "@2d6mcp/dw/database";
 
 const TMP = join(tmpdir(), `2d6mcp-test-dw-${Date.now()}`);
 const DB_PATH = join(TMP, "test-dw.db");

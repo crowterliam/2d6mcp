@@ -3,7 +3,7 @@ import Database from "better-sqlite3";
 import { existsSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { loadConfig } from "../../src/config.js";
+import { loadConfig } from "../../packages/server/src/config.js";
 import {
   searchDwRules,
   searchDwMoves,
@@ -14,9 +14,9 @@ import {
   searchDwGmTools,
   listDwMoveCategories,
   listDwMonsterSettings,
-} from "../../src/dw/queries.js";
-import { ensureDwSchema, closeDwDatabase } from "../../src/dw/database.js";
-import { populateDwDatabase } from "../../src/dw/populate.js";
+} from "@2d6mcp/dw";
+import { ensureDwSchema, closeDwDatabase } from "@2d6mcp/dw/database";
+import { populateDwDatabase } from "@2d6mcp/dw/populate";
 
 const config = loadConfig();
 const BUNDLED_DB = config.dwDbPath;

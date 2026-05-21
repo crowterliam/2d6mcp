@@ -2,7 +2,7 @@
 /// Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { loadConfig } from "../../src/config.js";
+import { loadConfig } from "../../packages/server/src/config.js";
 
 const originalEnv = { ...process.env };
 

@@ -5,8 +5,8 @@
 import { writeFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { PROJECT_ROOT, BYOD_CONSENT_FILE } from "./config.js";
-import { populateOglDatabase } from "./ogl/populate.js";
-import { populateDwDatabase } from "./dw/populate.js";
+import { populateOglDatabase } from "@2d6mcp/ogl/populate";
+import { populateDwDatabase } from "@2d6mcp/dw/populate";
 
 function cmdSetup(): void {
   if (existsSync(BYOD_CONSENT_FILE)) {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
-import { getDatabase } from "../../ogl/database.js";
+import { getDatabase } from "@2d6mcp/ogl/database";
 import {
   searchOglRules,
   searchOglTables,
@@ -13,7 +13,7 @@ import {
   searchWorldBuilding,
   listOglCategories,
   listOglTables,
-} from "../../ogl/queries.js";
+} from "@2d6mcp/ogl";
 import { ensureOglDb } from "../helpers.js";
 
 export async function handleQueryOglRules(args: Record<string, unknown> | undefined): Promise<{
