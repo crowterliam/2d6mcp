@@ -3,7 +3,7 @@ import Database from "better-sqlite3";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { loadConfig } from "../../src/config.js";
+import { loadConfig } from "../../packages/server/src/config.js";
 import {
   searchOglRules,
   searchOglTables,
@@ -15,9 +15,9 @@ import {
   searchCombat,
   searchShipOps,
   searchWorldBuilding,
-} from "../../src/ogl/queries.js";
-import { getDatabase, initSchema, ensureSchema, closeDatabase } from "../../src/ogl/database.js";
-import { populateOglDatabase } from "../../src/ogl/populate.js";
+} from "@2d6mcp/ogl";
+import { getDatabase, initSchema, ensureSchema, closeDatabase } from "@2d6mcp/ogl/database";
+import { populateOglDatabase } from "@2d6mcp/ogl/populate";
 
 const config = loadConfig();
 const BUNDLED_DB = config.oglDbPath;

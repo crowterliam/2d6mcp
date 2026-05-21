@@ -1,0 +1,44 @@
+{
+  "name": "@2d6mcp/server",
+  "version": "0.4.0",
+  "description": "2d6mcp MCP Server — system-agnostic mechanical engine, dice roller, and rules reference",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "2d6mcp": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "setup": "node dist/cli.js setup",
+    "populate-ogl": "node dist/cli.js populate-ogl",
+    "populate-dw": "node dist/cli.js populate-dw"
+  },
+  "license": "AGPL-3.0-only",
+  "author": "Jupiter Industries <liam@evaunit.one> (https://jupiter.industries)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/crowterliam/2d6mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/crowterliam/2d6mcp/issues"
+  },
+  "homepage": "https://jupiter.industries",
+  "dependencies": {
+    "@2d6mcp/shared": "*",
+    "@2d6mcp/ogl": "*",
+    "@2d6mcp/dw": "*",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@xmldom/xmldom": "^0.9.10",
+    "better-sqlite3": "^11.8.0",
+    "pdf-parse": "^2.4.5",
+    "zod": "^3.24.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.19.19",
+    "typescript": "^5.8.0",
+    "vitest": "^4.1.7"
+  }
+}

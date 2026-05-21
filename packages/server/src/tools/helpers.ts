@@ -4,8 +4,8 @@
 import { readFileSync, existsSync, statSync } from "node:fs";
 import { resolve, join, extname } from "node:path";
 import { loadConfig, PROJECT_ROOT, type Config } from "../config.js";
-import { populateOglDatabase } from "../ogl/populate.js";
-import { populateDwDatabase } from "../dw/populate.js";
+import { populateOglDatabase } from "@2d6mcp/ogl/populate";
+import { populateDwDatabase } from "@2d6mcp/dw/populate";
 import { checkByodConsent, getByodPath } from "../byod/gate.js";
 import { discoverFiles, ingestFile, type IngestedChunk, type IngestedFile } from "../byod/ingest.js";
 import { getByodDatabase, indexChunks, rebuildByodFts, getStoredFileHash, markFileFailed, FAILED_HASH } from "../byod/search.js";

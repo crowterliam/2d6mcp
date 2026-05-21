@@ -3,22 +3,22 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import { loadConfig } from "../../config.js";
-import { getDatabase } from "../../ogl/database.js";
-import { ensureDwSchema } from "../../dw/database.js";
+import { getDatabase } from "@2d6mcp/ogl/database";
+import { ensureDwSchema } from "@2d6mcp/dw/database";
 import {
   searchOglRules,
   searchOglSkills,
   searchOglEquipment,
   searchCombat,
   searchShipOps,
-} from "../../ogl/queries.js";
+} from "@2d6mcp/ogl";
 import {
   searchDwRules,
   searchDwMoves,
   searchDwClasses,
   searchDwEquipment,
   searchDwGmTools,
-} from "../../dw/queries.js";
+} from "@2d6mcp/dw";
 import { openSessionDb, getRecentRulings, getRecentContext, storeRuling, logTranscript, getTranscript, getSession, getOrCreateProgress, updateProgress, markChunkProcessed, getNextUnprocessedChunk, deleteProgress } from "../../session/database.js";
 import { transcribeAudioBuffer, isMLXWhisperAvailable } from "../../audio/mlx-transcribe.js";
 import { synthesizeRuling as mlxSynthesizeRuling, isMLXLLMAvailable } from "../../rulings/mlx-synthesize.js";

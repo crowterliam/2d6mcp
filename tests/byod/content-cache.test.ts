@@ -10,7 +10,7 @@ import {
   getCachedChunks,
   storeCachedChunks,
   getCacheStats,
-} from "../../src/byod/content-cache.js";
+} from "../../packages/server/src/byod/content-cache.js";
 
 const originalEnv = { ...process.env };
 const TMP = join(tmpdir(), `2d6mcp-test-cache-${Date.now()}`);

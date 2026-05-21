@@ -23,7 +23,7 @@ afterEach(() => {
 
 describe("getByodDatabase", () => {
   it("creates a database for a BYOD path", async () => {
-    const { getByodDatabase, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -37,7 +37,7 @@ describe("getByodDatabase", () => {
   });
 
   it("returns the same db for the same path", async () => {
-    const { getByodDatabase, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db1 = getByodDatabase(byodPath);
@@ -49,7 +49,7 @@ describe("getByodDatabase", () => {
 
 describe("indexChunks", () => {
   it("indexes chunks for a file", async () => {
-    const { getByodDatabase, indexChunks, rebuildByodFts, listByodFiles, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, indexChunks, rebuildByodFts, listByodFiles, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -68,7 +68,7 @@ describe("indexChunks", () => {
   });
 
   it("skips re-indexing when hash matches", async () => {
-    const { getByodDatabase, indexChunks, rebuildByodFts, listByodFiles, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, indexChunks, rebuildByodFts, listByodFiles, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -86,7 +86,7 @@ describe("indexChunks", () => {
   });
 
   it("replaces chunks when hash changes", async () => {
-    const { getByodDatabase, indexChunks, rebuildByodFts, getFileChunks, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, indexChunks, rebuildByodFts, getFileChunks, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -107,7 +107,7 @@ describe("indexChunks", () => {
 
 describe("searchByodIndex", () => {
   it("finds indexed content", async () => {
-    const { getByodDatabase, indexChunks, rebuildByodFts, searchByodIndex, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, indexChunks, rebuildByodFts, searchByodIndex, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -124,7 +124,7 @@ describe("searchByodIndex", () => {
   });
 
   it("returns empty for no matches", async () => {
-    const { getByodDatabase, indexChunks, rebuildByodFts, searchByodIndex, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, indexChunks, rebuildByodFts, searchByodIndex, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -139,7 +139,7 @@ describe("searchByodIndex", () => {
   });
 
   it("returns empty for empty search", async () => {
-    const { getByodDatabase, searchByodIndex, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, searchByodIndex, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -151,7 +151,7 @@ describe("searchByodIndex", () => {
 
 describe("hasIndexedFiles", () => {
   it("returns false when no files indexed", async () => {
-    const { getByodDatabase, hasIndexedFiles, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, hasIndexedFiles, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -160,7 +160,7 @@ describe("hasIndexedFiles", () => {
   });
 
   it("returns true when files are indexed", async () => {
-    const { getByodDatabase, indexChunks, hasIndexedFiles, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, indexChunks, hasIndexedFiles, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -174,7 +174,7 @@ describe("hasIndexedFiles", () => {
 
 describe("getStoredFileHash", () => {
   it("returns null for unknown file", async () => {
-    const { getByodDatabase, getStoredFileHash, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, getStoredFileHash, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -183,7 +183,7 @@ describe("getStoredFileHash", () => {
   });
 
   it("returns the stored hash", async () => {
-    const { getByodDatabase, indexChunks, getStoredFileHash, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, indexChunks, getStoredFileHash, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -197,7 +197,7 @@ describe("getStoredFileHash", () => {
 
 describe("markFileFailed", () => {
   it("marks a file as failed", async () => {
-    const { getByodDatabase, markFileFailed, listByodFiles, getStoredFileHash, FAILED_HASH, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, markFileFailed, listByodFiles, getStoredFileHash, FAILED_HASH, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -211,7 +211,7 @@ describe("markFileFailed", () => {
   });
 
   it("removes chunks when marking as failed", async () => {
-    const { getByodDatabase, indexChunks, markFileFailed, getFileChunks, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, indexChunks, markFileFailed, getFileChunks, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -228,7 +228,7 @@ describe("markFileFailed", () => {
 
 describe("getFileChunks", () => {
   it("returns null for nonexistent file", async () => {
-    const { getByodDatabase, getFileChunks, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, getFileChunks, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -239,7 +239,7 @@ describe("getFileChunks", () => {
   });
 
   it("returns file and chunks", async () => {
-    const { getByodDatabase, indexChunks, getFileChunks, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, indexChunks, getFileChunks, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -259,7 +259,7 @@ describe("getFileChunks", () => {
 
 describe("getChunkContent", () => {
   it("returns null for nonexistent file", async () => {
-    const { getByodDatabase, getChunkContent, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, getChunkContent, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -268,7 +268,7 @@ describe("getChunkContent", () => {
   });
 
   it("returns null for nonexistent chunk index", async () => {
-    const { getByodDatabase, indexChunks, getChunkContent, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, indexChunks, getChunkContent, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -280,7 +280,7 @@ describe("getChunkContent", () => {
   });
 
   it("returns the chunk content", async () => {
-    const { getByodDatabase, indexChunks, getChunkContent, closeByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, indexChunks, getChunkContent, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -298,7 +298,7 @@ describe("getChunkContent", () => {
 
 describe("clearByodDatabase", () => {
   it("deletes the database file", async () => {
-    const { getByodDatabase, indexChunks, closeByodDatabase, clearByodDatabase } = await import("../../src/byod/search.js");
+    const { getByodDatabase, indexChunks, closeByodDatabase, clearByodDatabase } = await import("../../packages/server/src/byod/search.js");
     const byodPath = uniqueByodPath();
     mkdirSync(byodPath, { recursive: true });
     const db = getByodDatabase(byodPath);
@@ -312,7 +312,7 @@ describe("clearByodDatabase", () => {
   });
 
   it("reports when database does not exist", async () => {
-    const { closeByodDatabase, clearByodDatabase } = await import("../../src/byod/search.js");
+    const { closeByodDatabase, clearByodDatabase } = await import("../../packages/server/src/byod/search.js");
     closeByodDatabase();
     const result = clearByodDatabase("/nonexistent/path/that/does/not/exist");
     expect(result.deleted).toBe(false);

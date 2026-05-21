@@ -33,7 +33,7 @@ function writeTestConfig(config: { webhooks: any[] }): void {
 
 describe("parseRoutingContext", () => {
   it("parses all context fields into tags", async () => {
-    const mod = await import("../../src/discord/config.js");
+    const mod = await import("../../packages/server/src/discord/config.js");
     const tags = mod.parseRoutingContext({
       channel_type: "gm, player",
       visibility: "public",
@@ -51,13 +51,13 @@ describe("parseRoutingContext", () => {
   });
 
   it("returns empty array for empty context", async () => {
-    const mod = await import("../../src/discord/config.js");
+    const mod = await import("../../packages/server/src/discord/config.js");
     const tags = mod.parseRoutingContext({});
     expect(tags).toEqual([]);
   });
 
   it("deduplicates tags", async () => {
-    const mod = await import("../../src/discord/config.js");
+    const mod = await import("../../packages/server/src/discord/config.js");
     const tags = mod.parseRoutingContext({
       channel_type: "gm",
       visibility: "gm",

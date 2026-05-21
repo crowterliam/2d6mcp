@@ -6,7 +6,7 @@ import {
   rollOnTable,
   normalizeDiceType,
   type TableDefinition,
-} from "../../src/dice/tables.js";
+} from "../../packages/server/src/dice/tables.js";
 
 describe("resolveDiceRange", () => {
   it("returns 6 for 1d6", () => expect(resolveDiceRange("1d6")).toBe(6));

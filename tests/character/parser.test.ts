@@ -3,7 +3,7 @@ import {
   parseCharacterText,
   readCharacterFile,
   extractUpp,
-} from "../../src/character/parser.js";
+} from "../../packages/server/src/character/parser.js";
 
 describe("extractUpp", () => {
   it("extracts a 6-char hex UPP", () => {

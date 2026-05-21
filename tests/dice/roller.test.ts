@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseDiceNotation, roll2d6, rollCustom } from "../../src/dice/roller.js";
+import { parseDiceNotation, roll2d6, rollCustom } from "@2d6mcp/shared/dice";
 
 describe("parseDiceNotation", () => {
   it("parses basic 2d6", () => {

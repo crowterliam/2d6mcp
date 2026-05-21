@@ -19,7 +19,7 @@ afterEach(() => {
 describe("checkByodConsent", () => {
   it("returns disallowed when no BYOD_PATH set", async () => {
     delete process.env.BYOD_PATH;
-    const { checkByodConsent } = await import("../../src/byod/gate.js");
+    const { checkByodConsent } = await import("../../packages/server/src/byod/gate.js");
     const result = checkByodConsent();
     expect(result.allowed).toBe(false);
   });
@@ -27,7 +27,7 @@ describe("checkByodConsent", () => {
   it("returns disallowed when consented but no path", async () => {
     process.env.AGREE_BYOD_USE = "true";
     delete process.env.BYOD_PATH;
-    const { checkByodConsent } = await import("../../src/byod/gate.js");
+    const { checkByodConsent } = await import("../../packages/server/src/byod/gate.js");
     const result = checkByodConsent();
     expect(result.allowed).toBe(false);
     expect(result.message).toContain("BYOD_PATH");
@@ -36,7 +36,7 @@ describe("checkByodConsent", () => {
   it("returns allowed when consented with valid path", async () => {
     process.env.AGREE_BYOD_USE = "true";
     process.env.BYOD_PATH = TMP;
-    const { checkByodConsent } = await import("../../src/byod/gate.js");
+    const { checkByodConsent } = await import("../../packages/server/src/byod/gate.js");
     const result = checkByodConsent();
     expect(result.allowed).toBe(true);
     expect(result.message).toBe("BYOD Mode enabled.");
@@ -46,13 +46,13 @@ describe("checkByodConsent", () => {
 describe("getByodPath", () => {
   it("returns empty string when no path set", async () => {
     delete process.env.BYOD_PATH;
-    const { getByodPath } = await import("../../src/byod/gate.js");
+    const { getByodPath } = await import("../../packages/server/src/byod/gate.js");
     expect(getByodPath()).toBe("");
   });
 
   it("returns the configured path", async () => {
     process.env.BYOD_PATH = TMP;
-    const { getByodPath } = await import("../../src/byod/gate.js");
+    const { getByodPath } = await import("../../packages/server/src/byod/gate.js");
     expect(getByodPath()).toBe(TMP);
   });
 });

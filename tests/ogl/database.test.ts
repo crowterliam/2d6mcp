@@ -3,8 +3,8 @@ import Database from "better-sqlite3";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { tmpdir } from "node:os";
-import { getDatabase, initSchema, ensureSchema, closeDatabase } from "../../src/ogl/database.js";
-import { SCHEMA_DDL } from "../../src/ogl/schema.sql.js";
+import { getDatabase, initSchema, ensureSchema, closeDatabase } from "@2d6mcp/ogl/database";
+import { SCHEMA_DDL } from "@2d6mcp/ogl/schema";
 
 const TMP = join(tmpdir(), `2d6mcp-test-ogl-${Date.now()}`);
 const DB_PATH = join(TMP, "test-ogl.db");

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   colorFromName,
   type DiscordMessage,
-} from "../../src/discord/webhook.js";
+} from "../../packages/server/src/discord/webhook.js";
 
 describe("colorFromName", () => {
   it("resolves named colors", () => {

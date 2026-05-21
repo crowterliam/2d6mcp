@@ -13,7 +13,7 @@ import { execSync } from "node:child_process";
 describe("isMLXWhisperAvailable", () => {
   it("returns true when mlx_whisper is in PATH", async () => {
     vi.mocked(execSync).mockReturnValue(Buffer.from("/opt/homebrew/bin/mlx_whisper"));
-    const { isMLXWhisperAvailable } = await import("../../src/audio/mlx-transcribe.js");
+    const { isMLXWhisperAvailable } = await import("../../packages/server/src/audio/mlx-transcribe.js");
     expect(isMLXWhisperAvailable()).toBe(true);
   });
 
@@ -21,7 +21,7 @@ describe("isMLXWhisperAvailable", () => {
     vi.mocked(execSync).mockImplementation(() => {
       throw new Error("not found");
     });
-    const { isMLXWhisperAvailable } = await import("../../src/audio/mlx-transcribe.js");
+    const { isMLXWhisperAvailable } = await import("../../packages/server/src/audio/mlx-transcribe.js");
     expect(isMLXWhisperAvailable()).toBe(false);
   });
 });
@@ -29,7 +29,7 @@ describe("isMLXWhisperAvailable", () => {
 describe("isMLXLLMAvailable", () => {
   it("returns true when mlx_lm.generate is in PATH", async () => {
     vi.mocked(execSync).mockReturnValue(Buffer.from("/opt/homebrew/bin/mlx_lm.generate"));
-    const { isMLXLLMAvailable } = await import("../../src/rulings/mlx-synthesize.js");
+    const { isMLXLLMAvailable } = await import("../../packages/server/src/rulings/mlx-synthesize.js");
     expect(isMLXLLMAvailable()).toBe(true);
   });
 
@@ -37,7 +37,7 @@ describe("isMLXLLMAvailable", () => {
     vi.mocked(execSync).mockImplementation(() => {
       throw new Error("not found");
     });
-    const { isMLXLLMAvailable } = await import("../../src/rulings/mlx-synthesize.js");
+    const { isMLXLLMAvailable } = await import("../../packages/server/src/rulings/mlx-synthesize.js");
     expect(isMLXLLMAvailable()).toBe(false);
   });
 });

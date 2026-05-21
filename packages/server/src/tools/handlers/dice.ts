@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
-import { roll2d6, rollCustom } from "../../dice/roller.js";
-import { rollOnTable, normalizeDiceType } from "../../dice/tables.js";
-import { getDatabase } from "../../ogl/database.js";
-import { searchOglTables } from "../../ogl/queries.js";
+import { roll2d6, rollCustom } from "@2d6mcp/shared/dice";
+import { rollOnTable, normalizeDiceType } from "@2d6mcp/shared/tables";
+import { getDatabase } from "@2d6mcp/ogl/database";
+import { searchOglTables } from "@2d6mcp/ogl";
 import { ensureOglDb } from "../helpers.js";
 
 export async function handleRoll2d6(args: Record<string, unknown> | undefined): Promise<{

@@ -21,7 +21,7 @@ import {
   storeRuling,
   getRecentRulings,
   closeSessionDb,
-} from "../../src/session/database.js";
+} from "../../packages/server/src/session/database.js";
 
 const TMP = join(tmpdir(), `2d6mcp-test-session-${Date.now()}`);
 const DB_PATH = join(TMP, "test-sessions.db");

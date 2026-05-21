@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
-import { ensureDwSchema } from "../../dw/database.js";
+import { ensureDwSchema } from "@2d6mcp/dw/database";
 import {
   searchDwRules,
   searchDwMoves,
@@ -12,7 +12,7 @@ import {
   searchDwGmTools,
   listDwMoveCategories,
   listDwMonsterSettings,
-} from "../../dw/queries.js";
+} from "@2d6mcp/dw";
 import { ensureDwDb } from "../helpers.js";
 
 export async function handleQueryDwRules(args: Record<string, unknown> | undefined): Promise<{
