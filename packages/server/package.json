@@ -1,6 +1,6 @@
 {
   "name": "@2d6mcp/server",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "2d6mcp MCP Server — system-agnostic mechanical engine, dice roller, and rules reference",
   "type": "module",
   "main": "dist/index.js",
