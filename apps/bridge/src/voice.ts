@@ -21,6 +21,7 @@ export interface VoiceState {
 }
 
 const voiceStates = new Map<string, VoiceState>();
+const pendingJoins = new Set<string>();
 
 export function getVoiceState(guildId: string): VoiceState | undefined {
   return voiceStates.get(guildId);
@@ -40,6 +41,15 @@ export async function joinVoice(channel: VoiceBasedChannel, guild: { id: string;
   const existing = voiceStates.get(guild.id);
   if (existing) return existing;
 
+  // Prevent duplicate joins from racing VoiceStateUpdate events
+  if (pendingJoins.has(guild.id)) {
+    console.log(`Skipping duplicate join for ${guild.name}`);
+    const state = voiceStates.get(guild.id);
+    if (state) return state;
+    throw new Error("Join already in progress");
+  }
+  pendingJoins.add(guild.id);
+
   const connection = joinVoiceChannel({
     channelId: channel.id,
     guildId: guild.id,
@@ -53,8 +63,15 @@ export async function joinVoice(channel: VoiceBasedChannel, guild: { id: string;
     console.log(`Voice state: ${oldState.status} → ${newState.status} (${guild.name})`);
   });
 
-  // Wait for the connection to be ready (25s timeout for Fly.io → Discord)
-  await entersState(connection, VoiceConnectionStatus.Ready, 25_000);
+  // Wait for the connection to be ready (25s timeout for Discord voice)
+  try {
+    await entersState(connection, VoiceConnectionStatus.Ready, 25_000);
+  } catch (err) {
+    pendingJoins.delete(guild.id);
+    try { connection.destroy(); } catch {}
+    throw err;
+  }
+  pendingJoins.delete(guild.id);
   console.log(`Joined voice: ${guild.name} (${guild.id})`);
 
   // The voice receiver is a property of the connection, not a separate factory
