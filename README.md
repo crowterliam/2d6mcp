@@ -40,26 +40,22 @@ npm run populate-5ecompatible  # generate the 5E-compatible rules database
 npm run start          # run the MCP server (stdio transport)
 ```
 
-## Quick Start — Hosted Discord Bot
+## Quick Start — Hosted Discord Bot (Cloudflare)
 
 ```bash
 git clone https://github.com/crowterliam/2d6mcp.git
 cd 2d6mcp
-cp apps/worker/wrangler.toml.example apps/worker/wrangler.toml
-# Fill in your Cloudflare account_id and create a D1 database + R2 bucket
-cd apps/worker
-npx wrangler d1 create 2d6mcp
-npx wrangler r2 bucket create 2d6mcp-audio
-npx wrangler d1 execute 2d6mcp --remote --file src/db/schema.sql
-npx wrangler secret put DISCORD_BOT_TOKEN
-npx wrangler secret put DISCORD_PUBLIC_KEY
-npx wrangler secret put DISCORD_CLIENT_ID
-npx wrangler secret put DISCORD_CLIENT_SECRET
-npx wrangler secret put JWT_SECRET
-npx wrangler deploy
+npm install
+npm run setup-cloud
 ```
 
-Then: set your Interactions Endpoint URL in Discord Developer Portal to `https://2d6mcp.YOUR-SUBDOMAIN.workers.dev/api/interactions`, register slash commands, and invite the bot.
+The interactive wizard guides you through:
+- Cloudflare login + account setup
+- Discord bot token + configuration
+- Worker deployment, D1 + R2 creation, rule seeding
+- Slash command registration
+
+5 minutes, one command. Then paste the Interactions Endpoint URL in Discord Developer Portal.
 
 ## MCP Client Configuration
 

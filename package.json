@@ -12,6 +12,7 @@
     "start": "node packages/server/dist/index.js",
     "dev": "tsc --build --watch",
     "setup": "node packages/server/dist/cli.js setup",
+    "setup-cloud": "node scripts/setup-cloud.mjs",
     "populate-ogl": "node packages/server/dist/cli.js populate-ogl",
     "populate-dw": "node packages/server/dist/cli.js populate-dw",
     "populate-brp": "node packages/server/dist/cli.js populate-brp",
