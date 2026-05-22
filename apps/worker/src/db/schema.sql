@@ -1,6 +1,3 @@
--- 2d6mcp Cloudflare Worker — D1 Schema
--- SPDX-License-Identifier: AGPL-3.0-only
-
 CREATE TABLE IF NOT EXISTS guilds (
   guild_id TEXT PRIMARY KEY,
   owner_id TEXT NOT NULL,
@@ -57,7 +54,7 @@ CREATE TABLE IF NOT EXISTS rate_limits (
   count INTEGER NOT NULL DEFAULT 0
 );
 
-CREATE VIRTUAL TABLE IF NOT EXISTS ogl_rules_fts USING fts5(
+CREATE VIRTUAL TABLE ogl_rules_fts USING fts5(
   title,
   category,
   content,
@@ -65,7 +62,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS ogl_rules_fts USING fts5(
   tokenize='porter unicode61'
 );
 
-CREATE VIRTUAL TABLE IF NOT EXISTS dw_rules_fts USING fts5(
+CREATE VIRTUAL TABLE dw_rules_fts USING fts5(
   title,
   category,
   content,
@@ -73,7 +70,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS dw_rules_fts USING fts5(
   tokenize='porter unicode61'
 );
 
-CREATE VIRTUAL TABLE IF NOT EXISTS transcription_progress (
+CREATE TABLE IF NOT EXISTS transcription_progress (
   file_path TEXT PRIMARY KEY,
   guild_id TEXT NOT NULL,
   session_id TEXT,
