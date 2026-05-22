@@ -73,6 +73,11 @@ export async function registerCommands(env: Env): Promise<void> {
       options: [{ name: "query", description: "What to search for", type: 3, required: true }],
     },
     { name: "help", description: "Show available commands" },
+    {
+      name: "push-to-ask",
+      description: "Capture the last N seconds of voice audio for AI analysis",
+      options: [{ name: "seconds", description: "Seconds of audio (default 30)", type: 4, required: false }],
+    },
   ];
 
   const url = `https://discord.com/api/v10/applications/${env.DISCORD_CLIENT_ID}/commands`;

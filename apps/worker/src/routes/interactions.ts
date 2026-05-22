@@ -165,8 +165,8 @@ interactions.post("/api/interactions", async (c) => {
           "/session end — End the current session\n" +
           "/session context — View recent transcript\n" +
           "/search <query> — Search session transcript\n" +
-          "/join — Bot joins voice channel\n" +
-          "/leave — Bot leaves voice channel"
+          "/push-to-ask [seconds] — Capture voice audio for AI analysis\n" +
+          "/help — Show available commands"
         ));
       }
 
@@ -213,12 +213,29 @@ interactions.post("/api/interactions", async (c) => {
         return c.json(RESPONSE_DEFERRED);
       }
 
-      case "join": {
-        return c.json(respond("Voice bridge connection is handled by the bridge process. Please ensure the bridge is running and use /join to connect."));
-      }
+      case "join":
+      case "leave":
+        return c.json(respond("Voice commands are handled by the bridge. Ensure the bridge is deployed on Fly.io and your bot token is configured. See `apps/bridge/Bridge_SETUP.md`."));
 
-      case "leave": {
-        return c.json(respond("Voice bridge disconnected."));
+      case "push-to-ask": {
+        const seconds = (opts.get("seconds") as number) || 30;
+        if (!guildId) return c.json(respond("This command must be used in a server."));
+
+        // Proxy to the bridge's HTTP endpoint
+        try {
+          const bridgeUrl = env.BRIDGE_URL || "https://2d6mcp-bridge.fly.dev";
+          const res = await fetch(`${bridgeUrl}/push-to-ask?guild_id=${guildId}&seconds=${seconds}`, {
+            method: "POST",
+            signal: AbortSignal.timeout(5000),
+          });
+          const data = await res.json() as { ok: boolean; error?: string; key?: string };
+          if (data.ok) {
+            return c.json(respond(`Audio sent (${seconds}s). Ask \`/ask\` with your question to reference this moment.`));
+          }
+          return c.json(respond(data.error || "Not connected to voice. Join a voice channel first."));
+        } catch {
+          return c.json(respond("Bridge is not reachable. Ensure it is deployed on Fly.io."));
+        }
       }
 
       default:
