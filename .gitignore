@@ -11,6 +11,10 @@ dist/
 .dev.vars
 .wrangler/
 
+# Build artifacts
+*.tsbuildinfo
+dist/
+
 # Audio fixtures — generated for local MLX testing
 tests/audio/fixtures/
 
