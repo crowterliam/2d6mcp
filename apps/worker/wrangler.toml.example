@@ -2,6 +2,7 @@ name = "2d6mcp"
 main = "src/index.ts"
 compatibility_date = "2025-05-01"
 compatibility_flags = ["nodejs_compat"]
+# Replace with your Cloudflare account ID (from: wrangler whoami)
 # account_id = "your-cloudflare-account-id"
 
 # ── AI ──
@@ -9,30 +10,33 @@ compatibility_flags = ["nodejs_compat"]
 binding = "AI"
 
 # ── D1 ──
+# Create with: npx wrangler d1 create 2d6mcp
 [[d1_databases]]
 binding = "DB"
 database_name = "2d6mcp-dev"
-database_id = "your-d1-database-id"
+# database_id = "your-d1-database-id"
 
 # ── R2 ──
+# Create with: npx wrangler r2 bucket create 2d6mcp-audio
 [[r2_buckets]]
 binding = "AUDIO"
 bucket_name = "2d6mcp-audio"
 
-# ── Env vars (set secrets via wrangler secret put or .dev.vars) ──
+# ── Non-secret config ──
 [vars]
-DISCORD_BOT_TOKEN = ""
-DISCORD_PUBLIC_KEY = ""
-DISCORD_CLIENT_ID = ""
-DISCORD_CLIENT_SECRET = ""
-JWT_SECRET = ""
-STRIPE_SECRET_KEY = ""
-STRIPE_WEBHOOK_SECRET = ""
-API_URL = "https://2d6mcp-api.liam.workers.dev"
-WEB_URL = "https://2d6mcp.app"
+API_URL = "https://your-worker-name.your-subdomain.workers.dev"
+WEB_URL = "https://your-domain.com"
+
+# ── Secrets ──
+# Set ALL of these via `npx wrangler secret put <NAME>`. Do NOT paste values here.
+# Required: DISCORD_BOT_TOKEN, DISCORD_PUBLIC_KEY, DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET
+# Required: JWT_SECRET (any random string ≥32 chars)
+# Optional: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
+# See README.md for setup instructions.
 
 # ── Staging env (optional) ──
+# Copy the bindings above into [env.staging] for a separate staging deployment.
 # [env.staging]
 # name = "2d6mcp-staging"
 # account_id = "your-cloudflare-account-id"
-# ... (copy bindings above)
+# ... copy [ai], [[d1_databases]], [[r2_buckets]], [vars] sections above
