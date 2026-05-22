@@ -11,7 +11,7 @@ import {
   entersState,
   type VoiceConnection,
 } from "@discordjs/voice";
-import type { VoiceBasedChannel } from "discord.js";
+import type { VoiceBasedChannel, Guild } from "discord.js";
 import { RingBuffer } from "./ring-buffer.js";
 
 export interface VoiceState {
@@ -37,7 +37,7 @@ export function getTotalMemory(): number {
   return total;
 }
 
-export async function joinVoice(channel: VoiceBasedChannel, guild: { id: string; name: string; voiceAdapterCreator: any }): Promise<VoiceState> {
+export async function joinVoice(channel: VoiceBasedChannel, guild: Guild): Promise<VoiceState> {
   const existing = voiceStates.get(guild.id);
   if (existing) return existing;
 
@@ -53,7 +53,7 @@ export async function joinVoice(channel: VoiceBasedChannel, guild: { id: string;
   const connection = joinVoiceChannel({
     channelId: channel.id,
     guildId: guild.id,
-    adapterCreator: guild.voiceAdapterCreator as any,
+    adapterCreator: (channel.guild as any).voiceAdapterCreator,
     selfDeaf: true,
     selfMute: true,
   });
