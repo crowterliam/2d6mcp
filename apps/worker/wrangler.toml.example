@@ -1,0 +1,38 @@
+name = "2d6mcp"
+main = "src/index.ts"
+compatibility_date = "2025-05-01"
+compatibility_flags = ["nodejs_compat"]
+# account_id = "your-cloudflare-account-id"
+
+# ── AI ──
+[ai]
+binding = "AI"
+
+# ── D1 ──
+[[d1_databases]]
+binding = "DB"
+database_name = "2d6mcp-dev"
+database_id = "your-d1-database-id"
+
+# ── R2 ──
+[[r2_buckets]]
+binding = "AUDIO"
+bucket_name = "2d6mcp-audio"
+
+# ── Env vars (set secrets via wrangler secret put or .dev.vars) ──
+[vars]
+DISCORD_BOT_TOKEN = ""
+DISCORD_PUBLIC_KEY = ""
+DISCORD_CLIENT_ID = ""
+DISCORD_CLIENT_SECRET = ""
+JWT_SECRET = ""
+STRIPE_SECRET_KEY = ""
+STRIPE_WEBHOOK_SECRET = ""
+API_URL = "https://2d6mcp-api.liam.workers.dev"
+WEB_URL = "https://2d6mcp.app"
+
+# ── Staging env (optional) ──
+# [env.staging]
+# name = "2d6mcp-staging"
+# account_id = "your-cloudflare-account-id"
+# ... (copy bindings above)
