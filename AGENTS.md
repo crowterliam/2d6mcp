@@ -349,3 +349,100 @@ Never reference any third-party game system or trademarked terms. Use generic de
 ### Security Note
 
 **Never commit secrets to the repository.** `wrangler.toml` is gitignored — use `wrangler.toml.example` as a template. All secrets for the Cloudflare Worker must be set via `wrangler secret put`. `.dev.vars` is gitignored for local development. The self-hosted MCP server reads secrets from environment variables only — never from committed files.
+
+## Development Workflow
+
+These rules apply to **all AI coding agents** working on this repository. Follow them strictly across sessions. Deviations cause merge conflicts, broken builds, and exposed secrets.
+
+### Branch and Commit Discipline
+
+1. **Always create a feature branch.** Start work with `git checkout -b feature/<descriptive-name>`. Never commit directly to `main`.
+
+2. **Atomic commits.** One logical change per commit. If you fix a bug, improve docs, and refactor code in the same session, make three commits.
+
+3. **Conventional commit messages:**
+   ```
+   type(scope): brief description
+   
+   feat(worker): add /api/ask endpoint with Qwen3 MoE
+   fix(security): resolve ReDoS in quality filter regex
+   docs(readme): update monorepo architecture diagram
+   ```
+
+4. **Before committing — verify what changed.** Run `git status --short` and `git diff --stat`. Only stage files you intend to change. Never `git add -A` blindly.
+
+### Pre-Commit Checklist
+
+Run these **before every commit** that includes code changes:
+
+```bash
+npm run typecheck    # tsc --build --noEmit across all packages
+npm test             # 209 tests across 18 test files
+npm run build        # full compilation (tsc --build)
+```
+
+If the Worker was modified, also run:
+
+```bash
+npx tsc --noEmit --project apps/worker/tsconfig.json
+```
+
+### Security Before Every Commit
+
+1. **Check for exposed secrets:**
+   ```bash
+   git diff --staged | grep -iE '(token|secret|password|key)\s*[=:]\s*["\x27][a-zA-Z0-9_-]{8,}'
+   ```
+   If this returns anything, the diff contains hardcoded credentials. Remove them.
+
+2. **Verify sensitive files are gitignored:**
+   ```bash
+   git check-ignore apps/worker/wrangler.toml apps/worker/.dev.vars
+   ```
+   Both must return the file path (meaning they are ignored).
+
+3. **Verify no build artifacts are staged:**
+   ```bash
+   git diff --staged --name-only | grep -E '\.tsbuildinfo$|\.wrangler/|dist/'
+   ```
+   Must return nothing.
+
+### PR and Merge Workflow
+
+1. **Push the feature branch** and open a PR against `main`.
+
+2. **PR description** must include:
+   - What changed (2-3 sentences)
+   - Files affected (list key files)
+   - Test results (`npm test` output — 209 pass)
+   - Breaking changes (if any)
+
+3. **Do not self-merge without review.** A second pair of eyes catches things you missed — especially security issues and path mismatches. Wait for approval before merging.
+
+4. **After merge, delete the feature branch.** `git branch -d feature/<name>` for local, `git push origin --delete feature/<name>` for remote.
+
+### Documentation Discipline
+
+When you add or change features, update documentation **in the same commit**:
+
+| Change type | Update these files |
+|---|---|
+| New MCP tool | `AGENTS.md` tools table, `README.md` tools table, harness files |
+| New Worker route | `AGENTS.md` package structure, `README.md` deployment section |
+| New env var | `AGENTS.md` env var tables, `README.md`, `.env.example` |
+| Architecture change | `AGENTS.md` architecture diagram, `README.md`, `CONTRIBUTING.md` |
+| Security change | `SECURITY.md`, `.env.example` |
+
+### Worker Deployment
+
+1. **Test locally first:** `cd apps/worker && npx wrangler dev`
+2. **Dry-run deploy:** `npx wrangler deploy --dry-run`
+3. **Set secrets before first deploy:** all via `wrangler secret put`, never in `wrangler.toml`
+4. **After deploy, test the live endpoint:** `curl https://2d6mcp.<subdomain>.workers.dev/api/health`
+
+### Testing
+
+- Run `npm test` before every commit. All 209 tests must pass.
+- If you add new logic to `packages/shared/`, add corresponding tests in `tests/`.
+- If you add a new Worker route, test it locally with curl before committing.
+- Never commit code that breaks the build or any test.
