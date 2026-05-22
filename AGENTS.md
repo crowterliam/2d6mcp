@@ -377,7 +377,7 @@ Run these **before every commit** that includes code changes:
 
 ```bash
 npm run typecheck    # tsc --build --noEmit across all packages
-npm test             # 209 tests across 18 test files
+npm test             # 270 tests across 26 test files
 npm run build        # full compilation (tsc --build)
 ```
 
@@ -414,7 +414,7 @@ npx tsc --noEmit --project apps/worker/tsconfig.json
 2. **PR description** must include:
    - What changed (2-3 sentences)
    - Files affected (list key files)
-   - Test results (`npm test` output — 209 pass)
+   - Test results (`npm test` output — 270 pass)
    - Breaking changes (if any)
 
 3. **Do not self-merge without review.** A second pair of eyes catches things you missed — especially security issues and path mismatches. Wait for approval before merging.
@@ -442,7 +442,7 @@ When you add or change features, update documentation **in the same commit**:
 
 ### Testing
 
-- Run `npm test` before every commit. All 209 tests must pass.
+- Run `npm test` before every commit. All 270 tests must pass.
 - If you add new logic to `packages/shared/`, add corresponding tests in `tests/`.
 - If you add a new Worker route, test it locally with curl before committing.
 - Never commit code that breaks the build or any test.
