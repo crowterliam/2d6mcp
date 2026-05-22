@@ -8,7 +8,7 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "tsc --build",
+    "build": "tsc --build && npx tsc --project apps/bridge/tsconfig.json",
     "start": "node packages/server/dist/index.js",
     "dev": "tsc --build --watch",
     "setup": "node packages/server/dist/cli.js setup",
