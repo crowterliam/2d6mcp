@@ -35,6 +35,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
     const channel = newState.channel;
     if (!channel) return;
     console.log(`Voice: ${newState.member?.user.username} joined voice in ${guild.name}`);
+    console.log(`  guild.id=${guild.id}, channel.id=${channel.id}, channel.name=${channel.name}`);
     await joinVoice(channel, guild);
     console.log(`Auto-joined ${guild.name}`);
     updateHealthState({ guilds: getVoiceCount(), memoryBytes: getTotalMemory() });

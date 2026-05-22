@@ -53,14 +53,23 @@ export async function joinVoice(channel: VoiceBasedChannel, guild: Guild): Promi
   const connection = joinVoiceChannel({
     channelId: channel.id,
     guildId: guild.id,
-    adapterCreator: (channel.guild as any).voiceAdapterCreator,
+    adapterCreator: guild.voiceAdapterCreator,
     selfDeaf: true,
     selfMute: true,
   });
 
-  // Log state transitions for debugging
-  connection.on("stateChange", (oldState, newState) => {
-    console.log(`Voice state: ${oldState.status} → ${newState.status} (${guild.name})`);
+  // Log state transitions — every single one
+  connection.on("stateChange", (oldState: any, newState: any) => {
+    console.log(`[voice:${guild.id}] ${oldState.status} → ${newState.status}`);
+  });
+
+  connection.on("error", (err: Error) => {
+    console.error(`[voice:${guild.id}] error:`, err.message);
+  });
+
+  // Simplified: don't auto-destroy on disconnect, let @discordjs/voice manage it
+  connection.on(VoiceConnectionStatus.Disconnected, () => {
+    console.log(`[voice:${guild.id}] disconnected`);
   });
 
   // Wait for the connection to be ready (25s timeout for Discord voice)
@@ -76,20 +85,6 @@ export async function joinVoice(channel: VoiceBasedChannel, guild: Guild): Promi
 
   // The voice receiver is a property of the connection, not a separate factory
   const receiver = connection.receiver;
-
-  connection.on(VoiceConnectionStatus.Disconnected, async () => {
-    try {
-      await Promise.race([
-        entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
-        entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
-      ]);
-    } catch {
-      console.log(`Voice disconnected: ${guild.name}`);
-      destroyVoice(guild.id);
-    }
-  });
-
-  const ringBuffer = new RingBuffer(guild.id, 120);
 
   // Listen for Opus audio from all speakers
   receiver.speaking.on("start", (userId: string) => {
