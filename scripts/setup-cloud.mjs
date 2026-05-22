@@ -245,8 +245,8 @@ WEB_URL = "https://2d6mcp.pages.dev"
     DISCORD_CLIENT_ID: discordClientId,
     DISCORD_CLIENT_SECRET: discordClientSecret,
     JWT_SECRET: jwtSecret,
-    STRIPE_SECRET_KEY: "sk_test_placeholder",
-    STRIPE_WEBHOOK_SECRET: "whsec_placeholder",
+    STRIPE_SECRET_KEY: "placeholder_stripe_key",
+    STRIPE_WEBHOOK_SECRET: "placeholder_webhook_secret",
   };
 
   for (const [name, value] of Object.entries(secrets)) {

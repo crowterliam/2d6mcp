@@ -1,0 +1,10 @@
+# Gitleaks configuration for 2d6mcp
+# SPDX-License-Identifier: AGPL-3.0-only
+
+# Allow placeholder values used in setup wizard scripts.
+# These are NOT real secrets — they guide users on what format to provide.
+[rules.allowlist]
+  description = "setup wizard placeholder values"
+  paths = [
+    "scripts/setup-cloud.mjs",
+  ]
