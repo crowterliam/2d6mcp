@@ -1,5 +1,8 @@
 # 2D6 MCP — Setup Guide
 
+SPDX-License-Identifier: AGPL-3.0-only
+Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
+
 This guide covers connecting the 2d6mcp server to common AI coding harnesses (self-hosted mode) and deploying the Discord bot (Cloudflare hosted mode). After setup, your AI assistant gains dice rolling, rules lookup, character parsing, and BYOD file search capabilities for 2d6-based tabletop RPGs.
 
 ## Deployment Options

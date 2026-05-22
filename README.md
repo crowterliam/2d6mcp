@@ -1,5 +1,8 @@
 # 2D6 MCP — AI GM Assistant
 
+SPDX-License-Identifier: AGPL-3.0-only
+Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
+
 A system-agnostic Model Context Protocol (MCP) server and hosted Cloudflare Worker providing a mechanical engine, dice roller, rules reference, and AI-powered rulings assistant for 2d6-based tabletop RPGs. Supports sci-fi (OGL/Cepheus Engine SRD) and fantasy (Dungeon World, CC-BY-3.0) games.
 
 ## Deployment Modes

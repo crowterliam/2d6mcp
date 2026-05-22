@@ -29,6 +29,7 @@ export interface Config {
   byodPath: string | null;
   oglDbPath: string;
   dwDbPath: string;
+  brpDbPath: string;
   sessionDbPath: string;
   mlxWhisperModel: string;
   mlxLLMModel: string;
@@ -113,6 +114,10 @@ export function loadConfig(): Config {
     process.env.DW_DB_PATH ||
     resolve(PROJECT_ROOT, "data", "dw", "dungeon-world.db");
 
+  const brpDbPath =
+    process.env.BRP_DB_PATH ||
+    resolve(PROJECT_ROOT, "data", "brp", "basic-roleplaying.db");
+
   const sessionDbPath =
     process.env.SESSION_DB_PATH ||
     resolve(homedir(), ".2d6mcp", "sessions.db");
@@ -136,7 +141,7 @@ export function loadConfig(): Config {
   const sttBackend = (process.env.STT_BACKEND === "whispercpp") ? "whispercpp" : "mlx";
   const llmBackend = (process.env.LLM_BACKEND === "llamacpp") ? "llamacpp" : "mlx";
 
-  return { byodConsented, byodPath, oglDbPath, dwDbPath, sessionDbPath, mlxWhisperModel, mlxLLMModel, whisperCppModel, llamaCppModel, sttBackend, llmBackend, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs, byodMaxFileSize };
+  return { byodConsented, byodPath, oglDbPath, dwDbPath, brpDbPath, sessionDbPath, mlxWhisperModel, mlxLLMModel, whisperCppModel, llamaCppModel, sttBackend, llmBackend, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs, byodMaxFileSize };
 }
 
 export function isByodEnabled(): boolean {

@@ -186,6 +186,25 @@ export function getToolDefinitions(): Tool[] {
       },
     },
     {
+      name: "query_brp_rules",
+      description:
+        "Search the Basic Roleplaying (BRP) rules database for characteristics, skills, professions, weapons, armor, spot rules, and sample foes. BRP data is Open Game Content under the BRP Open Game License v1.0.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          search_term: {
+            type: "string",
+            description: "Search term (e.g., 'combat', 'sword', 'soldier', 'stealth', 'resistance table', 'poison')",
+          },
+          category: {
+            type: "string",
+            description: "Optional category filter: 'rules', 'characteristics', 'skills', 'professions', 'weapons', 'melee_weapons', 'missile_weapons', 'armor', 'shields', 'spot_rules', 'foes', 'categories', 'list_skills', 'list_professions', 'list_weapons'",
+          },
+        },
+        required: ["search_term"],
+      },
+    },
+    {
       name: "query_dw_rules",
       description:
         "Search the Dungeon World rules database for moves, classes, spells, equipment, monsters, or GM tools. DW data is derived from Dungeon World by Sage LaTorra and Adam Koebel (CC-BY-3.0), converted to Markdown by agude. See data/dw/ATTRIBUTION for full attribution.",
@@ -378,8 +397,8 @@ export function getToolDefinitions(): Tool[] {
           },
           rules_system: {
             type: "string",
-            enum: ["ogl", "dw"],
-            description: "Rules system for this session. 'ogl' = sci-fi 2d6 RPG (Cepheus Engine), 'dw' = fantasy 2d6 RPG (Dungeon World). Default: ogl.",
+            enum: ["ogl", "dw", "brp"],
+            description: "Rules system for this session. 'ogl' = sci-fi 2d6 RPG (Cepheus Engine), 'dw' = fantasy 2d6 RPG (Dungeon World), 'brp' = Basic Roleplaying (d100 percentile system). Default: ogl.",
             default: "ogl",
           },
           byod_system: {
@@ -513,7 +532,7 @@ export function getToolDefinitions(): Tool[] {
     {
       name: "synthesize_ruling",
       description:
-        "Synthesize a rules ruling using local MLX LLM. Takes a question, auto-looks up relevant rules from OGL/DW/BYOD, and returns a cited ruling. Requires mlx_lm.generate to be installed.",
+        "Synthesize a rules ruling using local MLX LLM. Takes a question, auto-looks up relevant rules from OGL/DW/BRP/BYOD, and returns a cited ruling. Requires mlx_lm.generate to be installed.",
       inputSchema: {
         type: "object",
         properties: {
@@ -523,8 +542,8 @@ export function getToolDefinitions(): Tool[] {
           },
           rules_system: {
             type: "string",
-            enum: ["ogl", "dw", "auto"],
-            description: "Which rules DB to search. 'auto' searches both. Default: 'auto'.",
+            enum: ["ogl", "dw", "brp", "auto"],
+            description: "Which rules DB to search. 'auto' searches all. Default: 'auto'.",
             default: "auto",
           },
           session_id: {

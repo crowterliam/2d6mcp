@@ -1,0 +1,22 @@
+{
+  "name": "@2d6mcp/brp",
+  "version": "0.5.0",
+  "description": "Basic Roleplaying (BRP) rules database — queries, schema, and population for 2d6mcp",
+  "type": "module",
+  "main": "dist/queries.js",
+  "types": "dist/queries.d.ts",
+  "exports": {
+    ".": "./dist/queries.js",
+    "./database": "./dist/database.js",
+    "./populate": "./dist/populate.js",
+    "./schema": "./dist/schema.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "AGPL-3.0-only",
+  "dependencies": {
+    "better-sqlite3": "^11.8.0"
+  }
+}

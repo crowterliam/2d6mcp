@@ -1,6 +1,6 @@
 {
   "name": "2d6mcp",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "description": "2d6mcp — system-agnostic mechanical engine, dice roller, rules reference, and AI GM assistant for 2d6-based tabletop RPGs",
   "workspaces": [
@@ -14,6 +14,7 @@
     "setup": "node packages/server/dist/cli.js setup",
     "populate-ogl": "node packages/server/dist/cli.js populate-ogl",
     "populate-dw": "node packages/server/dist/cli.js populate-dw",
+    "populate-brp": "node packages/server/dist/cli.js populate-brp",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

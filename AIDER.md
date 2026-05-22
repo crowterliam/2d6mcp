@@ -1,5 +1,8 @@
 # Aider Convention: 2D6 MCP
 
+SPDX-License-Identifier: AGPL-3.0-only
+Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
+
 This project is an AI GM assistant for 2d6-based TTRPGs, supporting sci-fi (OGL/Cepheus Engine) and fantasy (Dungeon World) games. It ships as both a self-hosted MCP server and a Cloudflare-deployed Discord bot.
 
 ## Project Conventions

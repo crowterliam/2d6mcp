@@ -4,6 +4,7 @@
     { "path": "packages/shared" },
     { "path": "packages/ogl" },
     { "path": "packages/dw" },
+    { "path": "packages/brp" },
     { "path": "packages/server" }
   ]
 }

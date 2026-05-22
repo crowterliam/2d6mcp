@@ -1,5 +1,8 @@
 # 2D6 MCP — Agent Instructions
 
+SPDX-License-Identifier: AGPL-3.0-only
+Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
+
 ## Project Identity
 
 This project provides two deployment modes for a 2d6-based tabletop RPG AI assistant:
