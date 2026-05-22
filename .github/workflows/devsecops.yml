@@ -57,6 +57,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Build shared packages (Worker needs type declarations)
+        run: npm run build
+
       - name: Worker typecheck
         run: npx tsc --noEmit --project apps/worker/tsconfig.json
 
