@@ -20,6 +20,7 @@ The project is system-agnostic and avoids all third-party trademarks.
 2d6mcp/                          # npm workspaces monorepo
 ├── apps/
 │   └── worker/                  # Cloudflare Worker (Hono + Workers AI + D1 + R2)
+│   └── bridge/                  # Discord voice relay (VPS, raw UDP required)
 ├── packages/
 │   ├── server/                  # MCP server (stdio transport, local MLX, BYOD)
 │   ├── shared/                  # @2d6mcp/shared — dice, keywords, prompts, quality filter
@@ -432,6 +433,15 @@ When you add or change features, update documentation **in the same commit**:
 | New env var | `AGENTS.md` env var tables, `README.md`, `.env.example` |
 | Architecture change | `AGENTS.md` architecture diagram, `README.md`, `CONTRIBUTING.md` |
 | Security change | `SECURITY.md`, `.env.example` |
+
+### Bridge Deployment (VPS)
+
+1. **Provision a VPS** with raw network access (Hetzner CX22 $4/mo recommended).
+2. **Clone + build:** `git clone`, `npm install`, `npm run build`
+3. **Configure .env:** `DISCORD_BOT_TOKEN` + `WORKER_URL`
+4. **Install systemd service:** `sudo cp apps/bridge/2d6mcp-bridge.service /etc/systemd/system/`
+5. **Start:** `sudo systemctl enable --now 2d6mcp-bridge`
+6. **Verify:** `curl http://localhost:3000/health`
 
 ### Worker Deployment
 

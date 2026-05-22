@@ -1,114 +1,104 @@
-# 2d6mcp Bridge Deployment — Fly.io
+# 2d6mcp Bridge Deployment — VPS
+
+The Discord voice bridge connects to Discord's gateway, auto-joins voice channels, captures audio, and streams it to the Cloudflare Worker for AI processing. It requires raw network access (UDP) — any VPS works. Hetzner, DigitalOcean, Linode, Vultr, or a Raspberry Pi at home.
 
 ## Prerequisites
 
-- [Fly.io account](https://fly.io) + `flyctl` CLI installed
+- A VPS running Ubuntu 22.04+ (or any Linux with systemd)
 - Discord bot token (from Developer Portal)
 - Worker URL (the deployed Cloudflare Worker)
+- Node.js 22+
 
-## Setup
-
-### 1. Install Fly CLI
-
-```bash
-# macOS
-brew install flyctl
-
-# Linux
-curl -L https://fly.io/install.sh | sh
-
-# Windows
-iwr https://fly.io/install.ps1 -useb | iex
-```
-
-### 2. Login + Create App
-
-Install `flyctl`:
-```bash
-brew install flyctl
-```
-
-Login and create the app **from the project root**:
-```bash
-cd /path/to/2d6mcp
-flyctl auth login
-flyctl launch --name 2d6mcp-bridge --region lax --no-deploy --flycast
-```
-
-Fly will prompt to copy the config — **say yes**. This creates `fly.toml` at the project root
-(replacing the template). The build context includes the entire monorepo.
-
-### 3. Set Secrets
+## Quick Setup (3 minutes)
 
 ```bash
-flyctl secrets set DISCORD_BOT_TOKEN=your-bot-token
-flyctl secrets set WORKER_URL=https://2d6mcp.YOUR-SUBDOMAIN.workers.dev
-```
+# 1. Install Node.js
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs git
 
-### 4. Build + Deploy
-
-```bash
-# Build the bridge TypeScript first (Docker image expects pre-built dist/)
+# 2. Clone and build
+git clone https://github.com/crowterliam/2d6mcp.git
+cd 2d6mcp
+npm install
 npm run build
 
-# Deploy to Fly.io
-flyctl deploy --config fly.toml
+# 3. Create environment file
+cat > apps/bridge/.env << 'EOF'
+DISCORD_BOT_TOKEN=your-bot-token-here
+WORKER_URL=https://2d6mcp.3ivkf0oy1.workers.dev
+HEALTH_PORT=3000
+EOF
+
+# 4. Install systemd service
+sudo cp apps/bridge/2d6mcp-bridge.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable 2d6mcp-bridge
+sudo systemctl start 2d6mcp-bridge
+
+# 5. Verify
+sudo systemctl status 2d6mcp-bridge
+curl http://localhost:3000/health
 ```
 
-> **Note**: Always deploy from the project root. Run `npm run build` before every deploy
-> so the Docker image picks up compiled `dist/`. TypeScript is not installed in the
-> production Docker image.
+The bridge starts automatically on boot and restarts on crash.
 
-### 5. Verify
+## Discord Bot Configuration
+
+Enable these **Privileged Gateway Intents** in the Discord Developer Portal (Bot section):
+
+- **SERVER MEMBERS INTENT** — required for auto-join (bridge needs voice state updates)
+- **PRESENCE INTENT** — recommended
+
+## How It Works
+
+1. **Auto-join**: When a user enters any voice channel the bot can access, the bridge automatically connects. No slash commands needed.
+2. **Ring buffer**: Continuously captures 120 seconds of audio per guild in a 16kHz mono PCM buffer.
+3. **Push-to-ask**: Worker receives `/push-to-ask` → makes HTTP request to bridge → bridge flushes ring buffer → uploads WAV to Worker → Worker transcribes via Workers AI Whisper.
+4. **Health**: `GET /health` returns guild count, uptime, memory for monitoring.
+
+## Manual Start (for development)
 
 ```bash
-# Check status
-flyctl status
+cd apps/bridge
+export DISCORD_BOT_TOKEN=your-token
+export WORKER_URL=https://2d6mcp.3ivkf0oy1.workers.dev
+node dist/index.js
+```
+
+## Monitoring
+
+```bash
+# Service status
+sudo systemctl status 2d6mcp-bridge
 
 # View logs
-flyctl logs
+sudo journalctl -u 2d6mcp-bridge -f
 
 # Health check
-curl https://2d6mcp-bridge.fly.dev/health
-# → {"status":"ok","guilds":0,"uptime":15,"memory":"42MB"}
-```
-
-### 6. Invite Bot
-
-The bridge uses the same Discord application as the Worker. Add it to your server:
-
-```
-https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=3148800&scope=bot%20applications.commands
-```
-
-Permissions needed: Connect, Speak, Use Voice Activity.
-
-### 7. Test
-
-In Discord:
-```
-/join                  → bot joins your voice channel
-/push-to-ask           → captures 30s of audio, uploads to Worker
-/leave                 → bot disconnects
+curl http://localhost:3000/health
+# → {"status":"ok","guilds":1,"uptime":3600,"memory":"12MB"}
 ```
 
 ## Scaling
 
+One bridge instance handles ~20 concurrent voice channels comfortably (256MB RAM). For more, run additional instances with separate bot tokens or use a load balancer.
+
+## Firewall
+
+No inbound ports need to be opened for Discord voice. The bridge connects to Discord (outbound TCP WebSocket + outbound UDP). The health port (3000) should be accessible to your monitoring and the Worker:
+
 ```bash
-# Scale to 3 instances
-flyctl scale count 3
-
-# Check current scale
-flyctl scale show
+sudo ufw allow 3000/tcp
 ```
-
-Default: 2 instances (set in `fly.toml`). Each handles ~20 concurrent guilds. Fly auto-scales by default.
 
 ## Costs
 
-| Instance | vCPU | RAM | Monthly |
-|---|---|---|---|
-| shared-cpu-1x | 1 | 256MB | $2.74 |
-| 2 instances (default) | 2 | 512MB | **$5.48/mo** |
+| Provider | Monthly | Specs |
+|---|---|---|
+| Hetzner CX22 | $4 | 2 vCPU, 4GB, 20TB traffic |
+| DigitalOcean | $6 | 1 vCPU, 1GB, 1TB traffic |
+| Linode | $5 | 1 vCPU, 1GB, 1TB traffic |
+| Vultr | $6 | 1 vCPU, 1GB, 2TB traffic |
+| Raspberry Pi | $0 | Runs at home, no cost |
 
-At 2 instances, the bridge pool handles ~40 concurrent voice channels.
+Discord voice bandwidth: ~8KB/s per active voice channel. A 1TB traffic allowance handles ~350,000 hours of voice.
