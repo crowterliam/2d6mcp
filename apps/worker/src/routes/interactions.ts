@@ -53,6 +53,11 @@ interactions.post("/api/interactions", async (c) => {
   const timestamp = c.req.header("X-Signature-Timestamp") || "";
   const body = await c.req.text();
 
+  if (!env.DISCORD_PUBLIC_KEY) {
+    console.error("DISCORD_PUBLIC_KEY not configured");
+    return c.json({ error: "Server not configured" }, 500);
+  }
+
   if (!verifyDiscordSignature(body, signature, timestamp, env.DISCORD_PUBLIC_KEY)) {
     return c.json({ error: "Invalid signature" }, 401);
   }
@@ -177,13 +182,26 @@ interactions.post("/api/interactions", async (c) => {
         // Defer immediately
         c.executionCtx.waitUntil((async () => {
           const rulingResult = await synthesizeRuling(env, question);
+
+          const oglSources = rulingResult.sources.filter((s) => s.system === "ogl").slice(0, 3);
+          const dwSources = rulingResult.sources.filter((s) => s.system === "dw").slice(0, 3);
+
+          const fields: Array<{ name: string; value: string; inline: boolean }> = [];
+          if (oglSources.length > 0) {
+            fields.push({ name: "OGL Sources", value: oglSources.map((s) => `\`${s.tag}\``).join("\n"), inline: true });
+          }
+          if (dwSources.length > 0) {
+            fields.push({ name: "DW Sources", value: dwSources.map((s) => `\`${s.tag}\``).join("\n"), inline: true });
+          }
+          if (rulingResult.qualityWarnings && rulingResult.qualityWarnings.length > 0) {
+            fields.push({ name: "⚠️ Verify", value: rulingResult.qualityWarnings.map((w) => w.substring(0, 100)).join("\n"), inline: false });
+          }
+
           await sendFollowUp(interaction.application_id, interaction.token, "", [{
-            title: `Ruling — ${question.substring(0, 100)}`,
-            description: rulingResult.ruling,
-            fields: [
-              { name: "Sources", value: rulingResult.sources.map((s) => `[${s.system}] ${s.tag}`).join(", ") || "No matching rules found.", inline: false },
-            ],
-            footer: { text: `${rulingResult.model} · ${(rulingResult.latencyMs / 1000).toFixed(1)}s` },
+            title: question.substring(0, 200),
+            description: rulingResult.ruling.substring(0, 4000),
+            fields,
+            footer: { text: `${rulingResult.model.split("/").pop()} · ${(rulingResult.latencyMs / 1000).toFixed(1)}s` },
             color: 0x008080,
           }]);
 
