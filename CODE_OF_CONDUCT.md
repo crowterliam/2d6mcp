@@ -1,5 +1,8 @@
 # Code of Conduct
 
+SPDX-License-Identifier: AGPL-3.0-only
+Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
+
 This project is committed to a safe, welcoming, and professional environment for
 all contributors. We do not tolerate harassment, bullying, or discrimination of
 any kind, against any person, for any reason. All interactions must remain

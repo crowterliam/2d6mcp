@@ -7,6 +7,7 @@ import { resolve } from "node:path";
 import { PROJECT_ROOT, BYOD_CONSENT_FILE } from "./config.js";
 import { populateOglDatabase } from "@2d6mcp/ogl/populate";
 import { populateDwDatabase } from "@2d6mcp/dw/populate";
+import { populateBrpDatabase } from "@2d6mcp/brp/populate";
 
 function cmdSetup(): void {
   if (existsSync(BYOD_CONSENT_FILE)) {
@@ -61,15 +62,18 @@ Usage:
   2d6mcp setup         Create the BYOD consent token
   2d6mcp populate-ogl  Generate or regenerate the OGL SQLite database
   2d6mcp populate-ogl --force  Force regeneration of OGL database
-  2d6mcp populate-dw   Generate or regenerate the Dungeon World SQLite database
-  2d6mcp populate-dw --force   Force regeneration of DW database
-  2d6mcp help          Show this help
+   2d6mcp populate-dw   Generate or regenerate the Dungeon World SQLite database
+   2d6mcp populate-dw --force   Force regeneration of DW database
+   2d6mcp populate-brp  Generate or regenerate the Basic Roleplaying SQLite database
+   2d6mcp populate-brp --force  Force regeneration of BRP database
+   2d6mcp help          Show this help
 
 Environment:
   AGREE_BYOD_USE=true   Enable BYOD via env var
-  BYOD_PATH=/path/to/files       Directory of local RPG source files
-  OGL_DB_PATH=/path/to/db        Custom OGL database path (optional)
-  DW_DB_PATH=/path/to/db         Custom DW database path (optional)
+   BYOD_PATH=/path/to/files       Directory of local RPG source files
+   OGL_DB_PATH=/path/to/db        Custom OGL database path (optional)
+   DW_DB_PATH=/path/to/db         Custom DW database path (optional)
+   BRP_DB_PATH=/path/to/db        Custom BRP database path (optional)
 `);
 }
 
@@ -90,6 +94,23 @@ function cmdPopulateDw(): void {
   console.log(result.message);
 }
 
+function cmdPopulateBrp(): void {
+  const dbPath = resolve(PROJECT_ROOT, "data", "brp", "basic-roleplaying.db");
+  const force = process.argv.includes("--force");
+
+  if (existsSync(dbPath) && !force) {
+    console.log("BRP database already exists. Use --force to overwrite.");
+    return;
+  }
+
+  if (force && existsSync(dbPath)) {
+    unlinkSync(dbPath);
+  }
+
+  const result = populateBrpDatabase(dbPath);
+  console.log(result.message);
+}
+
 const command = process.argv[2]?.toLowerCase() || "help";
 
 switch (command) {
@@ -101,6 +122,9 @@ switch (command) {
     break;
   case "populate-dw":
     cmdPopulateDw();
+    break;
+  case "populate-brp":
+    cmdPopulateBrp();
     break;
   case "help":
   case "--help":

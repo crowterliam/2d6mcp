@@ -6,6 +6,7 @@ import { getToolDefinitions } from "./definitions.js";
 import { handleRoll2d6, handleRollCustom, handleRollTable } from "./handlers/dice.js";
 import { handleQueryOglRules } from "./handlers/ogl.js";
 import { handleQueryDwRules } from "./handlers/dw.js";
+import { handleQueryBrpRules } from "./handlers/brp.js";
 import {
   handleQueryLocalByod,
   handleSyncByod,
@@ -58,6 +59,8 @@ export async function dispatchToolCall(
       return handleQueryOglRules(args);
     case "query_dw_rules":
       return handleQueryDwRules(args);
+    case "query_brp_rules":
+      return handleQueryBrpRules(args);
     case "query_local_byod":
       return handleQueryLocalByod(args);
     case "sync_byod":
