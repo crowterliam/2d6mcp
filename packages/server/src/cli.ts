@@ -8,6 +8,7 @@ import { PROJECT_ROOT, BYOD_CONSENT_FILE } from "./config.js";
 import { populateOglDatabase } from "@2d6mcp/ogl/populate";
 import { populateDwDatabase } from "@2d6mcp/dw/populate";
 import { populateBrpDatabase } from "@2d6mcp/brp/populate";
+import { populate5ecompatibleDatabase } from "@2d6mcp/5ecompatible/populate";
 
 function cmdSetup(): void {
   if (existsSync(BYOD_CONSENT_FILE)) {
@@ -64,16 +65,19 @@ Usage:
   2d6mcp populate-ogl --force  Force regeneration of OGL database
    2d6mcp populate-dw   Generate or regenerate the Dungeon World SQLite database
    2d6mcp populate-dw --force   Force regeneration of DW database
-   2d6mcp populate-brp  Generate or regenerate the Basic Roleplaying SQLite database
-   2d6mcp populate-brp --force  Force regeneration of BRP database
-   2d6mcp help          Show this help
+    2d6mcp populate-brp  Generate or regenerate the Basic Roleplaying SQLite database
+    2d6mcp populate-brp --force  Force regeneration of BRP database
+     2d6mcp populate-5ecompatible  Generate or regenerate the 5E-compatible SRD database
+     2d6mcp populate-5ecompatible --force  Force regeneration of 5E database
+     2d6mcp help          Show this help
 
-Environment:
-  AGREE_BYOD_USE=true   Enable BYOD via env var
-   BYOD_PATH=/path/to/files       Directory of local RPG source files
-   OGL_DB_PATH=/path/to/db        Custom OGL database path (optional)
-   DW_DB_PATH=/path/to/db         Custom DW database path (optional)
-   BRP_DB_PATH=/path/to/db        Custom BRP database path (optional)
+ Environment:
+   AGREE_BYOD_USE=true   Enable BYOD via env var
+    BYOD_PATH=/path/to/files       Directory of local RPG source files
+    OGL_DB_PATH=/path/to/db        Custom OGL database path (optional)
+    DW_DB_PATH=/path/to/db         Custom DW database path (optional)
+    BRP_DB_PATH=/path/to/db        Custom BRP database path (optional)
+    SR5E_DB_PATH=/path/to/db       Custom 5E-compatible database path (optional)
 `);
 }
 
@@ -111,6 +115,23 @@ function cmdPopulateBrp(): void {
   console.log(result.message);
 }
 
+function cmdPopulate5ecompatible(): void {
+  const dbPath = resolve(PROJECT_ROOT, "data", "5ecompatible", "5ecompatible-srd.db");
+  const force = process.argv.includes("--force");
+
+  if (existsSync(dbPath) && !force) {
+    console.log("5E-compatible database already exists. Use --force to overwrite.");
+    return;
+  }
+
+  if (force && existsSync(dbPath)) {
+    unlinkSync(dbPath);
+  }
+
+  const result = populate5ecompatibleDatabase(dbPath);
+  console.log(result.message);
+}
+
 const command = process.argv[2]?.toLowerCase() || "help";
 
 switch (command) {
@@ -125,6 +146,9 @@ switch (command) {
     break;
   case "populate-brp":
     cmdPopulateBrp();
+    break;
+  case "populate-5ecompatible":
+    cmdPopulate5ecompatible();
     break;
   case "help":
   case "--help":
