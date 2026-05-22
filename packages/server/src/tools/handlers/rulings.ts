@@ -6,6 +6,7 @@ import { loadConfig } from "../../config.js";
 import { getDatabase } from "@2d6mcp/ogl/database";
 import { ensureDwSchema } from "@2d6mcp/dw/database";
 import { ensureBrpSchema } from "@2d6mcp/brp/database";
+import { ensure5ecompatibleSchema } from "@2d6mcp/5ecompatible/database";
 import {
   searchOglRules,
   searchOglSkills,
@@ -29,12 +30,19 @@ import {
   searchBrpArmor,
   searchBrpSpotRules,
 } from "@2d6mcp/brp";
+import {
+  search5ecompatibleRules,
+  search5ecompatibleSpells,
+  search5ecompatibleMonsters,
+  search5ecompatibleClasses,
+  search5ecompatibleFeats,
+} from "@2d6mcp/5ecompatible";
 import { openSessionDb, getRecentRulings, getRecentContext, storeRuling, logTranscript, getTranscript, getSession, getOrCreateProgress, updateProgress, markChunkProcessed, getNextUnprocessedChunk, deleteProgress } from "../../session/database.js";
 import { transcribeAudioBuffer, isMLXWhisperAvailable } from "../../audio/mlx-transcribe.js";
 import { synthesizeRuling as mlxSynthesizeRuling, isMLXLLMAvailable } from "../../rulings/mlx-synthesize.js";
 import { checkByodConsent, getByodPath } from "../../byod/gate.js";
 import { getByodDatabase, searchByodIndex } from "../../byod/search.js";
-import { ensureOglDb, ensureDwDb, ensureBrpDb, resolveSafePath, extractKeywords, extractKeywordList, fuzzyKeywordList } from "../helpers.js";
+import { ensureOglDb, ensureDwDb, ensureBrpDb, ensure5ecompatibleDb, resolveSafePath, extractKeywords, extractKeywordList, fuzzyKeywordList } from "../helpers.js";
 import { isAudioLong, chunkAudio, transcribeChunk, cleanupChunks, getChunkFiles } from "../../audio/chunker.js";
 
 function scoreAndTakeTop(chunks: string[], originalKeywords: string[], fuzzyKeywords: string[], maxChunks: number = 3): string[] {
@@ -237,9 +245,44 @@ export async function handleSynthesizeRuling(args: Record<string, unknown> | und
       }
     }
 
+    if (rulesSystem === "5ecompatible" || rulesSystem === "auto") {
+      const { dbPath: sr5ePath } = ensure5ecompatibleDb();
+      const sr5eDb = ensure5ecompatibleSchema(sr5ePath);
+
+      const sr5eRules = search5ecompatibleRules(sr5eDb, question);
+      for (const r of sr5eRules) {
+        if (typeof r === "object" && r !== null && "title" in r && "snippet" in r) {
+          const rule = r as { title: string; snippet: string; section: string };
+          chunks.push(`[5E: ${rule.section} > ${rule.title}]\n${rule.snippet.replace(/<mark>/g, "**").replace(/<\/mark>/g, "**")}`);
+        }
+      }
+
+      if (keywords) {
+        const sr5eKwList = fuzzyKeywordList(extractKeywordList(question));
+        for (const kw of sr5eKwList) {
+          const sr5eSpells = search5ecompatibleSpells(sr5eDb, kw);
+          for (const s of sr5eSpells) {
+            chunks.push(`[5E Spell: ${s.name} (Level ${s.level} ${s.school})]\n${s.description}`);
+          }
+          const sr5eMonsters = search5ecompatibleMonsters(sr5eDb, kw);
+          for (const m of sr5eMonsters) {
+            chunks.push(`[5E Monster: ${m.name} (${m.type}, CR ${m.challengeRating})]\n${m.description}`);
+          }
+          const sr5eClasses = search5ecompatibleClasses(sr5eDb, kw);
+          for (const c of sr5eClasses) {
+            chunks.push(`[5E Class: ${c.name} (${c.hitDie}, ${c.primaryAbility})]\n${c.description}`);
+          }
+          const sr5eFeats = search5ecompatibleFeats(sr5eDb, kw);
+          for (const f of sr5eFeats) {
+            chunks.push(`[5E Feat: ${f.name} (${f.prerequisite})]\n${f.description}`);
+          }
+        }
+      }
+    }
+
     rulesContext = scoreAndTakeTop(chunks, extractKeywordList(question), fuzzyKeywordList(extractKeywordList(question))).join("\n\n");
     if (!rulesContext) {
-      rulesContext = "No matching rules found in OGL, Dungeon World, Basic Roleplaying, or BYOD databases.";
+      rulesContext = "No matching rules found in OGL, Dungeon World, Basic Roleplaying, 5E-compatible SRD, or BYOD databases.";
     }
   }
 

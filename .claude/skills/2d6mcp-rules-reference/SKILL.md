@@ -5,7 +5,7 @@ description: Rules lookup, table rolling, OGL and BYOD search strategies for the
 
 # 2D6 Rules Reference
 
-You have access to a pre-populated OGL rules database (Cepheus Engine SRD) and optionally your own BYOD files.
+You have access to a pre-populated OGL rules database (Cepheus Engine SRD), a Dungeon World database (CC-BY-3.0), a Basic Roleplaying database (BRP OGL v1.0), a 5E-compatible SRD database (CC-BY-4.0), and optionally your own BYOD files.
 
 ## OGL Database Search
 
@@ -36,6 +36,81 @@ query_ogl_rules("navy", category: "careers")      → navy career path
 query_ogl_rules("Astrogation", category: "skills") → skill description
 ```
 
+## DW Database Search
+
+```
+query_dw_rules(search_term, category?)
+```
+
+### Categories
+
+| Category | Contains |
+|----------|----------|
+| `moves` | Basic, special, and GM moves |
+| `classes` | Character classes and compendium classes |
+| `spells` | Wizard and cleric spells |
+| `equipment` | Weapons, armor, gear, services |
+| `monsters` | Monsters by type and environment |
+| `gm_tools` | Agendas, principles, fronts, dangers, steading rules |
+| `rules` | Core rules, tags, playbook rules |
+
+### Examples
+```
+query_dw_rules("hack and slash")               → move description
+query_dw_rules("wizard", category: "classes")   → wizard class
+query_dw_rules("goblin", category: "monsters")  → goblin stat block
+query_dw_rules("front", category: "gm_tools")   → front creation rules
+```
+
+## BRP Database Search
+
+```
+query_brp_rules(search_term, category?)
+```
+
+### Categories
+
+| Category | Contains |
+|----------|----------|
+| `characteristics` | STR, CON, SIZ, INT, POW, DEX, APP |
+| `skills` | Skill descriptions and specializations |
+| `professions` | Profession templates and skill packages |
+| `weapons` | Melee and ranged weapons |
+| `armor` | Armor types and protection values |
+| `spot_rules` | Spot rules for combat, damage, healing |
+| `foes` | Creatures and NPC foes |
+
+### Examples
+```
+query_brp_rules("dodge", category: "skills")          → dodge skill
+query_brp_rules("sword", category: "weapons")          → sword stats
+query_brp_rules("armor", category: "armor")            → armor types
+query_brp_rules("combat", category: "spot_rules")      → combat spot rules
+```
+
+## 5E-compatible Database Search
+
+```
+query_5ecompatible_rules(search_term, category?)
+```
+
+### Categories
+
+| Category | Contains |
+|----------|----------|
+| `spells` | Spell descriptions by level |
+| `monsters` | Monster stat blocks |
+| `classes` | Class features and progression |
+| `feats` | Feat descriptions and prerequisites |
+| `rules` | Core rules and conditions |
+
+### Examples
+```
+query_5ecompatible_rules("fireball", category: "spells")     → spell description
+query_5ecompatible_rules("goblin", category: "monsters")     → monster stat block
+query_5ecompatible_rules("tough", category: "feats")         → feat description
+```
+
 ## Table Rolling
 
 ```
@@ -60,9 +135,32 @@ Retrieves the full chunk content for a specific file and chunk index. Use after 
 
 ## Search Strategy
 
-1. **Always start with OGL**: `query_ogl_rules` is faster and covers the core rules
+1. **Match the system**: Use the appropriate tool — `query_ogl_rules` (sci-fi), `query_dw_rules` (fantasy), `query_brp_rules` (percentile), or `query_5ecompatible_rules` (d20 fantasy)
 2. **Be specific**: Search for the exact mechanic name or equipment item
 3. **Try categories**: If a broad search returns too much, narrow with a `category`
-4. **Fall back to BYOD**: If OGL doesn't have what you need, try `query_local_byod`
-5. **Combine searches**: For a complete picture, query both OGL and BYOD
+4. **Fall back to BYOD**: If core rules don't have what you need, try `query_local_byod`
+5. **Combine searches**: For a complete picture, query both core rules and BYOD
 6. **Get full content**: `query_local_byod` returns snippets. Use `get_byod_chunk(file_path, chunk_index)` to retrieve the full chunk for inference
+
+## Content Coverage
+
+### OGL (Cepheus Engine SRD)
+Rules, skills, careers, equipment, combat, starship operations, world building, and random tables for 2d6 sci-fi RPGs.
+
+### DW (Dungeon World CC-BY-3.0)
+Moves, classes, spells, equipment, monsters, and GM tools (agendas, principles, fronts, dangers) for 2d6 fantasy RPGs.
+
+### BRP (Basic Roleplaying BRP OGL v1.0)
+Characteristics, skills, professions, weapons, armor, spot rules, and foes for percentile-based RPGs.
+
+### 5E-compatible (5E-compatible SRD CC-BY-4.0)
+Spells, monsters, classes, feats, and core rules for d20 fantasy RPGs.
+
+## Environment Variables
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `OGL_DB_PATH` | `data/ogl/cepheus.db` | Custom OGL database path |
+| `DW_DB_PATH` | `data/dw/dungeon-world.db` | Custom DW database path |
+| `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Custom BRP database path |
+| `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Custom 5E-compatible database path |
