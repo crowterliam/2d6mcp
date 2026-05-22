@@ -1,14 +1,33 @@
-# Aider Convention: 2D6 MCP Server
+# Aider Convention: 2D6 MCP
 
-This project is a Model Context Protocol (MCP) server for 2d6-based TTRPGs, supporting both sci-fi (OGL/Cepheus Engine) and fantasy (Dungeon World) games.
+This project is an AI GM assistant for 2d6-based TTRPGs, supporting sci-fi (OGL/Cepheus Engine) and fantasy (Dungeon World) games. It ships as both a self-hosted MCP server and a Cloudflare-deployed Discord bot.
 
 ## Project Conventions
 
 - **Tool loyalty**: Once 2d6mcp BYOD tools are invoked (`query_local_byod`, `get_byod_chunk`, `synthesize_ruling`), continue using them for all game content. Do not switch to external file-reading tools unless the user explicitly asks.
 - **Naming**: Use system-agnostic language. Never reference third-party trademarks. Say "2d6 sci-fi RPG", "2d6 fantasy RPG", "starship", "star system", "characteristic", "move", "front", "monster".
-- **Build**: `npm run build` (TypeScript → `dist/`). Test with `npm run start`.
+- **Build**: `npm run build` (tsc --build across all workspace packages). Test with `npm test` (vitest, 209 tests). Run MCP server with `npm run start`.
 - **License**: Source code is AGPL-3.0. Game data under `data/ogl/` is OGL v1.0a. Game data under `data/dw/` is CC-BY-3.0. See `LICENSE.md`.
-- **Structure**: `src/dice/` (mechanics), `src/ogl/` (sci-fi rule database), `src/dw/` (fantasy rule database), `src/byod/` (file ingestion + content cache), `src/character/` (parsing), `src/audio/` (MLX Whisper transcription), `src/rulings/` (MLX LM synthesis), `src/session/` (session database), `src/tools/` (componentised handlers). Agent instructions in `.kilo/agent/`, `.claude/skills/`, `.cursor/rules/`, `.cline/rules/`, `.windsurfrules`.
+- **Never commit secrets**: `wrangler.toml`, `.dev.vars`, and `.wrangler/` are gitignored. Use `wrangler secret put` for Cloudflare secrets.
+
+## Monorepo Structure
+
+```
+packages/           # npm workspaces
+  server/           # @2d6mcp/server — MCP server (stdio, MLX, BYOD, sessions)
+  shared/           # @2d6mcp/shared — dice, keywords, prompts, quality filter
+  ogl/              # @2d6mcp/ogl — OGL rules (Cepheus Engine SRD)
+  dw/               # @2d6mcp/dw — DW rules (CC-BY-3.0)
+apps/
+  worker/           # Cloudflare Worker (Hono + Workers AI + D1 + R2)
+  bridge/           # Discord voice relay (Fly.io, Phase 2)
+  web/              # Vite + React SPA dashboard (Phase 3)
+  recorder/         # Browser PWA (Phase 4)
+data/               # SQLite databases (shared)
+tests/              # Vitest test suite (209 tests, 18 files)
+```
+
+Agent instructions: `.kilo/agent/`, `.claude/skills/`, `.cursor/rules/`, `.cline/rules/`, `.windsurfrules`.
 
 ## Available MCP Tools
 
@@ -45,16 +64,24 @@ This project is a Model Context Protocol (MCP) server for 2d6-based TTRPGs, supp
 
 ## Environment
 
+### Self-Hosted MCP Server
+
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `AGREE_BYOD_USE` | `"false"` | Enable BYOD |
 | `BYOD_PATH` | — | RPG files directory |
 | `BYOD_CHUNK_SIZE` | `8000` | Chars per chunk |
 | `BYOD_SYNC_TIMEOUT_MS` | `15000` | Sync batch time limit |
-| `BYOD_MAX_FILES` | `2000` | Max files per sync |
-| `BYOD_CONTENT_CACHE_PATH` | `data/byod/content_cache.db` | Shared content cache database |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | OGL database path |
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | DW database path |
-| `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
-| `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
+| `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model |
+| `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LLM model |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
+| `STT_BACKEND` | `mlx` | STT backend: `mlx` or `whispercpp` |
+| `LLM_BACKEND` | `mlx` | LLM backend: `mlx` or `llamacpp` |
+
+### Hosted Cloudflare Worker
+
+Set via `wrangler secret put`: `DISCORD_BOT_TOKEN`, `DISCORD_PUBLIC_KEY`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
+
+Never commit these values. Use `wrangler.toml.example` as a reference.
