@@ -131,6 +131,7 @@ npx wrangler secret put STRIPE_WEBHOOK_SECRET       # 9. Placeholder: whsec_...
 npx wrangler d1 execute 2d6mcp --remote --file src/db/schema.sql
 
 # Seed rules data (OGL + DW)
+# For self-hosted: npm run populate-ogl && npm run populate-dw && npm run populate-brp && npm run populate-5ecompatible
 node scripts/seed-d1.mjs
 npx wrangler d1 execute 2d6mcp --remote --file src/db/seed.sql
 
@@ -183,6 +184,8 @@ If the server is connected, the assistant will call `roll_2d6` and return dice r
 | `BYOD_CONTENT_CACHE_PATH` | `data/byod/content_cache.db` | Shared content cache database |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Path to custom OGL SQLite database |
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | Path to custom DW SQLite database |
+| `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Path to custom BRP SQLite database |
+| `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Path to custom 5E-compatible SQLite database |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LLM model |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |

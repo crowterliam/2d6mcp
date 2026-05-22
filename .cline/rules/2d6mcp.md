@@ -1,12 +1,12 @@
 # 2D6 MCP Server — Agent Instructions
 
-You have access to the **2d6mcp** MCP server for 2d6-based tabletop RPGs, supporting both sci-fi (OGL/Cepheus Engine) and fantasy (Dungeon World) games. Use system-agnostic language — never use third-party trademarked terms.
+You have access to the **2d6mcp** MCP server for 2d6-based tabletop RPGs, supporting both sci-fi (OGL/Cepheus Engine), fantasy (Dungeon World), percentile (Basic Roleplaying), and d20 fantasy (5E-compatible) games. Use system-agnostic language — never use third-party trademarked terms.
 
 ## Deployment Modes
 
 2d6mcp has two deployment modes:
 
-1. **Self-Hosted MCP Server** (`packages/server/`) — traditional MCP stdio server, local MLX, BYOD, session DB, 31 tools
+1. **Self-Hosted MCP Server** (`packages/server/`) — traditional MCP stdio server, local MLX, BYOD, session DB, 32 tools
 2. **Hosted Discord Bot** (`apps/worker/`) — Cloudflare Worker with Discord slash commands and Workers AI (Whisper + Qwen3 MoE)
 
 Both modes share rules databases, dice engine, prompt templates, and quality filters via `packages/shared/`.
@@ -22,6 +22,8 @@ Both modes share rules databases, dice engine, prompt templates, and quality fil
 | `roll_table` | Roll on a named table from the OGL database. |
 | `query_ogl_rules` | Search OGL rules by term and optional category. |
 | `query_dw_rules` | Search DW rules by term and optional category (moves, classes, spells, equipment, monsters, gm_tools, rules). |
+| `query_brp_rules` | Search BRP rules for characteristics, skills, professions, weapons, armor, spot rules, foes |
+| `query_5ecompatible_rules` | Search 5E-compatible rules for spells, monsters, classes, feats, and rules |
 | `query_local_byod` | Full-text search personal ingested files (requires consent). |
 | `parse_character` | Parse character sheet into structured data. |
 | `sync_byod` | Index BYOD files in time-budgeted batches. Re-call if `complete: false`. |
@@ -35,7 +37,7 @@ Both modes share rules databases, dice engine, prompt templates, and quality fil
 | `discord_remove_webhook` | Remove a stored Discord webhook. |
 | `discord_list_webhooks` | List configured webhooks. |
 | `discord_test_webhook` | Test webhook connectivity. |
-| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM. Auto-looks up OGL/DW/BYOD rules, returns a cited ruling. Requires `mlx_lm.generate`. |
+| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM. Auto-looks up OGL/DW/BRP/5E-compatible/BYOD rules, returns a cited ruling. Requires `mlx_lm.generate`. |
 | `resolve_from_context` | Full producer pipeline: take recent transcript, detect rules question, look up rules, synthesize ruling, log it. |
 | `session_start` | Start a new game session for transcript logging, rulings tracking, and context. Returns a session ID. |
 | `session_end` | End the active game session. |
@@ -64,7 +66,7 @@ Both modes share rules databases, dice engine, prompt templates, and quality fil
 - **Difficulty**: Modifiers +6 (simple) to -6 (formidable). Or adjust target: 6+ easy, 8+ average, 10+ difficult, 12+ very difficult, 14+ formidable.
 - **d66 tables**: Two d6s as tens/ones (11–66). `roll_table` with `"dice_type": "d66"`.
 - **Categories**: `skills`, `careers`, `equipment`, `tables`, `combat`, `starships`, `worlds`, `categories`, `list_tables`.
-- **OGL for sci-fi, DW for fantasy**: The OGL database covers sci-fi rules. The DW database covers fantasy rules (moves, classes, spells, monsters, GM tools). Fall back to BYOD for personal content.
+- **OGL for sci-fi, DW for fantasy, BRP for percentile, 5E-compatible for d20 fantasy**: The OGL database covers sci-fi rules. The DW database covers fantasy rules (moves, classes, spells, monsters, GM tools). The BRP database covers percentile RPG rules. The 5E-compatible database covers d20 fantasy rules. Fall back to BYOD for personal content.
 - **BYOD consent**: `AGREE_BYOD_USE="true"` and `BYOD_PATH` required.
 
 ## Key Workflows
@@ -79,7 +81,7 @@ Both modes share rules databases, dice engine, prompt templates, and quality fil
 
 **Session management**: `session_start("Session Name")` → `log_transcript(session_id, text)` → `get_session_context(session_id, minutes)` for recent context → `search_transcript(session_id, "query")` → `session_end(session_id)`. List with `session_list`. Summarize with `session_summarize(session_id)`.
 
-**Ruling synthesis**: `synthesize_ruling("question", rules_system: "auto")` for AI rulings with OGL/DW/BYOD citations. `resolve_from_context(session_id)` to auto-detect question from recent transcript. `transcribe_audio(file_path)` for voice-to-text.
+**Ruling synthesis**: `synthesize_ruling("question", rules_system: "auto")` for AI rulings with OGL/DW/BRP/5E-compatible/BYOD citations. `resolve_from_context(session_id)` to auto-detect question from recent transcript. `transcribe_audio(file_path)` for voice-to-text.
 
 **Discord**: `discord_post(content, webhook_names, context)` for smart-routed messages with embeds. `discord_add_webhook(name, url, tags)` to configure. `discord_list_webhooks` to view. `discord_test_webhook(name)` to verify. `discord_remove_webhook(name)` to remove.
 
@@ -97,6 +99,8 @@ Both modes share rules databases, dice engine, prompt templates, and quality fil
 | `BYOD_MAX_FILES` | `2000` | Max files per sync |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | OGL database path |
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | DW database path |
+| `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Custom BRP database path |
+| `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Custom 5E-compatible database path |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |

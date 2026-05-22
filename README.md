@@ -3,7 +3,7 @@
 SPDX-License-Identifier: AGPL-3.0-only
 Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
-A system-agnostic Model Context Protocol (MCP) server and hosted Cloudflare Worker providing a mechanical engine, dice roller, rules reference, and AI-powered rulings assistant for 2d6-based tabletop RPGs. Supports sci-fi (OGL/Cepheus Engine SRD) and fantasy (Dungeon World, CC-BY-3.0) games.
+A system-agnostic Model Context Protocol (MCP) server and hosted Cloudflare Worker providing a mechanical engine, dice roller, rules reference, and AI-powered rulings assistant for tabletop RPGs. Supports sci-fi (OGL/Cepheus Engine SRD), fantasy (Dungeon World, CC-BY-3.0), generic percentile (Basic Roleplaying SRD, BRP OGL v1.0), and d20 fantasy (5E-compatible SRD, CC-BY-4.0) games.
 
 ## Deployment Modes
 
@@ -15,9 +15,11 @@ A system-agnostic Model Context Protocol (MCP) server and hosted Cloudflare Work
 ## Features
 
 - **Dice Engine** — `2d6+1`, `3d6`, `d66`, target numbers, effect margins
-- **OGL Rules Database** — Pre-populated SQLite/D1 with Cepheus Engine SRD (OGL v1.0a)
-- **Dungeon World Database** — Pre-populated SQLite/D1 with moves, classes, spells, monsters, GM tools (CC-BY-3.0)
-- **AI Rulings** — Ask rules questions, get cited answers from OGL/DW/BYOD sources. Powered by Qwen3 MoE (Cloudflare) or MLX LLM (self-hosted)
+- **OGL Rules Database** — Generated on first use from bundled seed data: Cepheus Engine SRD (OGL v1.0a)
+- **Dungeon World Database** — Generated on first use from bundled seed data: moves, classes, spells, monsters, GM tools (CC-BY-3.0)
+- **Basic Roleplaying Database** — Generated on first use from bundled seed data: BRP SRD 1.0.2 characteristics, skills, professions, weapons, armor, spot rules (BRP OGL v1.0)
+- **5E-Compatible Database** — Generated on first use from bundled seed data: d20 fantasy SRD classes, spells, monsters, feats, and rules (CC-BY-4.0)
+- **AI Rulings** — Ask rules questions, get cited answers from OGL/DW/BRP/5E-compatible/BYOD sources. Powered by Qwen3 MoE (Cloudflare) or MLX LLM (self-hosted)
 - **Discord Bot** — Slash commands (`/ask`, `/roll`, `/session`) in your TTRPG server. Real-time rulings with source citations
 - **BYOD Indexing** — Ingest your own PDF/text/markdown files for local full-text search (self-hosted only)
 - **Session Management** — Start/end sessions, log transcripts, search what was said at the table
@@ -33,6 +35,8 @@ npm run build
 npm run setup          # create consent token for BYOD mode
 npm run populate-ogl   # generate the OGL rules database
 npm run populate-dw    # generate the Dungeon World rules database
+npm run populate-brp   # generate the Basic Roleplaying rules database
+npm run populate-5ecompatible  # generate the 5E-compatible rules database
 npm run start          # run the MCP server (stdio transport)
 ```
 
@@ -85,6 +89,8 @@ Then: set your Interactions Endpoint URL in Discord Developer Portal to `https:/
 | `roll_table` | Roll on a named table (`Reaction Table`, `Personal Encounter`, `Patron Encounter`) |
 | `query_ogl_rules` | Search the OGL database for rules, skills, careers, equipment, or tables |
 | `query_dw_rules` | Search the Dungeon World database for moves, classes, spells, equipment, monsters, GM tools |
+| `query_brp_rules` | Search the Basic Roleplaying database for characteristics, skills, professions, weapons, armor, spot rules |
+| `query_5ecompatible_rules` | Search the 5E-compatible database for spells, monsters, classes, feats, and rules |
 | `query_local_byod` | Search your locally ingested BYOD files (requires consent) |
 | `parse_character` | Parse a character sheet file into structured JSON |
 | `sync_byod` | Index/re-index all files in your BYOD directory |
@@ -93,7 +99,7 @@ Then: set your Interactions Endpoint URL in Discord Developer Portal to `https:/
 | `inspect_byod_file` | Show chunk structure for a specific indexed file |
 | `sync_file` | Index a single file by relative path |
 | `get_byod_chunk` | Retrieve full chunk content by file path + chunk index |
-| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM with OGL/DW/BYOD citations |
+| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM with OGL/DW/BRP/5E-compatible/BYOD citations |
 | `resolve_from_context` | Take recent session transcript, detect rules question, synthesize ruling |
 | `session_start` | Start a new game session for transcript logging and rulings tracking |
 | `session_end` | End the active game session |
@@ -137,10 +143,14 @@ Then: set your Interactions Endpoint URL in Discord Developer Portal to `https:/
 │   ├── server/          # MCP server — stdio transport, local MLX, BYOD, session DB
 │   ├── shared/          # @2d6mcp/shared — dice, keywords, prompts, quality filter
 │   ├── ogl/             # @2d6mcp/ogl — OGL rules database + queries
-│   └── dw/              # @2d6mcp/dw — DW rules database + queries
+│   ├── dw/              # @2d6mcp/dw — DW rules database + queries
+│   └── brp/             # @2d6mcp/brp — BRP rules database + queries
+│   └── 5ecompatible/    # @2d6mcp/5ecompatible — 5E-compatible rules database + queries
 ├── data/
 │   ├── ogl/cepheus.db   # Bundled OGL SQLite database
-│   └── dw/dungeon-world.db  # Bundled Dungeon World SQLite database
+│   ├── dw/dungeon-world.db  # Bundled Dungeon World SQLite database
+│   ├── brp/             # Generated BRP SQLite database + license files + logo
+│   └── 5ecompatible/    # Generated 5E-compatible SQLite database + license files
 ├── tests/               # Vitest test suite (209 tests)
 ├── tsconfig.base.json   # Shared TypeScript config
 └── package.json         # npm workspaces root
@@ -186,6 +196,8 @@ npm run start         # run the MCP server (packages/server/dist/index.js)
 | `BYOD_CONTENT_CACHE_PATH` | `data/byod/content_cache.db` | Shared content cache database |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Path to custom OGL SQLite database |
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | Path to custom DW SQLite database |
+| `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Path to custom BRP SQLite database |
+| `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Path to custom 5E-compatible SQLite database |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LLM model |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
@@ -213,6 +225,14 @@ This project uses a multi-license architecture:
 - **Source code** (`apps/**`, `packages/**`, root config files): [AGPL-3.0-only](https://www.gnu.org/licenses/agpl-3.0.en.html)
 - **OGL game data** (`data/ogl/**`): [OGL v1.0a](OGL-1.0a.txt)
 - **Dungeon World data** (`data/dw/**`): [CC-BY-3.0](data/dw/CC-BY-3.0.txt)
+- **Basic Roleplaying data** (`data/brp/**`): [BRP Open Game License v1.0](data/brp/BRP-OGL-1.0.txt)
+- **5E-compatible SRD data** (`data/5ecompatible/**`): [CC-BY-4.0](data/5ecompatible/SRD-NOTICE.txt)
+
+The BRP logo (`BRP.png` in the project root and `data/brp/BRP.png`) is a trademark of Chaosium Inc., displayed in compliance with Section 15 of the BRP Open Game License v1.0.
+
+![BRP logo](BRP.png)
+
+You are granted permission to reproduce the logo only for the purpose of labeling derivative works under the BRP OGL.
 
 Full license documentation: [LICENSE.md](LICENSE.md)
 

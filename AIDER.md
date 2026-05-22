@@ -3,14 +3,14 @@
 SPDX-License-Identifier: AGPL-3.0-only
 Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
-This project is an AI GM assistant for 2d6-based TTRPGs, supporting sci-fi (OGL/Cepheus Engine) and fantasy (Dungeon World) games. It ships as both a self-hosted MCP server and a Cloudflare-deployed Discord bot.
+This project is an AI GM assistant for 2d6-based TTRPGs, supporting sci-fi (OGL/Cepheus Engine), fantasy (Dungeon World), percentile (Basic Roleplaying), and d20 fantasy (5E-compatible) games. It ships as both a self-hosted MCP server and a Cloudflare-deployed Discord bot.
 
 ## Project Conventions
 
 - **Tool loyalty**: Once 2d6mcp BYOD tools are invoked (`query_local_byod`, `get_byod_chunk`, `synthesize_ruling`), continue using them for all game content. Do not switch to external file-reading tools unless the user explicitly asks.
 - **Naming**: Use system-agnostic language. Never reference third-party trademarks. Say "2d6 sci-fi RPG", "2d6 fantasy RPG", "starship", "star system", "characteristic", "move", "front", "monster".
 - **Build**: `npm run build` (tsc --build across all workspace packages). Test with `npm test` (vitest, 209 tests). Run MCP server with `npm run start`.
-- **License**: Source code is AGPL-3.0. Game data under `data/ogl/` is OGL v1.0a. Game data under `data/dw/` is CC-BY-3.0. See `LICENSE.md`.
+- **License**: Source code is AGPL-3.0. Game data under `data/ogl/` is OGL v1.0a. Game data under `data/dw/` is CC-BY-3.0. Game data under `data/brp/` is BRP OGL v1.0. Game data under `data/5ecompatible/` is CC-BY-4.0. See `LICENSE.md`.
 - **Never commit secrets**: `wrangler.toml`, `.dev.vars`, and `.wrangler/` are gitignored. Use `wrangler secret put` for Cloudflare secrets.
 
 ## Monorepo Structure
@@ -21,6 +21,8 @@ packages/           # npm workspaces
   shared/           # @2d6mcp/shared — dice, keywords, prompts, quality filter
   ogl/              # @2d6mcp/ogl — OGL rules (Cepheus Engine SRD)
   dw/               # @2d6mcp/dw — DW rules (CC-BY-3.0)
+  brp/              # @2d6mcp/brp — BRP rules (Basic Roleplaying SRD)
+  5ecompatible/     # @2d6mcp/5ecompatible — 5E-compatible rules (CC-BY-4.0)
 apps/
   worker/           # Cloudflare Worker (Hono + Workers AI + D1 + R2)
   bridge/           # Discord voice relay (Fly.io, Phase 2)
@@ -41,6 +43,8 @@ Agent instructions: `.kilo/agent/`, `.claude/skills/`, `.cursor/rules/`, `.cline
 | `roll_table` | Named table from OGL database |
 | `query_ogl_rules` | Search OGL rules (skills, careers, equipment, combat, starships, worlds) |
 | `query_dw_rules` | Search DW rules (moves, classes, spells, equipment, monsters, GM tools) |
+| `query_brp_rules` | Search BRP rules for characteristics, skills, professions, weapons, armor, spot rules, foes |
+| `query_5ecompatible_rules` | Search 5E-compatible rules for spells, monsters, classes, feats, and rules |
 | `query_local_byod` | Search personal ingested files |
 | `parse_character` | Parse character sheet to structured data |
 | `sync_byod` | Index BYOD files (time-budgeted, re-call until complete) |
@@ -54,7 +58,7 @@ Agent instructions: `.kilo/agent/`, `.claude/skills/`, `.cursor/rules/`, `.cline
 | `discord_remove_webhook` | Remove a stored Discord webhook by name |
 | `discord_list_webhooks` | List all configured webhooks (URLs masked) |
 | `discord_test_webhook` | Send a test message to verify webhook connectivity |
-| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM. Auto-looks up OGL/DW/BYOD rules, returns a cited ruling. Requires `mlx_lm.generate`. |
+| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM. Auto-looks up OGL/DW/BRP/5E-compatible/BYOD rules, returns a cited ruling. Requires `mlx_lm.generate`. |
 | `resolve_from_context` | Full producer pipeline: take recent session transcript, detect rules question, look up rules, synthesize ruling, log it. |
 | `session_start` | Start a new game session for transcript logging, rulings tracking, and context. Returns a session ID. |
 | `session_end` | End the active game session. |
@@ -77,6 +81,8 @@ Agent instructions: `.kilo/agent/`, `.claude/skills/`, `.cursor/rules/`, `.cline
 | `BYOD_SYNC_TIMEOUT_MS` | `15000` | Sync batch time limit |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | OGL database path |
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | DW database path |
+| `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Custom BRP database path |
+| `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Custom 5E-compatible database path |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LLM model |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |

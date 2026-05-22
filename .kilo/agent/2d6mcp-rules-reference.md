@@ -1,6 +1,6 @@
 # 2D6 Rules Reference
 
-You have access to a pre-populated OGL rules database (Cepheus Engine SRD), a Dungeon World database (CC-BY-3.0), optionally your own BYOD files, and AI ruling synthesis. Use these tools to look up game mechanics and generate cited rulings.
+You have access to a pre-populated OGL rules database (Cepheus Engine SRD), a Dungeon World database (CC-BY-3.0), a Basic Roleplaying database (BRP OGL v1.0), a 5E-compatible SRD database (CC-BY-4.0), optionally your own BYOD files, and AI ruling synthesis. Use these tools to look up game mechanics and generate cited rulings.
 
 ## AI Ruling Synthesis
 
@@ -8,11 +8,11 @@ You have access to a pre-populated OGL rules database (Cepheus Engine SRD), a Du
 synthesize_ruling(question, rules_system?, session_id?, rules_context?)
 ```
 
-Take a natural-language rules question, auto-look up relevant rules from OGL, DW, and BYOD databases, then synthesize a cited ruling using the local MLX LLM. Requires `mlx_lm.generate` to be installed.
+Take a natural-language rules question, auto-look up relevant rules from OGL/DW/BRP/5E-compatible/BYOD databases, then synthesize a cited ruling using the local MLX LLM. Requires `mlx_lm.generate` to be installed.
 
 **Key behaviour:**
 - If `rules_context` is provided, uses it directly (skip auto-lookup)
-- If omitted, searches OGL (sci-fi) and/or DW (fantasy) based on `rules_system` ("ogl", "dw", or "auto")
+- If omitted, searches OGL (sci-fi) and/or DW (fantasy) based on `rules_system` ("ogl", "dw", "brp", "5ecompatible", or "auto")
 - BYOD is searched if consent is given — search is scoped by `byod_system` if the session was started with one
 - Returns: question, ruling text with `[Source]` citations, model used, latency, and snippet of the rules context used
 - Rulings include `[Verify: ...]` warnings when numbers in the ruling don't appear in the source text (quality filter)
@@ -84,6 +84,60 @@ query_dw_rules("goblin", category: "monsters") → monster stat block
 query_dw_rules("front", category: "gm_tools")  → campaign front rules
 ```
 
+## BRP Database Search
+
+```
+query_brp_rules(search_term, category?)
+```
+
+Search the Basic Roleplaying rules database for characteristics, skills, professions, weapons, armor, spot rules, or foes.
+
+### Categories
+
+| Category | Contains |
+|----------|----------|
+| `characteristics` | Characteristics, attribute rolls, derived stats |
+| `skills` | Skill descriptions, base chances, categories |
+| `professions` | Profession templates, skill allocations |
+| `weapons` | Melee and ranged weapons, damage, range, special rules |
+| `armor` | Armor types, protection values, encumbrance |
+| `spot_rules` | Situational rules, environmental hazards, conditions |
+| `foes` | Creature and NPC stat blocks, abilities |
+
+### Examples
+```
+query_brp_rules("firearm")                    → weapon match
+query_brp_rules("soldier", category: "professions") → profession template
+query_brp_rules("dodge", category: "skills")  → skill description
+query_brp_rules("armor", category: "spot_rules") → spot rules
+```
+
+## 5E-Compatible Database Search
+
+```
+query_5ecompatible_rules(search_term, category?)
+```
+
+Search the 5E-compatible SRD rules database for spells, monsters, classes, feats, and rules.
+
+### Categories
+
+| Category | Contains |
+|----------|----------|
+| `spells` | Spell descriptions, level, school, components, casting time |
+| `monsters` | Monster stat blocks, CR, abilities, actions |
+| `classes` | Class features, proficiencies, hit dice |
+| `feats` | Feat descriptions, prerequisites, benefits |
+| `rules` | Core rules, conditions, combat, equipment |
+
+### Examples
+```
+query_5ecompatible_rules("fireball", category: "spells")    → spell description
+query_5ecompatible_rules("dragon", category: "monsters")    → monster stat block
+query_5ecompatible_rules("fighter", category: "classes")    → class features
+query_5ecompatible_rules("grappler", category: "feats")     → feat description
+```
+
 ## Table Rolling
 
 ```
@@ -153,13 +207,13 @@ Transcribe an audio file (WAV, MP3, M4A, FLAC) using local MLX Whisper. Requires
 
 ## Search Strategy
 
-1. **Always start with OGL or DW**: The built-in databases are faster and cover the core rules
+1. **Always start with OGL, DW, BRP, or 5E-compatible**: The built-in databases are faster and cover the core rules
 2. **Be specific**: Search for the exact mechanic name or equipment item
 3. **Try categories**: If a broad search returns too much, narrow with a `category`
 4. **Use AI synthesis for natural questions**: `synthesize_ruling` auto-looks up rules and produces a cited answer
-5. **Fall back to BYOD**: If OGL/DW doesn't have what you need, try `query_local_byod`
+5. **Fall back to BYOD**: If OGL/DW/BRP/5E-compatible doesn't have what you need, try `query_local_byod`
 6. **Scope BYOD with byod_system**: Start sessions with the correct system name to avoid wrong-system results
-7. **Combine searches**: For a complete picture, query both OGL/DW and BYOD — `synthesize_ruling` does this automatically
+7. **Combine searches**: For a complete picture, query OGL/DW/BRP/5E-compatible and BYOD — `synthesize_ruling` does this automatically
 8. **Get full content**: Use `get_byod_chunk` to retrieve complete chunk text for results that matter
 
 ## Content Coverage
@@ -183,3 +237,21 @@ The Dungeon World database covers:
 - **Equipment**: Weapons, armour, dungeon gear, poison, services — tags, cost, weight, damage
 - **Monsters**: Full stat blocks with tags, HP, armour, damage, instinct, moves, organisation
 - **GM Tools**: Agendas, principles, fronts, dangers (types, impulses, moves), steadings
+
+The BRP database covers:
+
+- **Characteristics**: All characteristics, derived attributes, characteristic rolls, resistance table
+- **Skills**: Skill categories, base chances, specializations, experience checks
+- **Professions**: Profession templates with skill allocations and starting equipment
+- **Weapons**: Melee and ranged weapons, damage, range, special qualities, malfunction
+- **Armor**: Armor types, protection values, encumbrance, hit locations
+- **Spot Rules**: Environmental hazards, conditions, situational modifiers, chases, falling
+- **Foes**: Creature stats, NPC templates, abilities, and special attacks
+
+The 5E-compatible SRD database covers:
+
+- **Spells**: Spells by level and school, components, casting time, range, duration, full descriptions
+- **Monsters**: Stat blocks, challenge ratings, abilities, actions, legendary actions
+- **Classes**: Class features, proficiencies, hit dice, spellcasting
+- **Feats**: Feat descriptions, prerequisites, mechanical benefits
+- **Rules**: Core rules, conditions, combat actions, equipment tables

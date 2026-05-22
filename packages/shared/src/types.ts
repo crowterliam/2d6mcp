@@ -7,14 +7,14 @@ export type { DiceRoll, Roll2d6Result, RollCustomResult } from "./dice.js";
 export type { RulingResult } from "./prompts.js";
 
 export interface RulingSource {
-  system: "ogl" | "dw" | "brp";
+  system: "ogl" | "dw" | "brp" | "5ecompatible";
   tag: string;
   content: string;
 }
 
 export interface RulingRequest {
   question: string;
-  rulesSystem?: "ogl" | "dw" | "brp" | "auto";
+  rulesSystem?: "ogl" | "dw" | "brp" | "5ecompatible" | "auto";
   sessionId?: string;
   rulesContext?: string;
   maxTokens?: number;

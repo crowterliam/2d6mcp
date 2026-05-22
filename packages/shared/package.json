@@ -1,6 +1,6 @@
 {
   "name": "@2d6mcp/shared",
-  "version": "0.4.0",
+  "version": "0.6.0",
   "description": "Shared utilities, types, dice roller, prompt templates, and quality filters for 2d6mcp",
   "type": "module",
   "main": "dist/index.js",

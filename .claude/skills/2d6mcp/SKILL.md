@@ -5,13 +5,13 @@ description: Master reference for the 2d6mcp MCP server — all tools, workflows
 
 # 2D6 MCP Server — Agent Instructions
 
-You have access to the **2d6mcp** MCP server. It provides a mechanical engine, dice roller, and rules reference for 2d6-based tabletop RPGs, supporting both sci-fi (OGL/Cepheus Engine) and fantasy (Dungeon World) games.
+You have access to the **2d6mcp** MCP server. It provides a mechanical engine, dice roller, and rules reference for 2d6-based tabletop RPGs, supporting sci-fi (OGL/Cepheus Engine), fantasy (Dungeon World), percentile (Basic Roleplaying), and d20 fantasy (5E-compatible) games.
 
 ## Deployment Modes
 
 2d6mcp has two deployment modes:
 
-1. **Self-Hosted MCP Server** (`packages/server/`) — traditional MCP stdio server, local MLX, BYOD, session DB, 31 tools
+1. **Self-Hosted MCP Server** (`packages/server/`) — traditional MCP stdio server, local MLX, BYOD, session DB, 32 tools
 2. **Hosted Discord Bot** (`apps/worker/`) — Cloudflare Worker with Discord slash commands and Workers AI (Whisper + Qwen3 MoE)
 
 Both modes share rules databases, dice engine, prompt templates, and quality filters via `packages/shared/`.
@@ -27,6 +27,8 @@ Both modes share rules databases, dice engine, prompt templates, and quality fil
 | `roll_table` | Roll on a named table (Reaction, Encounters, Patrons) |
 | `query_ogl_rules` | Search OGL rules database for skills, careers, equipment, combat |
 | `query_dw_rules` | Search DW rules database for moves, classes, spells, equipment, monsters, GM tools |
+| `query_brp_rules` | Search BRP rules for characteristics, skills, professions, weapons, armor, spot rules, foes |
+| `query_5ecompatible_rules` | Search 5E-compatible rules for spells, monsters, classes, feats, and rules |
 | `query_local_byod` | Full-text search across your locally ingested files |
 | `parse_character` | Parse a character sheet file into structured data |
 | `sync_byod` | Index/re-index files from your BYOD directory |
@@ -40,7 +42,7 @@ Both modes share rules databases, dice engine, prompt templates, and quality fil
 | `discord_remove_webhook` | Remove a stored Discord webhook by name |
 | `discord_list_webhooks` | List all configured webhooks (URLs partially masked) |
 | `discord_test_webhook` | Send a test message to verify webhook connectivity |
-| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM. Auto-looks up OGL/DW/BYOD rules, returns a cited ruling. Requires `mlx_lm.generate`. |
+| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM. Auto-looks up OGL/DW/BRP/5E-compatible/BYOD rules, returns a cited ruling. Requires `mlx_lm.generate`. |
 | `resolve_from_context` | Full producer pipeline: take recent session transcript, detect rules question, look up rules, synthesize ruling, log it. |
 | `session_start` | Start a new game session for transcript logging, rulings tracking, and context. Returns a session ID. |
 | `session_end` | End the active game session. |
@@ -106,7 +108,7 @@ Both modes share rules databases, dice engine, prompt templates, and quality fil
 - Use `session_summarize` to generate an AI summary of the full session transcript (requires MLX LLM)
 
 ### Ruling Synthesis
-- Use `synthesize_ruling` to ask a rules question and get an AI-generated ruling with OGL/DW/BYOD citations (requires `mlx_lm.generate`)
+- Use `synthesize_ruling` to ask a rules question and get an AI-generated ruling with OGL/DW/BRP/5E-compatible/BYOD citations (requires `mlx_lm.generate`)
 - Use `resolve_from_context` to run the full producer pipeline: take recent transcript, detect rules question, look up rules, synthesize ruling, and log it to the session
 - Use `transcribe_audio` to convert recorded audio to text using local MLX Whisper (requires `mlx_whisper`)
 
@@ -156,6 +158,8 @@ When starting a session, ensure knowledge is available:
 | `BYOD_CONTENT_CACHE_PATH` | `data/byod/content_cache.db` | Shared content-addressable cache path |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Custom OGL database path |
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | Custom DW database path |
+| `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Custom BRP database path |
+| `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Custom 5E-compatible database path |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |

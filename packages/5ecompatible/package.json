@@ -1,7 +1,7 @@
 {
-  "name": "@2d6mcp/dw",
+  "name": "@2d6mcp/5ecompatible",
   "version": "0.6.0",
-  "description": "Dungeon World rules database — queries, schema, and population for 2d6mcp",
+  "description": "2d6mcp 5E-compatible TTRPG rules — queries, schema, and SRD population",
   "type": "module",
   "main": "dist/queries.js",
   "types": "dist/queries.d.ts",

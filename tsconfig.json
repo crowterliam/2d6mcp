@@ -5,6 +5,7 @@
     { "path": "packages/ogl" },
     { "path": "packages/dw" },
     { "path": "packages/brp" },
+    { "path": "packages/5ecompatible" },
     { "path": "packages/server" }
   ]
 }

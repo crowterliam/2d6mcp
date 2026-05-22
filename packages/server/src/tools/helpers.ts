@@ -7,6 +7,7 @@ import { loadConfig, PROJECT_ROOT, type Config } from "../config.js";
 import { populateOglDatabase } from "@2d6mcp/ogl/populate";
 import { populateDwDatabase } from "@2d6mcp/dw/populate";
 import { populateBrpDatabase } from "@2d6mcp/brp/populate";
+import { populate5ecompatibleDatabase } from "@2d6mcp/5ecompatible/populate";
 import { checkByodConsent, getByodPath } from "../byod/gate.js";
 import { discoverFiles, ingestFile, type IngestedChunk, type IngestedFile } from "../byod/ingest.js";
 import { getByodDatabase, indexChunks, rebuildByodFts, getStoredFileHash, markFileFailed, FAILED_HASH } from "../byod/search.js";
@@ -525,6 +526,17 @@ export function ensureBrpDb(): { dbPath: string; initialized: boolean } {
   }
 
   return { dbPath: brpDbPath, initialized: false };
+}
+
+export function ensure5ecompatibleDb(): { dbPath: string; initialized: boolean } {
+  const { sr5eDbPath } = loadConfig();
+
+  if (!existsSync(sr5eDbPath)) {
+    populate5ecompatibleDatabase(sr5eDbPath);
+    return { dbPath: sr5eDbPath, initialized: true };
+  }
+
+  return { dbPath: sr5eDbPath, initialized: false };
 }
 
 // ---- Fuzzy matching for STT error correction ----
