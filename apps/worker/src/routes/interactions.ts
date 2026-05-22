@@ -218,24 +218,30 @@ interactions.post("/api/interactions", async (c) => {
         return c.json(respond("Voice commands are handled by the bridge. Ensure the bridge is deployed on Fly.io and your bot token is configured. See `apps/bridge/Bridge_SETUP.md`."));
 
       case "push-to-ask": {
+        await interaction.deferReply();
         const seconds = (opts.get("seconds") as number) || 30;
-        if (!guildId) return c.json(respond("This command must be used in a server."));
+        if (!guildId) {
+          await interaction.editReply("This command must be used in a server.");
+          return c.json({}); // already replied
+        }
 
         // Proxy to the bridge's HTTP endpoint
         try {
           const bridgeUrl = env.BRIDGE_URL || "https://2d6mcp-bridge.fly.dev";
-          const res = await fetch(`${bridgeUrl}/push-to-ask?guild_id=${guildId}&seconds=${seconds}`, {
+          const res = await fetch(`${bridgeUrl}/push-to-ask?guild_id=${encodeURIComponent(guildId)}&seconds=${seconds}`, {
             method: "POST",
             signal: AbortSignal.timeout(5000),
           });
           const data = await res.json() as { ok: boolean; error?: string; key?: string };
           if (data.ok) {
-            return c.json(respond(`Audio sent (${seconds}s). Ask \`/ask\` with your question to reference this moment.`));
+            await interaction.editReply(`Audio sent (${seconds}s). Ask \`/ask\` with your question to reference this moment.`);
+          } else {
+            await interaction.editReply(data.error || "Not connected to voice. Join a voice channel first.");
           }
-          return c.json(respond(data.error || "Not connected to voice. Join a voice channel first."));
         } catch {
-          return c.json(respond("Bridge is not reachable. Ensure it is deployed on Fly.io."));
+          await interaction.editReply("Bridge is not reachable. Ensure it is deployed on Fly.io.");
         }
+        return c.json({}); // already replied
       }
 
       default:

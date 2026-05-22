@@ -14,20 +14,20 @@ import { config } from "./env.js";
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildVoiceStates,
   ],
 });
 
 // ── Auto-Join Voice ──
-// When someone joins a voice channel, auto-join if the bot has access.
 client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
   if (!newState.channelId || oldState.channelId === newState.channelId) return;
+
+  // Ignore other bots
+  if (newState.id === client.user?.id) return;
   if (newState.member?.user.bot) return;
 
   const guild = newState.guild;
-  const me = guild.members.me;
-  if (!me) return;
-
   const existing = getVoiceState(guild.id);
   if (existing) return;
 
