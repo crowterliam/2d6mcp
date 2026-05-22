@@ -132,6 +132,41 @@ The interactive wizard guides you through:
 2d6mcp/
 ├── apps/
 │   ├── worker/          # Cloudflare Worker — API, Discord bot, Workers AI, D1, R2
+│   ├── bridge/          # Discord voice relay (VPS — raw UDP required)
+│   ├── web/             # Vite + React SPA dashboard + landing (Phase 3)
+│   └── recorder/        # Browser PWA fallback audio capture (Phase 4)
+├── packages/
+│   ├── server/          # MCP server — stdio transport, local MLX, BYOD, session DB
+│   ├── shared/          # @2d6mcp/shared — dice, keywords, prompts, quality filter
+│   ├── ogl/             # @2d6mcp/ogl — OGL rules database + queries
+│   ├── dw/              # @2d6mcp/dw — DW rules database + queries
+│   ├── brp/             # @2d6mcp/brp — BRP rules database + queries
+│   └── 5ecompatible/    # @2d6mcp/5ecompatible — 5E-compatible rules database + queries
+├── data/                # SQLite databases (shared)
+├── tests/               # Vitest test suite (270 tests)
+├── tsconfig.base.json
+└── package.json         # npm workspaces root
+```
+
+### Deployment Model
+
+```
+                    CLOUDFLARE                         VPS (Hetzner, DO, etc.)
+┌──────────────────────────────┐  ┌──────────────────────────────────────┐
+│  API Worker (Hono)           │  │  Bridge (Node.js + systemd)           │
+│  /api/interactions (Discord) │  │  Auto-joins voice channels            │
+│  /api/ask (Qwen3 MoE)        │◄─│  Ring buffer → Worker /api/audio-ingest│
+│  /api/roll (shared dice)     │  │  Health /push-to-ask HTTP endpoint     │
+│  /api/auth/* (OAuth2+JWT)    │  │  $4-6/mo on any VPS                   │
+│  D1 (rules) + R2 (audio)     │  └──────────────────────────────────────┘
+│  $5/mo (Workers Paid)        │
+└──────────────────────────────┘
+         │
+    Discord (slash commands live)
+```
+2d6mcp/
+├── apps/
+│   ├── worker/          # Cloudflare Worker — API, Discord bot, Workers AI, D1, R2
 │   ├── bridge/          # Fly.io Discord voice relay (Phase 2)
 │   ├── web/             # Vite + React SPA dashboard + landing (Phase 3)
 │   └── recorder/        # Browser PWA fallback audio capture (Phase 4)

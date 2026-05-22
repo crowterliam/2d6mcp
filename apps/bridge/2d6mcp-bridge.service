@@ -1,0 +1,27 @@
+[Unit]
+Description=2d6mcp Discord Voice Bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nobody
+EnvironmentFile=/root/2d6mcp/apps/bridge/.env
+WorkingDirectory=/root/2d6mcp
+ExecStart=/usr/bin/node /root/2d6mcp/apps/bridge/dist/index.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=2d6mcp-bridge
+
+# Security hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/root/2d6mcp
+ReadOnlyPaths=/
+
+[Install]
+WantedBy=multi-user.target
