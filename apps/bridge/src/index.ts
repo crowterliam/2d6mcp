@@ -38,7 +38,11 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
     await joinVoice(channel, guild);
     console.log(`Auto-joined ${guild.name}`);
     updateHealthState({ guilds: getVoiceCount(), memoryBytes: getTotalMemory() });
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.message === "Join already in progress") {
+      // Race condition — another VoiceStateUpdate already triggered join
+      return;
+    }
     console.error(`Auto-join failed for ${guild.name}:`, err);
   }
 });
