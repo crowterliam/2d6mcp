@@ -14,7 +14,9 @@ wrangler.toml
 
 # Build artifacts
 *.tsbuildinfo
-dist/
+
+# Generated seed files
+**/seed.sql
 
 # Audio fixtures — generated for local MLX testing
 tests/audio/fixtures/
