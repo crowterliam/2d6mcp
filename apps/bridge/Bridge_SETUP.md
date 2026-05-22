@@ -23,13 +23,20 @@ iwr https://fly.io/install.ps1 -useb | iex
 
 ### 2. Login + Create App
 
+Install `flyctl`:
 ```bash
-cd apps/bridge
-flyctl auth login
-flyctl launch --name 2d6mcp-bridge --region lax --no-deploy
+brew install flyctl
 ```
 
-This creates `fly.toml`. Fly will detect the Dockerfile.
+Login and create the app **from the project root**:
+```bash
+cd /path/to/2d6mcp
+flyctl auth login
+flyctl launch --name 2d6mcp-bridge --region lax --no-deploy --flycast
+```
+
+Fly will prompt to copy the config — **say yes**. This creates `fly.toml` at the project root
+(replacing the template). The build context includes the entire monorepo.
 
 ### 3. Set Secrets
 
@@ -41,11 +48,11 @@ flyctl secrets set WORKER_URL=https://2d6mcp.YOUR-SUBDOMAIN.workers.dev
 ### 4. Deploy
 
 ```bash
-flyctl deploy --build-target .
+flyctl deploy --config fly.toml
 ```
 
-> **Note**: The build context must be the project root (not `apps/bridge/`) because
-> the Dockerfile copies workspace dependencies from `packages/shared/`.
+> **Note**: Always deploy from the project root. The Dockerfile copies files from
+> `apps/bridge/` and `package*.json` files in the workspace root.
 
 ### 5. Verify
 
