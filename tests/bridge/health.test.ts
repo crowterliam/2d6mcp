@@ -14,7 +14,7 @@ describe("HealthServer", () => {
   const port = 3099;
 
   beforeAll(() => {
-    startHealthServer(port);
+    startHealthServer(port, "https://test-worker.example.com");
   });
 
   it("returns 200 with ok status", async () => {

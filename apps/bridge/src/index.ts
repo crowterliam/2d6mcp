@@ -2,15 +2,12 @@
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 //
 // 2d6mcp Discord Voice Bridge — Entry Point (Fly.io)
-// Connects to Discord gateway, manages voice connections,
-// streams audio to Cloudflare Worker for AI processing.
+// Auto-joins voice channels, captures audio, exposes HTTP endpoints
+// for the Cloudflare Worker to trigger push-to-ask.
 
 import { Client, Events, GatewayIntentBits } from "discord.js";
-import { joinVoice, destroyVoice, getVoiceCount, getTotalMemory, getVoiceState } from "./voice.js";
-import { ingestAudio } from "./ingest.js";
+import { joinVoice, getVoiceCount, getTotalMemory, getVoiceState } from "./voice.js";
 import { startHealthServer, updateHealthState } from "./health.js";
-import type {} from "./ring-buffer.js";
-
 import { config } from "./env.js";
 
 // ── Discord Client Setup ──
@@ -21,114 +18,33 @@ const client = new Client({
   ],
 });
 
-// ── Slash Command Handling ──
-client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
+// ── Auto-Join Voice ──
+// When someone joins a voice channel, auto-join if the bot has access.
+client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
+  if (!newState.channelId || oldState.channelId === newState.channelId) return;
+  if (newState.member?.user.bot) return;
 
-  const guildId = interaction.guildId;
-  if (!guildId) {
-    await interaction.reply({ content: "This command must be used in a server.", ephemeral: true });
-    return;
-  }
+  const guild = newState.guild;
+  const me = guild.members.me;
+  if (!me) return;
+
+  const existing = getVoiceState(guild.id);
+  if (existing) return;
 
   try {
-    switch (interaction.commandName) {
-      case "join": {
-        await interaction.deferReply({ ephemeral: true });
-        const member = interaction.guild?.members.cache.get(interaction.user.id);
-        const voiceChannel = member?.voice.channel;
-        if (!voiceChannel) {
-          await interaction.editReply("You must be in a voice channel.");
-          return;
-        }
-        if (!interaction.guild) {
-          await interaction.editReply("Could not find guild.");
-          return;
-        }
-        const state = await joinVoice(voiceChannel, interaction.guild);
-        updateHealthState({ guilds: getVoiceCount(), memoryBytes: getTotalMemory() });
-        await interaction.editReply(`Joined ${voiceChannel.name}. Listening. Use \`/push-to-ask\` to get a ruling.`);
-        break;
-      }
-
-      case "leave": {
-        await interaction.deferReply({ ephemeral: true });
-        destroyVoice(guildId);
-        updateHealthState({ guilds: getVoiceCount(), memoryBytes: getTotalMemory() });
-        await interaction.editReply("Disconnected from voice channel.");
-        break;
-      }
-
-      case "push-to-ask": {
-        await interaction.deferReply();
-        const seconds = interaction.options.getInteger("seconds") || 30;
-        const voiceState = getVoiceState(guildId);
-        if (!voiceState) {
-          await interaction.editReply("Not connected to voice. Use `/join` first.");
-          return;
-        }
-
-        const result = await ingestAudio(voiceState.ringBuffer, guildId, seconds, {
-          workerUrl: config.workerUrl,
-          workerApiKey: config.workerApiKey,
-        });
-
-        if (!result.ok) {
-          await interaction.editReply("No audio captured or upload failed. Try again in a few seconds.");
-          return;
-        }
-
-        await interaction.editReply(`Audio sent (${seconds}s). Ask \`/ask\` with your question to reference this moment.`);
-        break;
-      }
-
-      default:
-        await interaction.reply({ content: `Unknown command: ${interaction.commandName}`, ephemeral: true });
-    }
+    const channel = newState.channel;
+    if (!channel) return;
+    await joinVoice(channel, guild);
+    console.log(`Auto-joined ${guild.name} → ${channel.name}`);
+    updateHealthState({ guilds: getVoiceCount(), memoryBytes: getTotalMemory() });
   } catch (err) {
-    console.error("Interaction error:", err);
-    try {
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: "An error occurred.", ephemeral: true });
-      } else {
-        await interaction.followUp({ content: "An error occurred.", ephemeral: true });
-      }
-    } catch {}
+    console.error(`Auto-join failed for ${guild.name}:`, err);
   }
 });
 
 // ── Gateway Connect ──
 client.once(Events.ClientReady, (ready) => {
   console.log(`Bridge ready — logged in as ${ready.user.tag}`);
-  console.log(`Worker URL: ${config.workerUrl}`);
-
-  // Register slash commands for voice control
-  void ready.application.commands.set([
-    {
-      name: "join",
-      description: "Join your current voice channel to enable push-to-ask",
-    },
-    {
-      name: "leave",
-      description: "Disconnect from voice channel",
-    },
-    {
-      name: "push-to-ask",
-      description: "Capture the last N seconds of voice audio for AI analysis",
-      options: [
-        {
-          name: "seconds",
-          description: "Seconds of audio to capture (default 30)",
-          type: 4,
-          required: false,
-        },
-      ],
-    },
-  ]);
-
-  console.log("Slash commands registered");
-
-  // Warm up the Worker's AI models
   void fetch(`${config.workerUrl}/api/warm`, { method: "POST" }).catch(() => {});
 });
 
@@ -136,8 +52,8 @@ client.once(Events.ClientReady, (ready) => {
 console.log("Starting bridge...");
 await client.login(config.discordToken);
 
-// ── Health Server ──
-startHealthServer(3000);
+// ── Health + Push-to-Ask Server ──
+startHealthServer(3000, config.workerUrl);
 
 // ── Periodic Health Update ──
 setInterval(() => {

@@ -12,6 +12,7 @@ export interface Env {
   JWT_SECRET: string;
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
+  BRIDGE_URL: string;
   API_URL: string;
   WEB_URL: string;
 }
