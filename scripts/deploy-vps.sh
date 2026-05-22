@@ -14,8 +14,7 @@ apt-get install -y nodejs git
 # ── 2. Clone & build ──
 echo "[2/4] Cloning and building..."
 cd /root
-if [ -d 2d6mcp ]; then cd 2d6mcp && git pull; else git clone https://github.com/crowterliam/2d6mcp.git; fi
-cd 2d6mcp
+if [ -d 2d6mcp ]; then cd 2d6mcp && git pull; else git clone https://github.com/crowterliam/2d6mcp.git && cd 2d6mcp; fi
 npm install
 npm run build
 
