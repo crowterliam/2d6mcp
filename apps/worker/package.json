@@ -1,0 +1,28 @@
+{
+  "name": "@2d6mcp/worker",
+  "version": "0.4.0",
+  "private": true,
+  "description": "2d6mcp Cloudflare Worker — API, Discord Interactions, Workers AI, D1, R2",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:staging": "wrangler deploy --env staging",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "wrangler d1 execute 2d6mcp --file src/db/schema.sql",
+    "db:migrate:staging": "wrangler d1 execute 2d6mcp-staging --env staging --file src/db/schema.sql",
+    "db:seed": "wrangler d1 execute 2d6mcp --file src/db/seed.sql",
+    "db:seed:staging": "wrangler d1 execute 2d6mcp-staging --env staging --file src/db/seed.sql"
+  },
+  "license": "AGPL-3.0-only",
+  "dependencies": {
+    "@2d6mcp/shared": "*",
+    "hono": "^4.6.0",
+    "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250501.0",
+    "wrangler": "^4.0.0"
+  }
+}
