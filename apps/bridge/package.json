@@ -1,0 +1,25 @@
+{
+  "name": "@2d6mcp/bridge",
+  "version": "0.6.0",
+  "private": true,
+  "description": "2d6mcp Discord voice bridge — UDP audio relay to Cloudflare Worker (Fly.io)",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "AGPL-3.0-only",
+  "dependencies": {
+    "discord.js": "^14.16.0",
+    "@discordjs/voice": "^0.17.0",
+    "@discordjs/ws": "^1.2.0",
+    "libsodium-wrappers": "^0.7.15",
+    "opusscript": "^0.1.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0"
+  }
+}
