@@ -45,14 +45,19 @@ flyctl secrets set DISCORD_BOT_TOKEN=your-bot-token
 flyctl secrets set WORKER_URL=https://2d6mcp.YOUR-SUBDOMAIN.workers.dev
 ```
 
-### 4. Deploy
+### 4. Build + Deploy
 
 ```bash
+# Build the bridge TypeScript first (Docker image expects pre-built dist/)
+npm run build
+
+# Deploy to Fly.io
 flyctl deploy --config fly.toml
 ```
 
-> **Note**: Always deploy from the project root. The Dockerfile copies files from
-> `apps/bridge/` and `package*.json` files in the workspace root.
+> **Note**: Always deploy from the project root. Run `npm run build` before every deploy
+> so the Docker image picks up compiled `dist/`. TypeScript is not installed in the
+> production Docker image.
 
 ### 5. Verify
 
