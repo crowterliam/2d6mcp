@@ -24,16 +24,16 @@ jobs:
       - run: npm ci
 
       - name: Root typecheck (tsc --build)
-        run: npm run typecheck
+        run: npm run build
 
       - name: Worker typecheck
-        run: npx tsc --noEmit --project apps/worker/tsconfig.json
+        run: npm run build && npx tsc --noEmit --project apps/worker/tsconfig.json
 
       - name: Bridge typecheck
         run: npx tsc --noEmit --project apps/bridge/tsconfig.json
 
       - name: Full build
-        run: npm run build
+        run: echo "build already ran"
 
   test:
     name: Test (Node ${{ matrix.node-version }})
