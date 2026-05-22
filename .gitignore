@@ -11,6 +11,7 @@ dist/
 .dev.vars
 .wrangler/
 wrangler.toml
+fly.toml
 
 # Build artifacts
 *.tsbuildinfo

@@ -23,7 +23,17 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run build
+      - name: Root typecheck (tsc --build)
+        run: npm run typecheck
+
+      - name: Worker typecheck
+        run: npx tsc --noEmit --project apps/worker/tsconfig.json
+
+      - name: Bridge typecheck
+        run: npx tsc --noEmit --project apps/bridge/tsconfig.json
+
+      - name: Full build
+        run: npm run build
 
   test:
     name: Test (Node ${{ matrix.node-version }})
@@ -49,3 +59,25 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+  coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - run: npm run populate-ogl
+      - run: npm run populate-dw
+
+      - name: Coverage report
+        run: npm run test:coverage

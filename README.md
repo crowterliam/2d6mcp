@@ -171,7 +171,7 @@ Slash commands are in `.kilo/command/` for quick access to common operations.
 ```bash
 npm install           # install all workspace dependencies
 npm run build         # compile all packages (tsc --build)
-npm test              # run 209 tests across 18 test files
+npm test              # run 270 tests across 26 test files
 npm run typecheck     # type-check without emitting
 npm run start         # run the MCP server (packages/server/dist/index.js)
 ```

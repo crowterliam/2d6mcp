@@ -1,6 +1,6 @@
 {
   "name": "@2d6mcp/brp",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Basic Roleplaying (BRP) rules database — queries, schema, and population for 2d6mcp",
   "type": "module",
   "main": "dist/queries.js",

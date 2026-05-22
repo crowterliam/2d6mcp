@@ -10,7 +10,7 @@ git clone https://github.com/crowterliam/2d6mcp.git
 cd 2d6mcp
 npm install             # installs all workspace dependencies
 npm run build           # compiles all packages (tsc --build)
-npm test                # runs 209 tests across vitest
+npm test                # runs 270 tests across vitest
 ```
 
 1. Create a feature branch from `main`
