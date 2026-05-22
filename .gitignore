@@ -8,6 +8,8 @@ dist/
 .mcp-byod-consent-accepted
 .mcp-discord-webhooks.json
 .reference
+.dev.vars
+.wrangler/
 
 # Audio fixtures — generated for local MLX testing
 tests/audio/fixtures/
