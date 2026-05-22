@@ -11,7 +11,7 @@ import {
   entersState,
   type VoiceConnection,
 } from "@discordjs/voice";
-import type { VoiceBasedChannel, Guild } from "discord.js";
+import type { VoiceBasedChannel } from "discord.js";
 import { RingBuffer } from "./ring-buffer.js";
 
 export interface VoiceState {
@@ -36,7 +36,7 @@ export function getTotalMemory(): number {
   return total;
 }
 
-export async function joinVoice(channel: VoiceBasedChannel, guild: Guild): Promise<VoiceState> {
+export async function joinVoice(channel: VoiceBasedChannel, guild: { id: string; name: string; voiceAdapterCreator: any }): Promise<VoiceState> {
   const existing = voiceStates.get(guild.id);
   if (existing) return existing;
 
@@ -45,11 +45,16 @@ export async function joinVoice(channel: VoiceBasedChannel, guild: Guild): Promi
     guildId: guild.id,
     adapterCreator: guild.voiceAdapterCreator as any,
     selfDeaf: true,
-    selfMute: false,
+    selfMute: true,
   });
 
-  // Wait for the connection to be ready
-  await entersState(connection, VoiceConnectionStatus.Ready, 10_000);
+  // Log state transitions for debugging
+  connection.on("stateChange", (oldState, newState) => {
+    console.log(`Voice state: ${oldState.status} → ${newState.status} (${guild.name})`);
+  });
+
+  // Wait for the connection to be ready (25s timeout for Fly.io → Discord)
+  await entersState(connection, VoiceConnectionStatus.Ready, 25_000);
   console.log(`Joined voice: ${guild.name} (${guild.id})`);
 
   // The voice receiver is a property of the connection, not a separate factory

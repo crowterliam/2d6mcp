@@ -34,8 +34,9 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
   try {
     const channel = newState.channel;
     if (!channel) return;
+    console.log(`Voice: ${newState.member?.user.username} joined voice in ${guild.name}`);
     await joinVoice(channel, guild);
-    console.log(`Auto-joined ${guild.name} → ${channel.name}`);
+    console.log(`Auto-joined ${guild.name}`);
     updateHealthState({ guilds: getVoiceCount(), memoryBytes: getTotalMemory() });
   } catch (err) {
     console.error(`Auto-join failed for ${guild.name}:`, err);
