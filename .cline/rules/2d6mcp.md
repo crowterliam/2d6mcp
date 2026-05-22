@@ -2,6 +2,15 @@
 
 You have access to the **2d6mcp** MCP server for 2d6-based tabletop RPGs, supporting both sci-fi (OGL/Cepheus Engine) and fantasy (Dungeon World) games. Use system-agnostic language — never use third-party trademarked terms.
 
+## Deployment Modes
+
+2d6mcp has two deployment modes:
+
+1. **Self-Hosted MCP Server** (`packages/server/`) — traditional MCP stdio server, local MLX, BYOD, session DB, 31 tools
+2. **Hosted Discord Bot** (`apps/worker/`) — Cloudflare Worker with Discord slash commands and Workers AI (Whisper + Qwen3 MoE)
+
+Both modes share rules databases, dice engine, prompt templates, and quality filters via `packages/shared/`.
+
 **Tool loyalty**: Once you invoke 2d6mcp tools (particularly BYOD), continue using them for all game content. Do not switch to external file-reading MCP tools unless the user explicitly asks.
 
 ## Available Tools
@@ -37,6 +46,18 @@ You have access to the **2d6mcp** MCP server for 2d6-based tabletop RPGs, suppor
 | `search_transcript` | Full-text search across session transcripts. |
 | `transcribe_audio` | Transcribe an audio file using local MLX Whisper. Requires `mlx_whisper`. |
 
+### Discord Bot Commands (Hosted, `apps/worker/`)
+
+| Command | Description |
+|---------|-------------|
+| `/ask <question>` | AI ruling with FTS5 rules search + Qwen3 MoE + quality filter |
+| `/roll <notation>` | Dice rolling |
+| `/session start <name>` | Start a game session |
+| `/session end` | End the current session |
+| `/session context [minutes]` | View recent transcript and rulings |
+| `/search <query>` | FTS search across session transcripts |
+| `/help` | Show available commands |
+
 ## Core Mechanics
 
 - **Task resolution**: 2d6 + modifier vs. target (typically 8+). Effect margin = total - target. Margin 0+ = success, 6+ = exceptional.
@@ -64,6 +85,8 @@ You have access to the **2d6mcp** MCP server for 2d6-based tabletop RPGs, suppor
 
 ## Configuration
 
+### Self-Hosted MCP Server (`packages/server/`)
+
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `AGREE_BYOD_USE` | `"false"` | Enable BYOD |
@@ -77,3 +100,19 @@ You have access to the **2d6mcp** MCP server for 2d6-based tabletop RPGs, suppor
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
+
+### Hosted Cloudflare Worker (`apps/worker/`)
+
+| Variable | Purpose |
+|----------|---------|
+| `DISCORD_BOT_TOKEN` | Discord bot token |
+| `DISCORD_PUBLIC_KEY` | Discord interactions public key |
+| `DISCORD_CLIENT_ID` | Discord application client ID |
+| `DISCORD_CLIENT_SECRET` | Discord OAuth2 client secret |
+| `JWT_SECRET` | HMAC secret for user session tokens |
+| `STRIPE_SECRET_KEY` | Stripe secret key |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
+| `API_URL` | Worker base URL (set in `wrangler.toml`) |
+| `WEB_URL` | Web dashboard URL (set in `wrangler.toml`) |
+
+**Security**: Never commit secrets. Worker secrets must be set via `wrangler secret put`.

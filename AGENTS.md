@@ -1,8 +1,55 @@
-# 2D6 MCP Server — Agent Instructions
+# 2D6 MCP — Agent Instructions
 
 ## Project Identity
 
-This is a Model Context Protocol (MCP) server that acts as a mechanical engine, dice roller, and rules reference for 2d6-based tabletop RPGs. The server is system-agnostic and avoids all third-party trademarks. It includes an OGL rules database (Cepheus Engine SRD) for sci-fi games and a Dungeon World rules database (CC-BY-3.0) with moves, classes, spells, equipment, monsters, and GM tools for fantasy games.
+This project provides two deployment modes for a 2d6-based tabletop RPG AI assistant:
+
+1. **Self-Hosted MCP Server** (`packages/server/`) — stdio transport, local MLX, BYOD, session DB, 31 tools
+2. **Hosted Cloudflare Worker** (`apps/worker/`) — Discord bot, Workers AI (Whisper + Qwen3 MoE), D1, R2, OAuth2
+
+Both modes share the same rules databases (OGL/Cepheus Engine SRD for sci-fi, Dungeon World CC-BY-3.0 for fantasy), dice engine, prompt templates, and quality filters via `packages/shared/`.
+
+The project is system-agnostic and avoids all third-party trademarks.
+
+## Architecture
+
+```
+2d6mcp/                          # npm workspaces monorepo
+├── apps/
+│   └── worker/                  # Cloudflare Worker (Hono + Workers AI + D1 + R2)
+├── packages/
+│   ├── server/                  # MCP server (stdio transport, local MLX, BYOD)
+│   ├── shared/                  # @2d6mcp/shared — dice, keywords, prompts, quality filter
+│   ├── ogl/                     # @2d6mcp/ogl — OGL SQLite queries
+│   └── dw/                      # @2d6mcp/dw — DW SQLite queries
+├── data/
+│   ├── ogl/cepheus.db           # Bundled OGL database
+│   └── dw/dungeon-world.db      # Bundled DW database
+└── tests/                       # Vitest test suite (209 tests)
+```
+
+## Build & Test Commands
+
+```bash
+npm install              # install all workspace dependencies
+npm run build            # compile all packages (tsc --build)
+npm run start            # run MCP server (packages/server/dist/index.js)
+npm test                 # run test suite (vitest, 209 tests)
+npm run test:watch       # run tests in watch mode
+npm run test:coverage    # run tests with coverage
+npm run setup            # create BYOD consent token
+npm run populate-ogl     # regenerate OGL SQLite database
+npm run populate-dw      # regenerate DW SQLite database
+```
+
+### Worker-specific commands (in `apps/worker/`)
+
+```bash
+npm run dev              # wrangler dev (local dev server)
+npm run deploy           # wrangler deploy (production)
+npm run db:migrate       # run D1 schema migration
+npm run db:migrate:local # run D1 migration against local dev DB
+```
 
 ## Agent Modes
 
@@ -60,46 +107,28 @@ Slash commands are in `.kilo/command/`:
 |------|--------|
 | `AIDER.md` | Project conventions, MCP tools, environment reference |
 
-## Build & Test Commands
-
-```bash
-npm install          # install dependencies
-npm run build        # compile TypeScript to dist/
-npm run start        # run the MCP server (stdio transport)
-npm test             # run the test suite (vitest)
-npm run test:watch   # run tests in watch mode
-npm run test:coverage # run tests with coverage report
-npm run setup        # run first-time setup (consent token)
-npm run populate-ogl # regenerate the OGL SQLite database
-npm run populate-dw  # regenerate the Dungeon World SQLite database
-```
-
-## Architecture
+## Package Structure
 
 ```
-src/
+packages/server/src/
   index.ts          # MCP server entry point (stdio transport)
   server.ts         # Server class, tool registration
   config.ts         # Environment config + BYOD gate
   cli.ts            # CLI entry for setup/populate commands
   dice/
-    roller.ts       # Dice notation parser, 2d6 resolution
+    roller.ts       # Dice notation parser, 2d6 resolution (IMPORTS from @2d6mcp/shared)
     tables.ts       # d66 / 2d6 table rolling
   ogl/
-    database.ts     # SQLite connection + FTS5 setup
-    schema.sql.ts   # Schema DDL strings
-    populate.ts     # Populate DB with Cepheus Engine SRD data
+    database.ts     # SQLite connection + FTS5 setup (IMPORTS from @2d6mcp/ogl)
     queries.ts      # Rule search queries
   dw/
-    database.ts     # DW SQLite connection + schema setup
-    schema.sql.ts   # DW Schema DDL
-    populate.ts     # Populate DB with Dungeon World data (CC-BY-3.0)
+    database.ts     # DW SQLite connection + schema setup (IMPORTS from @2d6mcp/dw)
     queries.ts      # DW rule search queries
   byod/
     gate.ts         # Consent gate check
     ingest.ts       # File walking, PDF/text/md parsing
     search.ts       # FTS5 search against BYOD index
-    content-cache.ts # Content-addressable chunk cache (shared across workspaces)
+    content-cache.ts # Content-addressable chunk cache
   character/
     parser.ts       # UPP extraction, stat parsing
   discord/
@@ -122,34 +151,41 @@ src/
     helpers.ts         # Shared helpers, keyword extraction, fuzzy matching
     definitions.ts     # All tool JSON schemas
     index.ts           # Handler dispatch table
-data/
-  ogl/
-    cepheus.db      # Bundled OGL SQLite database (Cepheus Engine SRD)
-  dw/
-    dungeon-world.db  # Bundled DW SQLite database (Dungeon World, CC-BY-3.0)
-tests/                # Vitest test suite
-  config/             # Config module tests
-  dice/               # Dice roller and table tests
-  ogl/                # OGL database and query tests
-  dw/                 # DW database and query tests
-  byod/               # BYOD gate, ingest, search, cache tests
-  character/          # Character parser tests
-  discord/            # Discord config and webhook tests
-.kilo/
-  agent/            # Agent mode instructions
-  command/          # Slash command definitions
-.claude/
-  skills/           # Claude Code skill definitions (SKILL.md)
-.cursor/
-  rules/            # Cursor rule definitions
-.cline/
-  rules/            # Cline rule definitions
-.windsurfrules      # Windsurf rules file
-AIDER.md            # Aider conventions and MCP tool reference
-MCP_SETUP.md         # User guide for connecting to AI harnesses
+
+apps/worker/src/
+  index.ts             # Hono entry, CORS, route mounting
+  env.ts               # Typed Cloudflare bindings (AI, D1, R2, secrets)
+  types.ts             # Shared types for D1 rows, API payloads, JWT
+  middleware/
+    auth.ts            # JWT verification, Discord Ed25519 (tweetnacl)
+    jwt.ts             # Web Crypto API JWT sign/verify
+    rate-limit.ts      # D1-backed per-guild rate limiting
+  routes/
+    interactions.ts    # Discord Interactions endpoint (slash commands)
+    api.ts             # /api/ask, /api/roll, /api/transcribe, /api/warm, /api/health
+    auth.ts            # Discord OAuth2 (/api/auth/login, /callback, /me)
+    billing.ts         # Stripe checkout, portal, webhook
+    guild.ts           # Guild-scoped session CRUD
+  services/
+    whisper.ts         # Workers AI Whisper wrapper
+    llm.ts             # Workers AI Qwen3 MoE + Llama 3.2 3B fallback
+    synthesize.ts      # FTS5 rules search → prompt → LLM → quality filter
+  db/
+    schema.sql         # D1 schema: guilds, sessions, transcripts, rulings, FTS5 rules
+    queries.ts         # Typed prepared statements
+
+packages/shared/src/
+  index.ts             # Re-exports all modules
+  dice.ts              # parseDiceNotation, roll2d6, rollCustom
+  tables.ts            # rollOnTable, normalizeDiceType, rollD66
+  keywords.ts          # extractKeywords, fuzzyAlternatives, fuzzyKeywordList, STOPWORDS
+  prompts.ts           # DEFAULT_SYSTEM_PROMPT, SYSTEM_PROMPT_LARGE, quality filter
+  types.ts             # Shared interfaces (RulingResult, RulingSource, etc.)
 ```
 
 ## Available Tools
+
+### MCP Server Tools (Self-Hosted, `packages/server/`)
 
 | Tool | Purpose |
 |------|---------|
@@ -165,7 +201,7 @@ MCP_SETUP.md         # User guide for connecting to AI harnesses
 | `list_byod_files` | List indexed files with status and chunk counts |
 | `inspect_byod_file` | Show chunk structure for a specific file |
 | `sync_file` | Index a single file by relative path (for large files that timeout in bulk sync) |
-| `get_byod_chunk` | Retrieve full chunk content by file path + chunk index (for getting complete text after search snippets) |
+| `get_byod_chunk` | Retrieve full chunk content by file path + chunk index |
 | `discord_post` | Post messages to Discord webhooks with smart routing based on context tags |
 | `discord_add_webhook` | Add a Discord webhook with name, URL, tags, and description |
 | `discord_remove_webhook` | Remove a stored Discord webhook by name |
@@ -185,30 +221,50 @@ MCP_SETUP.md         # User guide for connecting to AI harnesses
 | `clear_transcription` | Reset transcription progress for a specific file, or clear all state. |
 | `delete_session` | Permanently delete a session and all its transcript segments and rulings. |
 
+### Discord Bot Commands (Hosted, `apps/worker/`)
+
+| Command | Description |
+|---------|-------------|
+| `/ask <question>` | AI ruling with FTS5 rules search + Qwen3 MoE + quality filter |
+| `/roll <notation>` | Dice rolling |
+| `/session start <name>` | Start a game session |
+| `/session end` | End the current session |
+| `/session context [minutes]` | View recent transcript and rulings |
+| `/search <query>` | FTS search across session transcripts |
+| `/help` | Show available commands |
+
 ## Session Management & Ruling Synthesis
 
-The server supports full game session logging and AI-assisted rules rulings:
+### Self-Hosted (MLX)
 
-- **Session lifecycle**: Start a session with `session_start`, log transcript segments with `log_transcript` throughout play, then end with `session_end`.
-- **BYOD system scoping**: Pass `byod_system` to `session_start` (e.g., `"call of cthulhu"`) to filter all subsequent BYOD searches to files matching that system name. Prevents wrong-system contamination.
-- **Context retrieval**: Use `get_session_context` to fetch recent transcript and rulings from the last N minutes — useful for catching up or recalling what just happened.
-- **Transcript search**: Use `search_transcript` to find what was said about a specific topic across the entire session.
-- **Ruling synthesis**: Use `synthesize_ruling` to ask a rules question and get an AI-generated cited ruling based on OGL/DW/BYOD rules. Requires MLX LM (`mlx_lm.generate`) to be installed locally.
-- **Context-based resolution**: Use `resolve_from_context` to run the full pipeline — take recent transcript, detect the rules question, look up rules, synthesize a ruling, and log it to the session.
-- **Session summaries**: Use `session_summarize` to generate an AI summary of the full session transcript via MLX LLM.
-- **Audio transcription**: Use `transcribe_audio` to convert recorded audio files to text using local MLX Whisper. Files over 3 minutes are processed in 2-minute chunks with progress tracking — call repeatedly with the same `file_path` and `session_id` until `complete: true`. Each chunk is auto-logged to the session.
-- **Transcription management**: Use `list_transcriptions` to see in-progress files and `clear_transcription` to reset stuck state.
+- **Session lifecycle**: Start with `session_start`, log with `log_transcript`, end with `session_end`.
+- **BYOD system scoping**: Pass `byod_system` to `session_start` to filter BYOD searches.
+- **Ruling synthesis**: `synthesize_ruling` auto-looks up OGL/DW/BYOD rules, passes to MLX LLM, returns cited ruling with quality filter.
+- **Audio transcription**: `transcribe_audio` processes files in 2-minute chunks with progress tracking. Call repeatedly until `complete: true`.
+
+### Hosted (Cloudflare Workers AI)
+
+- **Discord slash commands**: `/ask` defers response (3s Discord timeout), calls Workers AI Qwen3 MoE, follows up with embed.
+- **FTS5 rules search**: D1 FTS5 queries with phrase-pair detection and OGL-preference weighting.
+- **Quality filter**: Shared `filterRulingQuality` from `@2d6mcp/shared` validates numbers against source text.
+- **Rate limiting**: 1 `/ask` per 10 seconds per guild, D1-backed counters.
 
 ## Cross-Platform Backends
 
-The audio transcription and ruling synthesis use pluggable backends. On macOS, the default is Apple MLX. On Windows/Linux, swap to whisper.cpp and llama.cpp by setting environment variables:
+### Self-Hosted
 
 | Platform | STT Backend | LLM Backend |
 |---|---|---|
 | macOS (default) | `mlx` (MLX Whisper) | `mlx` (MLX LM) |
 | Windows/Linux | `whispercpp` (whisper.cpp) | `llamacpp` (llama.cpp) |
 
-The server detects the backend via `STT_BACKEND` and `LLM_BACKEND` env vars. All tools, session management, and search work identically regardless of backend — only the underlying CLI binary changes.
+### Hosted
+
+| Service | Model |
+|---|---|
+| STT | `@cf/openai/whisper-large-v3-turbo` (Workers AI) |
+| LLM | `@cf/qwen/qwen3-30b-a3b-fp8` (Workers AI, primary) |
+| LLM fallback | `@cf/meta/llama-3.2-3b-instruct` (Workers AI) |
 
 ## Multi-License Architecture
 
@@ -217,12 +273,12 @@ The server detects the backend via `STT_BACKEND` and `LLM_BACKEND` env vars. All
 - All files under `data/dw/`: CC-BY-3.0
 - `LICENSE.md` describes the firewall in detail
 - `OGL-1.0a.txt` contains the full OGL text with Cepheus SRD copyright attributions
-- `data/dw/CC-BY-3.0.txt` contains the full Creative Commons Attribution 3.0 license text
+- `data/dw/CC-BY-3.0.txt` contains the full CC-BY-3.0 license text
 - `data/dw/ATTRIBUTION` contains Dungeon World derivation and attribution details
 
 ## BYOD Consent Gate
 
-The server checks for `AGREE_BYOD_USE="true"` env var OR the presence of a `.mcp-byod-consent-accepted` token file in the project root before enabling BYOD tools. Without consent, BYOD tools return a clear disclaimer message.
+The server checks for `AGREE_BYOD_USE="true"` env var OR the presence of a `.mcp-byod-consent-accepted` token file in the project root before enabling BYOD tools. Without consent, BYOD tools return a clear disclaimer message. BYOD is self-hosted only — not available in the hosted Cloudflare Worker.
 
 ## Naming Conventions
 
@@ -231,6 +287,8 @@ Never reference any third-party game system or trademarked terms. Use generic de
 **Tool loyalty**: Once 2d6mcp tools are invoked (particularly BYOD — `query_local_byod`, `get_byod_chunk`, `synthesize_ruling`), continue using them for all game content. Do not switch to external file-reading MCP tools unless the user explicitly asks.
 
 ## Environment Variables
+
+### Self-Hosted MCP Server
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
@@ -251,3 +309,21 @@ Never reference any third-party game system or trademarked terms. Use generic de
 | `LLM_BACKEND` | `mlx` | LLM backend: `mlx` (macOS) or `llamacpp` (Win/Linux) |
 | `WHISPERCPP_MODEL` | `ggml-large-v3-turbo.bin` | whisper.cpp model path (Win/Linux) |
 | `LLAMACPP_MODEL` | `Llama-3.2-3B-Instruct.Q4_K_M.gguf` | llama.cpp model path (Win/Linux) |
+
+### Hosted Cloudflare Worker
+
+| Variable | Purpose |
+|----------|---------|
+| `DISCORD_BOT_TOKEN` | Discord bot token (set via `wrangler secret put`) |
+| `DISCORD_PUBLIC_KEY` | Discord interactions public key |
+| `DISCORD_CLIENT_ID` | Discord application client ID |
+| `DISCORD_CLIENT_SECRET` | Discord OAuth2 client secret |
+| `JWT_SECRET` | HMAC secret for user session tokens |
+| `STRIPE_SECRET_KEY` | Stripe secret key |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
+| `API_URL` | Worker base URL (set in `wrangler.toml`) |
+| `WEB_URL` | Web dashboard URL (set in `wrangler.toml`) |
+
+### Security Note
+
+**Never commit secrets to the repository.** `wrangler.toml` is gitignored — use `wrangler.toml.example` as a template. All secrets for the Cloudflare Worker must be set via `wrangler secret put`. `.dev.vars` is gitignored for local development. The self-hosted MCP server reads secrets from environment variables only — never from committed files.

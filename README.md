@@ -1,41 +1,67 @@
-# 2D6 MCP Server
+# 2D6 MCP — AI GM Assistant
 
-A system-agnostic Model Context Protocol (MCP) server providing a mechanical engine, dice roller, and rules reference for generic 2d6-based sci-fi tabletop RPGs, plus a Dungeon World rules database.
+A system-agnostic Model Context Protocol (MCP) server and hosted Cloudflare Worker providing a mechanical engine, dice roller, rules reference, and AI-powered rulings assistant for 2d6-based tabletop RPGs. Supports sci-fi (OGL/Cepheus Engine SRD) and fantasy (Dungeon World, CC-BY-3.0) games.
+
+## Deployment Modes
+
+| Mode | Description | Cost |
+|---|---|---|
+| **Self-Hosted MCP Server** | Run locally on your machine. Full BYOD support, MLX-powered audio transcription and ruling synthesis (macOS). Works in any AI harness (Claude, Kilo, Cursor, etc.) | Free (AGPL-3.0) |
+| **Hosted Discord Bot** | Deploy to Cloudflare Workers. Discord slash commands, Workers AI-powered rulings (Qwen3 MoE), web dashboard. Zero local setup beyond wrangler. | Free (self-deploy) / $5/mo (managed) |
 
 ## Features
 
-- **Dice Engine** — Parse standard dice notation (`2d6+1`, `3d6`, `d66`), roll against target numbers, and calculate effect margins
-- **Table Lookup** — Roll on named tables (reaction, encounters, patrons) using 1d6, 2d6, or d66 resolution
-- **OGL Rules Database** — Pre-populated SQLite database with Cepheus Engine SRD content under OGL 1.0a
-- **Dungeon World Database** — Pre-populated SQLite database with moves, classes, spells, equipment, monsters, and GM tools (CC-BY-3.0)
-- **BYOD Indexing** — Ingest your own PDF, text, and markdown files for local full-text search
-- **Character Parser** — Extract UPP hex strings, characteristics, and skills from character sheets
-- **Offline-First** — All queries run locally; no network calls, no telemetry
+- **Dice Engine** — `2d6+1`, `3d6`, `d66`, target numbers, effect margins
+- **OGL Rules Database** — Pre-populated SQLite/D1 with Cepheus Engine SRD (OGL v1.0a)
+- **Dungeon World Database** — Pre-populated SQLite/D1 with moves, classes, spells, monsters, GM tools (CC-BY-3.0)
+- **AI Rulings** — Ask rules questions, get cited answers from OGL/DW/BYOD sources. Powered by Qwen3 MoE (Cloudflare) or MLX LLM (self-hosted)
+- **Discord Bot** — Slash commands (`/ask`, `/roll`, `/session`) in your TTRPG server. Real-time rulings with source citations
+- **BYOD Indexing** — Ingest your own PDF/text/markdown files for local full-text search (self-hosted only)
+- **Session Management** — Start/end sessions, log transcripts, search what was said at the table
+- **Cross-Platform AI** — Cloudflare Workers AI (Whisper + LLM) works on any device, no GPU needed
 
-## Quick Start
+## Quick Start — Self-Hosted MCP Server
 
 ```bash
+git clone https://github.com/crowterliam/2d6mcp.git
+cd 2d6mcp
 npm install
 npm run build
 npm run setup          # create consent token for BYOD mode
 npm run populate-ogl   # generate the OGL rules database
 npm run populate-dw    # generate the Dungeon World rules database
+npm run start          # run the MCP server (stdio transport)
 ```
 
-### Run as an MCP Server
+## Quick Start — Hosted Discord Bot
 
-```
-npm run start
+```bash
+git clone https://github.com/crowterliam/2d6mcp.git
+cd 2d6mcp
+cp apps/worker/wrangler.toml.example apps/worker/wrangler.toml
+# Fill in your Cloudflare account_id and create a D1 database + R2 bucket
+cd apps/worker
+npx wrangler d1 create 2d6mcp
+npx wrangler r2 bucket create 2d6mcp-audio
+npx wrangler d1 execute 2d6mcp --remote --file src/db/schema.sql
+npx wrangler secret put DISCORD_BOT_TOKEN
+npx wrangler secret put DISCORD_PUBLIC_KEY
+npx wrangler secret put DISCORD_CLIENT_ID
+npx wrangler secret put DISCORD_CLIENT_SECRET
+npx wrangler secret put JWT_SECRET
+npx wrangler deploy
 ```
 
-### MCP Client Configuration
+Then: set your Interactions Endpoint URL in Discord Developer Portal to `https://2d6mcp.YOUR-SUBDOMAIN.workers.dev/api/interactions`, register slash commands, and invite the bot.
+
+## MCP Client Configuration
 
 ```json
 {
   "mcpServers": {
     "2d6mcp": {
       "command": "node",
-      "args": ["/path/to/2d6mcp/dist/index.js"],
+      "args": ["/absolute/path/to/2d6mcp/packages/server/dist/index.js"],
       "env": {
         "AGREE_BYOD_USE": "true",
         "BYOD_PATH": "/path/to/your/rpg/files"
@@ -46,6 +72,8 @@ npm run start
 ```
 
 ## Tools
+
+### MCP Server Tools (Self-Hosted)
 
 | Tool | Description |
 |------|-------------|
@@ -60,17 +88,64 @@ npm run start
 | `clear_byod` | Delete the BYOD index to start fresh |
 | `list_byod_files` | List all indexed files with chunk counts and status |
 | `inspect_byod_file` | Show chunk structure for a specific indexed file |
-| `sync_file` | Index a single file by relative path (for large files that timeout in bulk sync) |
+| `sync_file` | Index a single file by relative path |
 | `get_byod_chunk` | Retrieve full chunk content by file path + chunk index |
-| `discord_post` | Post messages to Discord webhooks with smart routing based on context tags |
-| `discord_add_webhook` | Add a Discord webhook with name, URL, tags, and description |
+| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM with OGL/DW/BYOD citations |
+| `resolve_from_context` | Take recent session transcript, detect rules question, synthesize ruling |
+| `session_start` | Start a new game session for transcript logging and rulings tracking |
+| `session_end` | End the active game session |
+| `session_list` | List all recorded game sessions |
+| `session_summarize` | Generate an AI summary for a session via MLX LLM |
+| `log_transcript` | Log a transcript segment to the current session |
+| `get_session_context` | Get recent transcript segments and rulings |
+| `search_transcript` | Full-text search across session transcripts |
+| `transcribe_audio` | Transcribe an audio file using local MLX Whisper |
+| `list_transcriptions` | List in-progress audio transcriptions |
+| `clear_transcription` | Reset transcription progress |
+| `delete_session` | Permanently delete a session and all its data |
+| `discord_post` | Post messages to Discord webhooks with smart routing |
+| `discord_add_webhook` | Add a Discord webhook with name, URL, tags |
 | `discord_remove_webhook` | Remove a stored Discord webhook by name |
-| `discord_list_webhooks` | List all configured webhooks (URLs partially masked) |
+| `discord_list_webhooks` | List all configured webhooks |
 | `discord_test_webhook` | Send a test message to verify webhook connectivity |
+
+### Discord Bot Commands (Hosted)
+
+| Command | Description |
+|---------|-------------|
+| `/ask <question>` | Ask a rules question — Workers AI Qwen3 MoE returns a cited ruling |
+| `/roll <notation>` | Roll dice (`2d6+1`, `3d6`, `d66`) |
+| `/session start <name>` | Start a game session |
+| `/session end` | End the current session |
+| `/session context [minutes]` | View recent transcript and rulings |
+| `/search <query>` | Search session transcript |
+| `/help` | Show available commands |
+
+## Architecture
+
+```
+2d6mcp/
+├── apps/
+│   ├── worker/          # Cloudflare Worker — API, Discord bot, Workers AI, D1, R2
+│   ├── bridge/          # Fly.io Discord voice relay (Phase 2)
+│   ├── web/             # Vite + React SPA dashboard + landing (Phase 3)
+│   └── recorder/        # Browser PWA fallback audio capture (Phase 4)
+├── packages/
+│   ├── server/          # MCP server — stdio transport, local MLX, BYOD, session DB
+│   ├── shared/          # @2d6mcp/shared — dice, keywords, prompts, quality filter
+│   ├── ogl/             # @2d6mcp/ogl — OGL rules database + queries
+│   └── dw/              # @2d6mcp/dw — DW rules database + queries
+├── data/
+│   ├── ogl/cepheus.db   # Bundled OGL SQLite database
+│   └── dw/dungeon-world.db  # Bundled Dungeon World SQLite database
+├── tests/               # Vitest test suite (209 tests)
+├── tsconfig.base.json   # Shared TypeScript config
+└── package.json         # npm workspaces root
+```
 
 ## Agent Modes
 
-This project includes AI agent instructions for common coding assistants (Kilo, Claude Code). See `.kilo/agent/` for domain-specific modes:
+This project includes AI agent instructions for common coding assistants. See `.kilo/agent/` for domain-specific modes:
 
 | Agent File | Domain |
 |-----------|--------|
@@ -82,19 +157,19 @@ This project includes AI agent instructions for common coding assistants (Kilo, 
 
 Slash commands are in `.kilo/command/` for quick access to common operations.
 
-## Modes of Operation
+## Build & Test
 
-### Mode A: OGL + DW Only (Default)
-
-Works out of the box with the bundled Cepheus Engine SRD database and Dungeon World database. All OGL and DW tools are available without any configuration.
-
-### Mode B: BYOD Engine
-
-Enable by setting `AGREE_BYOD_USE="true"` or running `npm run setup`. Requires a `BYOD_PATH` pointing to a directory of PDF/text/markdown files. Ingested content is indexed into a local SQLite FTS5 database and searchable via `query_local_byod`. Each `BYOD_PATH` gets its own isolated database, with a shared content cache that deduplicates identical files across workspaces.
-
-**Disclaimer:** By enabling local file ingestion, you confirm that you are the legal owner of the imported files or hold a valid license to use them. The developers of this software do not condone piracy or the unauthorized distribution of copyrighted tabletop roleplaying materials.
+```bash
+npm install           # install all workspace dependencies
+npm run build         # compile all packages (tsc --build)
+npm test              # run 209 tests across 18 test files
+npm run typecheck     # type-check without emitting
+npm run start         # run the MCP server (packages/server/dist/index.js)
+```
 
 ## Environment Variables
+
+### Self-Hosted MCP Server
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -104,83 +179,39 @@ Enable by setting `AGREE_BYOD_USE="true"` or running `npm run setup`. Requires a
 | `BYOD_CHUNK_OVERLAP` | `400` | Overlap between consecutive chunks |
 | `BYOD_MAX_FILES` | `2000` | Maximum files to process per sync |
 | `BYOD_MAX_CHUNKS_PER_FILE` | `500` | Maximum chunks from any single file |
-| `BYOD_SYNC_TIMEOUT_MS` | `15000` | Milliseconds per sync batch (1000–300000) |
-| `BYOD_CONTENT_CACHE_PATH` | `data/byod/content_cache.db` | Path to shared content cache database |
+| `BYOD_SYNC_TIMEOUT_MS` | `15000` | Milliseconds per sync batch |
+| `BYOD_CONTENT_CACHE_PATH` | `data/byod/content_cache.db` | Shared content cache database |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Path to custom OGL SQLite database |
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | Path to custom DW SQLite database |
+| `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model |
+| `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LLM model |
+| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
+| `STT_BACKEND` | `mlx` | STT backend: `mlx` or `whispercpp` |
+| `LLM_BACKEND` | `mlx` | LLM backend: `mlx` or `llamacpp` |
 
-## CLI Commands
+### Hosted Cloudflare Worker
 
-```bash
-npm run setup                    # create .mcp-byod-consent-accepted token
-npm run populate-ogl             # generate OGL database
-npm run populate-ogl -- --force  # regenerate OGL database
-npm run populate-dw              # generate Dungeon World database
-npm run populate-dw -- --force   # regenerate Dungeon World database
-```
-
-## Architecture
-
-```
-src/
-  index.ts          MCP server entry point (stdio transport)
-  server.ts         Server class, tool registration
-  config.ts         Environment config + BYOD gate
-  cli.ts            CLI entry for setup/populate commands
-  dice/
-    roller.ts       Dice notation parser, 2d6 resolution
-    tables.ts       d66 / 2d6 table rolling
-  ogl/
-    database.ts     SQLite connection + FTS5 setup
-    schema.sql.ts   Schema DDL
-    populate.ts     Populate DB with Cepheus Engine SRD data
-    queries.ts      Rule search queries
-  dw/
-    database.ts     DW SQLite connection + schema setup
-    schema.sql.ts   DW Schema DDL
-    populate.ts     Populate DB with Dungeon World data (CC-BY-3.0)
-    queries.ts      DW rule search queries
-  byod/
-    gate.ts         Consent gate check
-    ingest.ts       File walking, text/markdown parsing
-    search.ts       FTS5 search against BYOD index
-    content-cache.ts Content-addressable chunk cache (shared across workspaces)
-  character/
-    parser.ts       UPP extraction, stat parsing
-data/
-  ogl/cepheus.db    Bundled OGL SQLite database
-  dw/dungeon-world.db  Bundled Dungeon World SQLite database
-```
-
-## Open Game Content
-
-This product includes game rules and data derived from the **Cepheus Engine System Reference Document**, which is Open Game Content available under the Open Game License v1.0a.
-
-**Designation:** All text within the `data/ogl/` directory is designated as Open Game Content. The names "Cepheus Engine", "Samardan Press", "Moon Toad Publishing", "Mongoose Publishing", and "Traveller", and any product titles published by those entities, are designated as Product Identity under the OGL and are used solely for compliance and attribution.
-
-**Derivation:** This product is derived from the Traveller System Reference Document (Copyright 2008, Mongoose Publishing) and the Cepheus Engine System Reference Document (Copyright 2016, Samardan Press; Author Jason "Flynn" Kemp).
-
-**Non-Affiliation:** This product is not affiliated with, endorsed by, or sponsored by Jason "Flynn" Kemp, Samardan Press, Mongoose Publishing, Far Future Enterprises, Moon Toad Publishing, or Wizards of the Coast, Inc. The use of Open Game Content from these sources does not convey endorsement.
-
-## Dungeon World Content
-
-This product includes game rules and data derived from **Dungeon World** by Sage LaTorra and Adam Koebel, converted to Markdown by agude, licensed under the Creative Commons Attribution 3.0 Unported License (CC-BY-3.0).
-
-**Designation:** All text within the `data/dw/` directory is governed by CC-BY-3.0. The database includes moves, classes, spells, equipment, monsters, and GM tools. Attribution details are in `data/dw/ATTRIBUTION`.
-
-**Non-Affiliation:** This product is not affiliated with, endorsed by, or sponsored by Sage LaTorra, Adam Koebel, or agude.
-
-[Full OGL license text](OGL-1.0a.txt) | [Full CC-BY-3.0 license text](data/dw/CC-BY-3.0.txt) | [Full license documentation](LICENSE.md)
-
----
+| Variable | Set via | Description |
+|----------|---------|-------------|
+| `DISCORD_BOT_TOKEN` | `wrangler secret put` | Discord bot token |
+| `DISCORD_PUBLIC_KEY` | `wrangler secret put` | Discord interactions public key |
+| `DISCORD_CLIENT_ID` | `wrangler secret put` | Discord application client ID |
+| `DISCORD_CLIENT_SECRET` | `wrangler secret put` | Discord OAuth2 client secret |
+| `JWT_SECRET` | `wrangler secret put` | HMAC secret for user JWT tokens |
+| `STRIPE_SECRET_KEY` | `wrangler secret put` | Stripe secret key (billing) |
+| `STRIPE_WEBHOOK_SECRET` | `wrangler secret put` | Stripe webhook signing secret |
+| `API_URL` | `wrangler.toml` | Worker base URL |
+| `WEB_URL` | `wrangler.toml` | Web dashboard URL |
 
 ## License
 
 This project uses a multi-license architecture:
 
-- **Source code** (`src/**/*.ts`, root-level config files): [AGPL-3.0-only](https://www.gnu.org/licenses/agpl-3.0.en.html)
+- **Source code** (`apps/**`, `packages/**`, root config files): [AGPL-3.0-only](https://www.gnu.org/licenses/agpl-3.0.en.html)
 - **OGL game data** (`data/ogl/**`): [OGL v1.0a](OGL-1.0a.txt)
 - **Dungeon World data** (`data/dw/**`): [CC-BY-3.0](data/dw/CC-BY-3.0.txt)
+
+Full license documentation: [LICENSE.md](LICENSE.md)
 
 ---
 

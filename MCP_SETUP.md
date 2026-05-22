@@ -1,8 +1,17 @@
 # 2D6 MCP — Setup Guide
 
-This guide covers connecting the 2d6mcp server to common AI coding harnesses. After setup, your AI assistant gains dice rolling, rules lookup, character parsing, and BYOD file search capabilities for 2d6-based tabletop RPGs (sci-fi via OGL, fantasy via Dungeon World).
+This guide covers connecting the 2d6mcp server to common AI coding harnesses (self-hosted mode) and deploying the Discord bot (Cloudflare hosted mode). After setup, your AI assistant gains dice rolling, rules lookup, character parsing, and BYOD file search capabilities for 2d6-based tabletop RPGs.
 
-## Prerequisites
+## Deployment Options
+
+| Mode | Setup Time | Requires |
+|---|---|---|
+| **Self-Hosted MCP Server** | ~3 min | Node.js, macOS/Linux/Windows |
+| **Hosted Discord Bot** | ~15 min | Cloudflare account, Discord bot app |
+
+---
+
+## Prerequisites (Both Modes)
 
 ```bash
 cd /path/to/2d6mcp
@@ -12,12 +21,16 @@ npm run build
 
 Verify with:
 ```bash
-node dist/cli.js setup     # creates consent token for BYOD mode (optional)
+node packages/server/dist/cli.js setup     # creates consent token for BYOD mode (optional)
 ```
 
-The server binary is `dist/index.js`. All harnesses launch it via `node`.
+The MCP server binary is `packages/server/dist/index.js`. All harnesses launch it via `node`.
 
-## Claude Desktop
+---
+
+## Self-Hosted MCP Server
+
+### Claude Desktop
 
 **Config file**: macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`. Windows: `%APPDATA%\Claude\claude_desktop_config.json`.
 
@@ -26,7 +39,7 @@ The server binary is `dist/index.js`. All harnesses launch it via `node`.
   "mcpServers": {
     "2d6mcp": {
       "command": "node",
-      "args": ["/absolute/path/to/2d6mcp/dist/index.js"],
+      "args": ["/absolute/path/to/2d6mcp/packages/server/dist/index.js"],
       "env": {
         "AGREE_BYOD_USE": "true",
         "BYOD_PATH": "/absolute/path/to/your/rpg/files"
@@ -38,19 +51,7 @@ The server binary is `dist/index.js`. All harnesses launch it via `node`.
 
 Restart Claude Desktop after editing.
 
-**Minimal config (OGL-only, no BYOD)** — omit `env` entirely:
-```json
-{
-  "mcpServers": {
-    "2d6mcp": {
-      "command": "node",
-      "args": ["/absolute/path/to/2d6mcp/dist/index.js"]
-    }
-  }
-}
-```
-
-## Claude Code (CLI)
+### Claude Code (CLI)
 
 **Config file**: `~/.claude.json` (global) or `.claude.json` in your project (local).
 
@@ -59,7 +60,7 @@ Restart Claude Desktop after editing.
   "mcpServers": {
     "2d6mcp": {
       "command": "node",
-      "args": ["/absolute/path/to/2d6mcp/dist/index.js"],
+      "args": ["/absolute/path/to/2d6mcp/packages/server/dist/index.js"],
       "env": {
         "AGREE_BYOD_USE": "true",
         "BYOD_PATH": "/absolute/path/to/your/rpg/files"
@@ -69,51 +70,7 @@ Restart Claude Desktop after editing.
 }
 ```
 
-The Claude Code project already includes domain-specific skills in `.claude/skills/2d6mcp*/SKILL.md`. Load them with `/skill 2d6-mcp-core` (or the relevant sub-skill).
-
-## Cursor
-
-**Config file**: `.cursor/mcp.json` in your project root.
-
-```json
-{
-  "mcpServers": {
-    "2d6mcp": {
-      "command": "node",
-      "args": ["/absolute/path/to/2d6mcp/dist/index.js"],
-      "env": {
-        "AGREE_BYOD_USE": "true",
-        "BYOD_PATH": "/absolute/path/to/your/rpg/files"
-      }
-    }
-  }
-}
-```
-
-Cursor rule files are in `.cursor/rules/2d6mcp.md` — add the project to your Cursor workspace and the rules load automatically.
-
-## Windsurf
-
-**Config file**: `.windsurf/mcp.json` in your project root.
-
-```json
-{
-  "mcpServers": {
-    "2d6mcp": {
-      "command": "node",
-      "args": ["/absolute/path/to/2d6mcp/dist/index.js"],
-      "env": {
-        "AGREE_BYOD_USE": "true",
-        "BYOD_PATH": "/absolute/path/to/your/rpg/files"
-      }
-    }
-  }
-}
-```
-
-The Windsurf rules file is `.windsurfrules` in the project root — loads automatically when the workspace is opened.
-
-## Kilo Code / Kilo CLI
+### Kilo Code / Kilo CLI
 
 **Config file**: `kilo.json` in your project root, or `~/.config/kilo/kilo.json` for global.
 
@@ -122,7 +79,7 @@ The Windsurf rules file is `.windsurfrules` in the project root — loads automa
   "mcpServers": {
     "2d6mcp": {
       "command": "node",
-      "args": ["dist/index.js"],
+      "args": ["packages/server/dist/index.js"],
       "env": {
         "AGREE_BYOD_USE": "true",
         "BYOD_PATH": "/absolute/path/to/your/rpg/files"
@@ -132,84 +89,73 @@ The Windsurf rules file is `.windsurfrules` in the project root — loads automa
 }
 ```
 
-Agent modes are in `.kilo/agent/`. Slash commands are in `.kilo/command/`. Both load automatically in Kilo sessions within this project.
+### Cursor, Windsurf, Cline, Aider
 
-## Cline (VS Code Extension)
+See full setup instructions in [MCP_SETUP.md](MCP_SETUP.md) or [README.md](README.md).
 
-**Config file**: `.clinerules` or `.cline/rules/mcp.json` in your project root, or Cline extension settings.
+---
 
-```json
-{
-  "mcpServers": {
-    "2d6mcp": {
-      "command": "node",
-      "args": ["/absolute/path/to/2d6mcp/dist/index.js"],
-      "env": {
-        "AGREE_BYOD_USE": "true",
-        "BYOD_PATH": "/absolute/path/to/your/rpg/files"
-      }
-    }
-  }
-}
+## Hosted Discord Bot (Cloudflare)
+
+### Prerequisites
+
+- Cloudflare account with Workers Paid plan ($5/mo)
+- Discord bot application (created in [Discord Developer Portal](https://discord.com/developers/applications))
+- Node.js 20+ and npm
+
+### Setup Steps
+
+```bash
+cd apps/worker
+
+# Copy config template (wrangler.toml is gitignored)
+cp wrangler.toml.example wrangler.toml
+
+# Create infrastructure
+npx wrangler d1 create 2d6mcp                      # 1. D1 database
+npx wrangler r2 bucket create 2d6mcp-audio         # 2. R2 bucket
+
+# Set secrets (run each, paste value when prompted)
+npx wrangler secret put DISCORD_BOT_TOKEN           # 3. From Discord Dev Portal → Bot
+npx wrangler secret put DISCORD_PUBLIC_KEY          # 4. From Discord Dev Portal → General
+npx wrangler secret put DISCORD_CLIENT_ID           # 5. From Discord Dev Portal → General
+npx wrangler secret put DISCORD_CLIENT_SECRET       # 6. From Discord Dev Portal → OAuth2
+npx wrangler secret put JWT_SECRET                  # 7. Any random string (≥32 chars)
+npx wrangler secret put STRIPE_SECRET_KEY           # 8. Placeholder: sk_test_...
+npx wrangler secret put STRIPE_WEBHOOK_SECRET       # 9. Placeholder: whsec_...
+
+# Run database migration
+npx wrangler d1 execute 2d6mcp --remote --file src/db/schema.sql
+
+# Seed rules data (OGL + DW)
+node scripts/seed-d1.mjs
+npx wrangler d1 execute 2d6mcp --remote --file src/db/seed.sql
+
+# Deploy
+npx wrangler deploy
 ```
 
-Cline rules are in `.cline/rules/2d6mcp.md` — loads automatically.
+### Configure Discord
 
-## Aider
+1. Go to [Discord Developer Portal](https://discord.com/developers/applications) → Your App → General Information
+2. Set **Interactions Endpoint URL** to `https://2d6mcp.YOUR-SUBDOMAIN.workers.dev/api/interactions`
+3. Save — Discord will verify the endpoint
+4. Register slash commands (replace `YOUR_BOT_TOKEN`):
 
-Add to `.aider.conf.yml`:
-
-```yaml
-mcp-servers:
-  2d6mcp:
-    command: node
-    args: ["/absolute/path/to/2d6mcp/dist/index.js"]
-    env:
-      AGREE_BYOD_USE: "true"
-      BYOD_PATH: "/absolute/path/to/your/rpg/files"
+```bash
+curl -X PUT "https://discord.com/api/v10/applications/YOUR_CLIENT_ID/commands" \
+  -H "Authorization: Bot YOUR_BOT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '[{"name":"ask","description":"Ask a rules question and get a cited ruling","options":[{"name":"question","description":"Your rules question","type":3,"required":true}]},{"name":"roll","description":"Roll dice","options":[{"name":"notation","description":"Dice notation","type":3,"required":true}]},{"name":"session","description":"Manage game sessions","options":[{"name":"action","description":"start, end, or context","type":3,"required":true,"choices":[{"name":"Start a new session","value":"start"},{"name":"End the current session","value":"end"},{"name":"View recent context","value":"context"}]}]},{"name":"search","description":"Search session transcript","options":[{"name":"query","description":"What to search for","type":3,"required":true}]},{"name":"help","description":"Show available commands"}]'
 ```
 
-Aider conventions and tool reference are in `AIDER.md`.
+5. Invite the bot to your server:
 
-## VSCode (Generic MCP Extension)
-
-Any VS Code extension supporting the MCP protocol (e.g., "MCP Server" or "Continue" with MCP) uses a `.mcp.json` at the workspace root:
-
-```json
-{
-  "mcpServers": {
-    "2d6mcp": {
-      "command": "node",
-      "args": ["/absolute/path/to/2d6mcp/dist/index.js"],
-      "env": {
-        "AGREE_BYOD_USE": "true",
-        "BYOD_PATH": "/absolute/path/to/your/rpg/files"
-      }
-    }
-  }
-}
+```
+https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=2147485696&scope=bot%20applications.commands
 ```
 
-## Environment Variables
-
-All BYOD features require consent and a file path. The server also supports tuning limits for large reference folders.
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `AGREE_BYOD_USE` | `"false"` | Set to `"true"` to enable BYOD file ingestion and search |
-| `BYOD_PATH` | — | Absolute path to a directory of `.pdf`, `.md`, `.txt`, or `.html` RPG files |
-| `BYOD_CHUNK_SIZE` | `8000` | Characters per text chunk (500–50000) |
-| `BYOD_CHUNK_OVERLAP` | `400` | Overlap between consecutive chunks |
-| `BYOD_MAX_FILES` | `2000` | Maximum files processed per sync call |
-| `BYOD_MAX_CHUNKS_PER_FILE` | `500` | Maximum chunks produced from a single file |
-| `BYOD_SYNC_TIMEOUT_MS` | `15000` | Time budget per `sync_byod` call in milliseconds (1000–300000) |
-| `BYOD_CONTENT_CACHE_PATH` | `data/byod/content_cache.db` | Path to shared content cache database |
-| `OGL_DB_PATH` | `data/ogl/cepheus.db` | Path to a custom OGL SQLite database |
-| `DW_DB_PATH` | `data/dw/dungeon-world.db` | Path to a custom DW SQLite database |
-
-**OGL+DW mode**: No environment variables are needed. The bundled Cepheus Engine SRD database (`data/ogl/cepheus.db`) and Dungeon World database (`data/dw/dungeon-world.db`) are used automatically.
-
-**BYOD mode**: At minimum, set `AGREE_BYOD_USE=true` and `BYOD_PATH`. Run `npm run setup` as a convenience — it creates the consent token file so you don't need the env var.
+---
 
 ## Verifying the Connection
 
@@ -219,31 +165,44 @@ After configuring your harness and restarting, ask your AI assistant:
 
 If the server is connected, the assistant will call `roll_2d6` and return dice results with an effect margin.
 
-To test rules lookup:
+## Environment Variables
 
-> "What does the OGL database say about combat?"
+### Self-Hosted
 
-To test BYOD (if configured):
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `AGREE_BYOD_USE` | `"false"` | Set to `"true"` to enable BYOD file ingestion and search |
+| `BYOD_PATH` | — | Absolute path to a directory of `.pdf`, `.md`, `.txt`, or `.html` RPG files |
+| `BYOD_CHUNK_SIZE` | `8000` | Characters per text chunk (500–50000) |
+| `BYOD_CHUNK_OVERLAP` | `400` | Overlap between consecutive chunks |
+| `BYOD_MAX_FILES` | `2000` | Maximum files processed per sync call |
+| `BYOD_SYNC_TIMEOUT_MS` | `15000` | Time budget per `sync_byod` call in milliseconds |
+| `BYOD_CONTENT_CACHE_PATH` | `data/byod/content_cache.db` | Shared content cache database |
+| `OGL_DB_PATH` | `data/ogl/cepheus.db` | Path to custom OGL SQLite database |
+| `DW_DB_PATH` | `data/dw/dungeon-world.db` | Path to custom DW SQLite database |
+| `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model |
+| `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LLM model |
+| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
+| `STT_BACKEND` | `mlx` | STT backend: `mlx` or `whispercpp` |
+| `LLM_BACKEND` | `mlx` | LLM backend: `mlx` or `llamacpp` |
 
-> "Sync my BYOD files and list what's indexed."
+### Hosted
+
+Set via `wrangler secret put`. See [README.md](README.md) for the full list.
 
 ## Troubleshooting
 
 **"Tool not found" or no response**: The MCP server may not have started. Check:
-- The path to `dist/index.js` is absolute and correct
+- The path to `packages/server/dist/index.js` is absolute and correct
 - `npm run build` completed without errors
 - Your harness was restarted after editing its config file
 
 **"BYOD Mode is disabled"**: Set `AGREE_BYOD_USE=true` in the harness config's `env` block, or run `npm run setup` in the 2d6mcp directory.
 
-**"No BYOD_PATH set"**: Add `BYOD_PATH` to the `env` block pointing to a directory containing supported files (`.pdf`, `.md`, `.txt`, `.html`).
+**Interactions Endpoint won't verify**: Ensure all 6 secrets are set via `wrangler secret put` and `wrangler.toml` has no vars section with empty values. Redeploy after setting secrets.
+
+**Worker returns 500**: Check `wrangler tail` for logs. Common causes: missing secrets, D1 not migrated, FTS5 tables not seeded.
 
 **Server starts but sync times out**: This is normal for large reference folders. The `sync_byod` tool returns `complete: false` — tell your assistant to call `sync_byod` again to continue where it left off.
 
-**No results from BYOD search**: Files must be synced before they are searchable. Run `sync_byod` first (repeat until `complete: true`), then try your search again.
-
-**"Table not found" on `roll_table`**: Use `query_ogl_rules("", category: "list_tables")` to see all available tables.
-
-**Server crashes with "Cannot find module"**: Run `npm install` to ensure all dependencies are present, then `npm run build`.
-
-**Workspace isolation**: Each `BYOD_PATH` gets its own isolated database. If you change `BYOD_PATH` to a different directory, a separate index is created. The shared content cache (`BYOD_CONTENT_CACHE_PATH`) deduplicates identical files across workspaces, so changing `BYOD_PATH` does not re-ingest files that were already processed.
+**Slash commands not appearing**: Commands must be registered via the Discord API (see curl command above). They appear after a short delay (up to 1 hour for global commands).
