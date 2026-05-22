@@ -29,7 +29,7 @@ An optional hosted deployment is available for Discord communities via Cloudflar
 
 ## What These Tools Actually Do
 
-The primary purpose of this software is retrieval and interpretation, not generation. The rules databases (OGL, Dungeon World, Basic Roleplaying) are generated on first use from bundled seed data. When you ask a question, the system searches for the most relevant rules text, assembles it, and passes it to a language model with instructions to explain what those rules say. It cites its sources. It does not invent mechanics. The language model is acting as a research assistant who has already read the book, not as an author writing new material.
+The primary purpose of this software is retrieval and interpretation, not generation. The rules databases (OGL, Dungeon World, Basic Roleplaying, 5E-compatible SRD) are generated on first use from bundled seed data. When you ask a question, the system searches for the most relevant rules text, assembles it, and passes it to a language model with instructions to explain what those rules say. It cites its sources. It does not invent mechanics. The language model is acting as a research assistant who has already read the book, not as an author writing new material.
 
 This makes the tools useful as an accessibility aid. Someone who struggles to read or interpret a large reference book in a short time can ask a question and receive a direct, cited answer drawn from the text they already own. For players with cognitive or visual disabilities, this can be the difference between participating at the table and sitting out.
 
@@ -42,6 +42,7 @@ This project is guided by the principles of free and open source software. All o
 | OGL (Cepheus Engine SRD) | Open Game License v1.0a | Samardan Press, Moon Toad Publishing |
 | Dungeon World | Creative Commons Attribution 3.0 | Sage LaTorra and Adam Koebel |
 | Basic Roleplaying | BRP Open Game License v1.0 | Chaosium Inc. |
+| 5E-Compatible SRD | Creative Commons Attribution 4.0 | Wizards of the Coast LLC |
 
 Where identifying marks or trademarks appear, they are used solely for attribution and to indicate the rights granted to us by the content providers. If you hold rights to material included in this project and have a concern about its use, please contact the lead maintainer immediately. We will work with you to address any reasonable request.
 
@@ -79,3 +80,5 @@ This work created using the BRP Open Game License.
 BRP Open Game License v 1.0 (c) copyright 2020 Chaosium Inc.
 Basic Roleplaying (c) copyright 1980-2020 Chaosium Inc.
 Basic Roleplaying and the BRP logo are trademarks of Chaosium Inc. Used with permission.
+
+This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd, and licensed under the Creative Commons Attribution 4.0 International License (CC-BY-4.0). This work is 5E-compatible. It is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC. See `data/5ecompatible/SRD-NOTICE.txt` for full attribution.
