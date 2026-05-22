@@ -1,0 +1,31 @@
+OPEN GAME CONTENT — NOTICE OF LICENSE
+
+All files in this directory are designated as Open Game Content under the
+BRP Open Game License v1.0 and may only be Used under its terms.
+
+A copy of the BRP Open Game License v1.0 is included in this directory as
+BRP-OGL-1.0.txt.
+
+The BRP logo (BRP.png) is a trademark of Chaosium Inc. and is displayed
+in compliance with Section 15 of the BRP Open Game License v1.0. You are
+granted permission to reproduce the logo only for the purpose of labeling
+derivative works under the BRP OGL.
+
+This Open Game Content is derived from:
+
+  - Basic Roleplaying System Reference Document 1.0 (BRPSRD1.0)
+    (c) copyright 2020 Chaosium Inc.
+    Authors, original rules: Greg Stafford, Steve Henderson, Warren James,
+    Steve Perrin, Sandy Petersen, Ray Turney, and Lynn Willis;
+    developed by Jason Durall, James Lowder, and Jeff Richard.
+
+Trademark Notice: "Basic Roleplaying" and the BRP logo are trademarks of
+Chaosium Inc. Used with permission. "Call of Cthulhu", "RuneQuest",
+"King Arthur Pendragon", "7th Sea", "HeroQuest", "Stormbringer",
+"ElfQuest", "Ringworld", "Superworld", "Nephilim", "Hawkmoon",
+"Elric!", "Magic World", "Prince Valiant", "Thieves' World",
+"Worlds of Wonder", and "Dragon Lords of Melnibone" are trademarks of
+Chaosium Inc. "Glorantha" is a trademark of Moon Design Publications.
+All trademarks are the property of their respective owners. This product
+is not affiliated with or endorsed by Chaosium Inc. or any other
+trademark holder.

@@ -5,6 +5,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { loadConfig } from "../../config.js";
 import { getDatabase } from "@2d6mcp/ogl/database";
 import { ensureDwSchema } from "@2d6mcp/dw/database";
+import { ensureBrpSchema } from "@2d6mcp/brp/database";
 import {
   searchOglRules,
   searchOglSkills,
@@ -19,12 +20,21 @@ import {
   searchDwEquipment,
   searchDwGmTools,
 } from "@2d6mcp/dw";
+import {
+  searchBrpRules,
+  searchBrpCharacteristics,
+  searchBrpSkills,
+  searchBrpWeaponsMelee,
+  searchBrpWeaponsMissile,
+  searchBrpArmor,
+  searchBrpSpotRules,
+} from "@2d6mcp/brp";
 import { openSessionDb, getRecentRulings, getRecentContext, storeRuling, logTranscript, getTranscript, getSession, getOrCreateProgress, updateProgress, markChunkProcessed, getNextUnprocessedChunk, deleteProgress } from "../../session/database.js";
 import { transcribeAudioBuffer, isMLXWhisperAvailable } from "../../audio/mlx-transcribe.js";
 import { synthesizeRuling as mlxSynthesizeRuling, isMLXLLMAvailable } from "../../rulings/mlx-synthesize.js";
 import { checkByodConsent, getByodPath } from "../../byod/gate.js";
 import { getByodDatabase, searchByodIndex } from "../../byod/search.js";
-import { ensureOglDb, ensureDwDb, resolveSafePath, extractKeywords, extractKeywordList, fuzzyKeywordList } from "../helpers.js";
+import { ensureOglDb, ensureDwDb, ensureBrpDb, resolveSafePath, extractKeywords, extractKeywordList, fuzzyKeywordList } from "../helpers.js";
 import { isAudioLong, chunkAudio, transcribeChunk, cleanupChunks, getChunkFiles } from "../../audio/chunker.js";
 
 function scoreAndTakeTop(chunks: string[], originalKeywords: string[], fuzzyKeywords: string[], maxChunks: number = 3): string[] {
@@ -184,9 +194,52 @@ export async function handleSynthesizeRuling(args: Record<string, unknown> | und
       }
     }
 
+    if (rulesSystem === "brp" || rulesSystem === "auto") {
+      const { dbPath: brpPath } = ensureBrpDb();
+      const brpDb = ensureBrpSchema(brpPath);
+
+      const brpRules = searchBrpRules(brpDb, question);
+      for (const r of brpRules) {
+        if (typeof r === "object" && r !== null && "title" in r && "snippet" in r) {
+          const rule = r as { title: string; snippet: string; section: string };
+          chunks.push(`[BRP: ${rule.section} > ${rule.title}]\n${rule.snippet.replace(/<mark>/g, "**").replace(/<\/mark>/g, "**")}`);
+        }
+      }
+
+      if (keywords) {
+        const brpKwList = fuzzyKeywordList(extractKeywordList(question));
+        for (const kw of brpKwList) {
+          const brpSkills = searchBrpSkills(brpDb, kw);
+          for (const s of brpSkills) {
+            chunks.push(`[BRP Skill: ${s.name} (${s.baseChance})]\n${s.description}`);
+          }
+          const brpChars = searchBrpCharacteristics(brpDb, kw);
+          for (const c of brpChars) {
+            chunks.push(`[BRP Characteristic: ${c.name} (${c.abbreviation}, ${c.dice})]\n${c.description}`);
+          }
+          const brpArmor = searchBrpArmor(brpDb, kw);
+          for (const a of brpArmor) {
+            chunks.push(`[BRP Armor: ${a.name} (${a.armorPoints} points, ${a.skillModifier})]\n`);
+          }
+          const brpMelee = searchBrpWeaponsMelee(brpDb, kw);
+          for (const w of brpMelee) {
+            chunks.push(`[BRP Weapon: ${w.name} (${w.skill}, ${w.damage})]\n`);
+          }
+          const brpMissile = searchBrpWeaponsMissile(brpDb, kw);
+          for (const w of brpMissile) {
+            chunks.push(`[BRP Missile Weapon: ${w.name} (${w.skill}, ${w.damage}, ${w.range})]\n`);
+          }
+          const brpSpot = searchBrpSpotRules(brpDb, kw);
+          for (const r of brpSpot) {
+            chunks.push(`[BRP Spot Rule: ${r.category} > ${r.topic}]\n${r.content}`);
+          }
+        }
+      }
+    }
+
     rulesContext = scoreAndTakeTop(chunks, extractKeywordList(question), fuzzyKeywordList(extractKeywordList(question))).join("\n\n");
     if (!rulesContext) {
-      rulesContext = "No matching rules found in OGL, Dungeon World, or BYOD databases.";
+      rulesContext = "No matching rules found in OGL, Dungeon World, Basic Roleplaying, or BYOD databases.";
     }
   }
 
