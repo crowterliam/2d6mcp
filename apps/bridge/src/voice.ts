@@ -86,6 +86,8 @@ export async function joinVoice(channel: VoiceBasedChannel, guild: Guild): Promi
   // The voice receiver is a property of the connection, not a separate factory
   const receiver = connection.receiver;
 
+  const ringBuffer = new RingBuffer(guild.id, 120);
+
   // Listen for Opus audio from all speakers
   receiver.speaking.on("start", (userId: string) => {
     const opusStream = receiver.subscribe(userId, {
