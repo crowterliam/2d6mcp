@@ -5,14 +5,30 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-EnvironmentFile=/root/2d6mcp/apps/bridge/.env
-WorkingDirectory=/root/2d6mcp
-ExecStart=/usr/bin/node /root/2d6mcp/apps/bridge/dist/index.js
+User=bridge
+Group=bridge
+EnvironmentFile=/opt/2d6mcp/apps/bridge/.env
+WorkingDirectory=/opt/2d6mcp
+ExecStart=/usr/bin/node /opt/2d6mcp/apps/bridge/dist/index.js
 Restart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=2d6mcp-bridge
+
+# Security hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/2d6mcp
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+MemoryDenyWriteExecute=yes
+LockPersonality=yes
 
 [Install]
 WantedBy=multi-user.target
