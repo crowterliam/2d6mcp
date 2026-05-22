@@ -15,6 +15,7 @@ fly.toml
 
 # Build artifacts
 *.tsbuildinfo
+coverage/
 
 # Generated seed files
 **/seed.sql
