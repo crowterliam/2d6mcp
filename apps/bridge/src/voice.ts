@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 //
-// Per-guild voice connection management.
-// Handles join/leave, Opus audio reception, and ring buffer writing.
+// Simplified voice module — event-driven connection management.
+// Skips entersState/Ready gate; subscribes to audio when the connection reaches Ready state.
 
 import {
   joinVoiceChannel,
-  EndBehaviorType,
   VoiceConnectionStatus,
-  entersState,
+  getVoiceConnection,
   type VoiceConnection,
 } from "@discordjs/voice";
-import type { VoiceBasedChannel, Guild } from "discord.js";
+import type { VoiceBasedChannel } from "discord.js";
 import { RingBuffer } from "./ring-buffer.js";
 
 export interface VoiceState {
@@ -21,7 +20,6 @@ export interface VoiceState {
 }
 
 const voiceStates = new Map<string, VoiceState>();
-const pendingJoins = new Set<string>();
 
 export function getVoiceState(guildId: string): VoiceState | undefined {
   return voiceStates.get(guildId);
@@ -37,92 +35,82 @@ export function getTotalMemory(): number {
   return total;
 }
 
-export async function joinVoice(channel: VoiceBasedChannel, guild: Guild): Promise<VoiceState> {
+export function connectToVoice(channel: VoiceBasedChannel, guild: { id: string; name: string; voiceAdapterCreator: any }): void {
   const existing = voiceStates.get(guild.id);
-  if (existing) return existing;
+  if (existing) return;
 
-  // Prevent duplicate joins from racing VoiceStateUpdate events
-  if (pendingJoins.has(guild.id)) {
-    console.log(`Skipping duplicate join for ${guild.name}`);
-    const state = voiceStates.get(guild.id);
-    if (state) return state;
-    throw new Error("Join already in progress");
+  const existingConn = getVoiceConnection(guild.id);
+  if (existingConn) {
+    console.log(`[voice:${guild.id}] already has connection, reusing`);
+    return;
   }
-  pendingJoins.add(guild.id);
 
   const connection = joinVoiceChannel({
     channelId: channel.id,
     guildId: guild.id,
-    adapterCreator: guild.voiceAdapterCreator,
+    adapterCreator: (guild as any).voiceAdapterCreator,
     selfDeaf: true,
     selfMute: true,
   });
 
-  // Log state transitions — every single one
-  connection.on("stateChange", (oldState: any, newState: any) => {
+  const ringBuffer = new RingBuffer(guild.id, 120);
+  const state: VoiceState = { connection, ringBuffer, guildId: guild.id };
+  voiceStates.set(guild.id, state);
+
+  // Event-driven: log state transitions, set up audio on Ready
+  connection.on("stateChange", (oldState, newState) => {
     console.log(`[voice:${guild.id}] ${oldState.status} → ${newState.status}`);
+
+    if (newState.status === VoiceConnectionStatus.Ready) {
+      console.log(`[voice:${guild.id}] ready — subscribing to audio`);
+      setupAudioReception(connection, ringBuffer, guild.id);
+    }
+
+    if (newState.status === VoiceConnectionStatus.Destroyed) {
+      voiceStates.delete(guild.id);
+    }
   });
 
   connection.on("error", (err: Error) => {
     console.error(`[voice:${guild.id}] error:`, err.message);
   });
 
-  // Simplified: don't auto-destroy on disconnect, let @discordjs/voice manage it
   connection.on(VoiceConnectionStatus.Disconnected, () => {
     console.log(`[voice:${guild.id}] disconnected`);
+    // @discordjs/voice auto-reconnects; if it fails, it'll go to Destroyed
   });
-
-  // Wait for the connection to be ready (25s timeout for Discord voice)
-  try {
-    await entersState(connection, VoiceConnectionStatus.Ready, 25_000);
-  } catch (err) {
-    pendingJoins.delete(guild.id);
-    try { connection.destroy(); } catch {}
-    throw err;
-  }
-  pendingJoins.delete(guild.id);
-  console.log(`Joined voice: ${guild.name} (${guild.id})`);
-
-  // The voice receiver is a property of the connection, not a separate factory
-  const receiver = connection.receiver;
-
-  const ringBuffer = new RingBuffer(guild.id, 120);
-
-  // Listen for Opus audio from all speakers
-  receiver.speaking.on("start", (userId: string) => {
-    const opusStream = receiver.subscribe(userId, {
-      end: {
-        behavior: EndBehaviorType.AfterSilence,
-        duration: 1000,
-      },
-    });
-
-    // Decode Opus → PCM and write to ring buffer
-    // chunk is raw Opus data; store as 16-bit PCM samples
-    opusStream.on("data", (chunk: Buffer) => {
-      const pcm = new Int16Array(chunk.buffer, chunk.byteOffset, Math.floor(chunk.byteLength / 2));
-      ringBuffer.write(pcm);
-    });
-  });
-
-  connection.on("stateChange", (_oldState, newState) => {
-    if (newState.status === VoiceConnectionStatus.Destroyed) {
-      voiceStates.delete(guild.id);
-    }
-  });
-
-  const state: VoiceState = { connection, ringBuffer, guildId: guild.id };
-  voiceStates.set(guild.id, state);
-
-  return state;
 }
 
-export function destroyVoice(guildId: string): void {
+function setupAudioReception(connection: VoiceConnection, buffer: RingBuffer, guildId: string): void {
+  const receiver = connection.receiver;
+  const subscribed = new Set<string>();
+
+  receiver.speaking.on("start", (userId: string) => {
+    if (subscribed.has(userId)) return;
+    subscribed.add(userId);
+
+    const stream = receiver.subscribe(userId, {
+      end: { behavior: "afterSilence" as any, duration: 1000 },
+    });
+
+    stream.on("data", (chunk: Buffer) => {
+      // chunk is raw Opus data
+      const pcm = new Int16Array(chunk.buffer, chunk.byteOffset, Math.floor(chunk.byteLength / 2));
+      buffer.write(pcm);
+    });
+  });
+}
+
+export function disconnectVoice(guildId: string): void {
   const state = voiceStates.get(guildId);
-  if (!state) return;
+  if (!state) {
+    // Try getVoiceConnection for externally-created connections
+    const conn = getVoiceConnection(guildId);
+    if (conn) { try { conn.destroy(); } catch {} }
+    return;
+  }
 
   try { state.connection.destroy(); } catch {}
   voiceStates.delete(guildId);
-  console.log(`Destroyed voice: ${guildId}`);
+  console.log(`[voice:${guildId}] disconnected`);
 }
-
