@@ -3,7 +3,7 @@
 
 # Allow placeholder values used in setup wizard scripts.
 # These are NOT real secrets — they guide users on what format to provide.
-[rules.allowlist]
+[allowlist]
   description = "setup wizard placeholder values"
   paths = [
     "scripts/setup-cloud.mjs",
