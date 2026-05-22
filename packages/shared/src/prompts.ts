@@ -69,11 +69,15 @@ function truncateRepetition(text: string): string {
   return cleaned.join("\n").trim();
 }
 
-const NUMBER_PATTERN = /(\d+d\d+(?:[+-]\d+)?|\b\d+\.?\d*\s*(?:DM|hp|hit points?|ac|armor class|Cr\d*|credits?|meters?|tons?|points?|damage|XP|parsecs?)\b|\bCr\d+\b)/gi;
+const DICE_PATTERN = /\d+d\d+(?:[+-]\d+)?/gi;
+const STAT_PATTERN = /\b\d+\.?\d*\s*(?:DM|hp|hit points?|ac|armor class|Cr\d*|credits?|meters?|tons?|points?|damage|XP|parsecs?)\b/gi;
+const CREDIT_PATTERN = /\bCr\d+\b/gi;
 
 function extractNumericTerms(text: string): string[] {
-  const matches = text.match(NUMBER_PATTERN) || [];
-  return [...new Set(matches.map((m) => m.toLowerCase()))];
+  const dice = text.match(DICE_PATTERN) || [];
+  const stats = text.match(STAT_PATTERN) || [];
+  const credits = text.match(CREDIT_PATTERN) || [];
+  return [...new Set([...dice, ...stats, ...credits].map((m) => m.toLowerCase()))];
 }
 
 function validateNumberInSource(term: string, rulesText: string, rulingExcerpt: string): string | null {
