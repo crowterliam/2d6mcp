@@ -9,7 +9,7 @@
     ".": "./dist/queries.js",
     "./database": "./dist/database.js",
     "./populate": "./dist/populate.js",
-    "./schema": "./dist/schema.js"
+    "./schema": "./dist/schema.sql.js"
   },
   "scripts": {
     "build": "tsc",

@@ -92,6 +92,7 @@ export async function handleQueryBrpRules(args: Record<string, unknown> | undefi
     default:
       response.rules = searchBrpRules(db, searchTerm);
       response.characteristics = searchBrpCharacteristics(db, searchTerm);
+      response.derived_characteristics = searchBrpDerivedCharacteristics(db, searchTerm);
       response.skills = searchBrpSkills(db, searchTerm);
       response.professions = searchBrpProfessions(db, searchTerm);
       response.melee_weapons = searchBrpWeaponsMelee(db, searchTerm);

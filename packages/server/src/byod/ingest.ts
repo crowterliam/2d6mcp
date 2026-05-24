@@ -103,7 +103,9 @@ function walkDirectory(dir: string, baseDir: string, maxFileSize: number = MAX_F
           try {
             const buf = readFileSync(fullPath);
             contentHash = createHash("sha256").update(buf).digest("hex");
-          } catch {
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : "unknown error";
+            log(`Warning: could not compute content hash for ${entry}: ${msg}`);
           }
 
           results.push({

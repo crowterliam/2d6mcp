@@ -284,7 +284,10 @@ function parseMonster(content: string): ParsedMonster | null {
   }
 
   const skillsMatch = content.match(/\*\*Skills\*\*\s*(.+)/m);
-  const senses = skillsMatch ? skillsMatch[1].trim() : "";
+  const skills = skillsMatch ? skillsMatch[1].trim() : "";
+
+  const sensesMatch = content.match(/\*\*Senses\*\*\s*(.+)/m);
+  const senses = sensesMatch ? sensesMatch[1].trim() : "";
 
   const langsMatch = content.match(/\*\*Languages\*\*\s*(.+)/m);
   const languages = langsMatch ? langsMatch[1].trim() : "";
@@ -318,10 +321,11 @@ function parseMonster(content: string): ParsedMonster | null {
     actions = actionLines.join(" ").substring(0, 2000) || null;
   }
 
+  const skillsSenses = [skills, senses].filter(Boolean).join(", ");
   const description = [
     `Size: ${size}`, `Type: ${mtype}`, `Alignment: ${alignment}`,
     `AC: ${ac}`, `HP: ${hp}`, `Speed: ${speed}`,
-    senses ? `Skills/Senses: ${senses}` : null,
+    skillsSenses ? `Skills/Senses: ${skillsSenses}` : null,
     languages ? `Languages: ${languages}` : null,
     challengeRating ? `CR: ${challengeRating}` : null,
   ].filter(Boolean).join(" | ");
@@ -330,7 +334,7 @@ function parseMonster(content: string): ParsedMonster | null {
     name, size, type: mtype, alignment, ac, hp, speed,
     strength: abilities[0], dexterity: abilities[1], constitution: abilities[2],
     intelligence: abilities[3], wisdom: abilities[4], charisma: abilities[5],
-    senses, languages, challengeRating, traits, actions, description,
+    senses: skillsSenses, languages, challengeRating, traits, actions, description,
   };
 }
 
