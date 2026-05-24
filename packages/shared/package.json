@@ -9,6 +9,7 @@
     ".": "./dist/index.js",
     "./dice": "./dist/dice.js",
     "./tables": "./dist/tables.js",
+    "./table-parser": "./dist/table-parser.js",
     "./prompts": "./dist/prompts.js",
     "./keywords": "./dist/keywords.js",
     "./types": "./dist/types.js",
