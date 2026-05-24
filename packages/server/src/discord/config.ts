@@ -105,9 +105,8 @@ function expandSynonyms(tags: string[]): string[] {
   return [...expanded];
 }
 
-function scoreWebhook(webhook: WebhookEntry, contextTags: string[]): number {
-  if (contextTags.length === 0) return 1;
-  const expandedContext = expandSynonyms(contextTags);
+function scoreWebhook(webhook: WebhookEntry, expandedContext: Set<string>): number {
+  if (expandedContext.size === 0) return 1;
   const webhookTags = new Set(webhook.tags.map((t) => t.toLowerCase()));
   let score = 0;
   for (const tag of expandedContext) {
@@ -154,8 +153,9 @@ export function resolveWebhooks(
     };
   }
 
+  const expandedContext = new Set(expandSynonyms(contextTags));
   const scored = config.webhooks
-    .map((w) => ({ webhook: w, score: scoreWebhook(w, contextTags) }))
+    .map((w) => ({ webhook: w, score: scoreWebhook(w, expandedContext) }))
     .sort((a, b) => b.score - a.score);
 
   const maxScore = scored[0].score;

@@ -70,8 +70,8 @@ function truncateRepetition(text: string): string {
 }
 
 const DICE_PATTERN = /\d+d\d+(?:[+-]\d+)?/gi;
-const STAT_PATTERN = /\b\d+\.?\d*\s*(?:DM|hp|hit points?|ac|armor class|Cr\d*|credits?|meters?|tons?|points?|damage|XP|parsecs?)\b/gi;
-const CREDIT_PATTERN = /\bCr\d+\b/gi;
+const STAT_PATTERN = /\b\d+(?:\.\d+)?\s*(?:DM|hp|hit points?|ac|armor class|Cr\d{0,6}|credits?|meters?|tons?|points?|damage|XP|parsecs?)\b/gi;
+const CREDIT_PATTERN = /\bCr\d{1,10}\b/gi;
 
 function extractNumericTerms(text: string): string[] {
   const dice = text.match(DICE_PATTERN) || [];
