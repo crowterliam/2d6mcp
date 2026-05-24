@@ -10,7 +10,7 @@ A system-agnostic Model Context Protocol (MCP) server and hosted Cloudflare Work
 | Mode | Description | Cost |
 |---|---|---|
 | **Self-Hosted MCP Server** | Run locally on your machine. Full BYOD support, MLX-powered audio transcription and ruling synthesis (macOS). Works in any AI harness (Claude, Kilo, Cursor, etc.) | Free (AGPL-3.0) |
-| **Hosted Discord Bot** | Deploy to Cloudflare Workers. Discord slash commands, Workers AI-powered rulings (Qwen3 MoE), web dashboard. Zero local setup beyond wrangler. | Free (self-deploy) / $5/mo (managed) |
+| **Hosted Discord Bot** | Deploy to Cloudflare Workers. Discord slash commands, Workers AI-powered rulings (Qwen3 MoE), web dashboard. Zero local setup beyond wrangler. | Free (self-deploy, AGPL-3.0) |
 
 ## Features
 
@@ -73,6 +73,16 @@ The interactive wizard guides you through:
   }
 }
 ```
+
+## BYOD — Non-Commercial Use Disclosure
+
+BYOD (Bring Your Own Documents) mode enables local file ingestion for personal, non-commercial use only. By enabling BYOD (`AGREE_BYOD_USE="true"` or `npm run setup`), you confirm that:
+
+- You are the legal owner of the imported files or hold a valid license to use them.
+- This tool is provided strictly for personal, non-commercial automation and referencing.
+- The developers of this software do not condone piracy or the unauthorized distribution of copyrighted tabletop roleplaying materials.
+
+BYOD is self-hosted only and is not available in the hosted Cloudflare Worker.
 
 ## Tools
 
@@ -157,34 +167,11 @@ The interactive wizard guides you through:
 │  /api/interactions (Discord) │  │  Auto-joins voice channels            │
 │  /api/ask (Qwen3 MoE)        │◄─│  Ring buffer → Worker /api/audio-ingest│
 │  /api/roll (shared dice)     │  │  Health /push-to-ask HTTP endpoint     │
-│  /api/auth/* (OAuth2+JWT)    │  │  $4-6/mo on any VPS                   │
-│  D1 (rules) + R2 (audio)     │  └──────────────────────────────────────┘
-│  $5/mo (Workers Paid)        │
+│  /api/auth/* (OAuth2+JWT)    │  └──────────────────────────────────────┘
+│  D1 (rules) + R2 (audio)     │
 └──────────────────────────────┘
          │
     Discord (slash commands live)
-```
-2d6mcp/
-├── apps/
-│   ├── worker/          # Cloudflare Worker — API, Discord bot, Workers AI, D1, R2
-│   ├── bridge/          # Fly.io Discord voice relay (Phase 2)
-│   ├── web/             # Vite + React SPA dashboard + landing (Phase 3)
-│   └── recorder/        # Browser PWA fallback audio capture (Phase 4)
-├── packages/
-│   ├── server/          # MCP server — stdio transport, local MLX, BYOD, session DB
-│   ├── shared/          # @2d6mcp/shared — dice, keywords, prompts, quality filter
-│   ├── ogl/             # @2d6mcp/ogl — OGL rules database + queries
-│   ├── dw/              # @2d6mcp/dw — DW rules database + queries
-│   └── brp/             # @2d6mcp/brp — BRP rules database + queries
-│   └── 5ecompatible/    # @2d6mcp/5ecompatible — 5E-compatible rules database + queries
-├── data/
-│   ├── ogl/cepheus.db   # Bundled OGL SQLite database
-│   ├── dw/dungeon-world.db  # Bundled Dungeon World SQLite database
-│   ├── brp/             # Generated BRP SQLite database + license files + logo
-│   └── 5ecompatible/    # Generated 5E-compatible SQLite database + license files
-├── tests/               # Vitest test suite (209 tests)
-├── tsconfig.base.json   # Shared TypeScript config
-└── package.json         # npm workspaces root
 ```
 
 ## Agent Modes
@@ -244,8 +231,6 @@ npm run start         # run the MCP server (packages/server/dist/index.js)
 | `DISCORD_CLIENT_ID` | `wrangler secret put` | Discord application client ID |
 | `DISCORD_CLIENT_SECRET` | `wrangler secret put` | Discord OAuth2 client secret |
 | `JWT_SECRET` | `wrangler secret put` | HMAC secret for user JWT tokens |
-| `STRIPE_SECRET_KEY` | `wrangler secret put` | Stripe secret key (billing) |
-| `STRIPE_WEBHOOK_SECRET` | `wrangler secret put` | Stripe webhook signing secret |
 | `API_URL` | `wrangler.toml` | Worker base URL |
 | `WEB_URL` | `wrangler.toml` | Web dashboard URL |
 
@@ -269,4 +254,4 @@ Full license documentation: [LICENSE.md](LICENSE.md)
 
 ---
 
-Copyright © 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers · https://jupiter.industries
+Copyright © 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
