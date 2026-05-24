@@ -17,6 +17,7 @@ import {
   handleInspectByodFile,
   handleGetByodChunk,
 } from "./handlers/byod.js";
+import { handleRollByodTable, handleListByodTables } from "./handlers/byod-table.js";
 import { handleParseCharacter } from "./handlers/character.js";
 import {
   handleDiscordPost,
@@ -78,6 +79,10 @@ export async function dispatchToolCall(
       return handleInspectByodFile(args);
     case "get_byod_chunk":
       return handleGetByodChunk(args);
+    case "roll_byod_table":
+      return handleRollByodTable(args);
+    case "list_byod_tables":
+      return handleListByodTables(args);
     case "parse_character":
       return handleParseCharacter(args);
     case "discord_post":

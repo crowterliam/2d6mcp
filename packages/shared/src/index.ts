@@ -3,6 +3,7 @@
 
 export * from "./dice.js";
 export * from "./tables.js";
+export * from "./table-parser.js";
 export * from "./keywords.js";
 export * from "./prompts.js";
 export * from "./types.js";
