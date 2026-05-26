@@ -27,7 +27,7 @@ jobs:
         run: npm run build
 
       - name: Worker typecheck
-        run: npm run build && npx tsc --noEmit --project apps/worker/tsconfig.json
+        run: npx tsc --noEmit --project apps/worker/tsconfig.json
 
       - name: Bridge typecheck
         run: npx tsc --noEmit --project apps/bridge/tsconfig.json
