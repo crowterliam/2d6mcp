@@ -25,9 +25,67 @@ export function getToolDefinitions(): Tool[] {
       },
     },
     {
+      name: "roll_d20",
+      description:
+        "Roll a d20 with optional modifier, advantage/disadvantage, and target number comparison. Returns dice, total, hit/miss, critical hits (nat 20), and fumbles (nat 1). The core mechanic for d20-based fantasy RPGs (5E, 4E, Orcus, OSE).",
+      inputSchema: {
+        type: "object",
+        properties: {
+          modifier: {
+            type: "integer",
+            description: "Attack bonus or ability modifier added to the d20 roll (default 0)",
+            default: 0,
+          },
+          target: {
+            type: "integer",
+            description: "Target number to compare against (e.g., Armor Class, Difficulty Class). If provided, calculates hit/miss.",
+          },
+          advantage: {
+            type: "boolean",
+            description: "Roll with advantage (roll 2d20, take the higher). Default: false.",
+            default: false,
+          },
+          disadvantage: {
+            type: "boolean",
+            description: "Roll with disadvantage (roll 2d20, take the lower). If both advantage and disadvantage, they cancel to a normal roll.",
+            default: false,
+          },
+        },
+      },
+    },
+    {
+      name: "roll_percentile",
+      description:
+        "Roll percentile dice (d100) with optional target comparison. Returns tens and ones dice, total, success/failure, critical success (≤5% of target), and fumble (96-100). The core mechanic for BRP/percentile RPGs (Call of Cthulhu, Basic Roleplaying, Against the Darkmaster, Pendragon).",
+      inputSchema: {
+        type: "object",
+        properties: {
+          target: {
+            type: "integer",
+            description: "Target percentile — the d100 roll must be ≤ this value to succeed (BRP-style roll-under). If provided, calculates success and critical success thresholds.",
+          },
+        },
+      },
+    },
+    {
+      name: "roll_damage",
+      description:
+        "Roll damage dice with an optional damage type. Parses expressions like '2d6+3 fire', '1d8 piercing', '4d6 bludgeoning', or just '2d6'. Returns individual dice, total, damage type, and description.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          notation: {
+            type: "string",
+            description: 'Damage dice notation, e.g. "2d6+3 fire", "1d8 piercing", "4d6", "2d6-1 cold"',
+          },
+        },
+        required: ["notation"],
+      },
+    },
+    {
       name: "roll_table",
       description:
-        "Roll on a named table using a specified dice type (1d6, 2d6, d66, 1d3, 2d3). Returns the dice result, the matching table entry, and the full description.",
+        "Roll on a named table using a specified dice type (1d6, 2d6, d66, d20, d100, d4, d8, d10, d12, 1d3, 2d3). Returns the dice result, the matching table entry, and the full description.",
       inputSchema: {
         type: "object",
         properties: {
@@ -37,9 +95,15 @@ export function getToolDefinitions(): Tool[] {
           },
           dice_type: {
             type: "string",
-            enum: ["1d6", "2d6", "d66", "1d3", "2d3"],
+            enum: ["1d6", "2d6", "d66", "1d3", "2d3", "d4", "d8", "d10", "d12", "d20", "d100"],
             description: "Dice type for the table (default: 2d6)",
             default: "2d6",
+          },
+          system: {
+            type: "string",
+            enum: ["ogl", "dw", "brp", "5ecompatible", "orcus"],
+            description: "Rules system database to search for the table. Default: 'ogl'. Use '5ecompatible' or 'orcus' for d20 fantasy tables, 'brp' for percentile tables.",
+            default: "ogl",
           },
         },
         required: ["table_name"],
