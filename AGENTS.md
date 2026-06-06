@@ -10,7 +10,7 @@ This project provides two deployment modes for a 2d6-based tabletop RPG AI assis
 1. **Self-Hosted MCP Server** (`packages/server/`) — stdio transport, local MLX, BYOD, session DB, 32 tools
 2. **Hosted Cloudflare Worker** (`apps/worker/`) — Discord bot, Workers AI (Whisper + Qwen3 MoE), D1, R2, OAuth2
 
-Both modes share the same rules databases (OGL/Cepheus Engine SRD for sci-fi, Dungeon World CC-BY-3.0 for fantasy, Basic Roleplaying SRD for percentile RPGs, 5E-compatible SRD CC-BY-4.0 for d20 fantasy, Orcus OGL v1.0a for d20-compatible retro-clone), dice engine, prompt templates, and quality filters via `packages/shared/`.
+Both modes share the same rules databases (OGL/Cepheus Engine SRD for sci-fi, Dungeon World CC-BY-3.0 for fantasy, Basic Roleplaying SRD for percentile RPGs, 5E-compatible SRD CC-BY-4.0 for d20 fantasy, Orcus OGL v1.0a for 4e-compatible), dice engine, prompt templates, and quality filters via `packages/shared/`.
 
 The project is system-agnostic and avoids all third-party trademarks.
 
@@ -73,9 +73,9 @@ Specialised agent instructions are available for multiple AI coding harnesses:
 | Agent File | Domain |
 |-----------|--------|
 | `.kilo/agent/2d6mcp.md` | Master reference — all tools, workflows, environment vars |
-| `.kilo/agent/2d6mcp-task-resolution.md` | Dice rolling, effect margins, difficulty, boon/bane |
-| `.kilo/agent/2d6mcp-rules-reference.md` | Rules lookup, table rolling, OGL + BYOD search |
-| `.kilo/agent/2d6mcp-character-creation.md` | UPP, characteristics, career paths, skills |
+| `.kilo/agent/2d6mcp-task-resolution.md` | Dice rolling — 2d6, d20, and d100 resolution with effect margins, difficulty, boon/bane |
+| `.kilo/agent/2d6mcp-rules-reference.md` | Rules lookup and table rolling — OGL, DW, BRP, 5E, 4E-compatible, BYOD search strategies |
+| `.kilo/agent/2d6mcp-character-creation.md` | Multi-system character creation — UPP, characteristics, careers, classes, skills |
 | `.kilo/agent/2d6mcp-byod.md` | BYOD sync, listing, inspection, troubleshooting |
 
 Slash commands are in `.kilo/command/`:
@@ -91,9 +91,9 @@ Slash commands are in `.kilo/command/`:
 | Skill | Domain |
 |-------|--------|
 | `.claude/skills/2d6mcp/SKILL.md` | Master reference — all tools, workflows, environment vars |
-| `.claude/skills/2d6mcp-task-resolution/SKILL.md` | Dice rolling, effect margins, difficulty, boon/bane |
-| `.claude/skills/2d6mcp-rules-reference/SKILL.md` | Rules lookup, table rolling, OGL + BYOD search |
-| `.claude/skills/2d6mcp-character-creation/SKILL.md` | UPP, characteristics, career paths, skills |
+| `.claude/skills/2d6mcp-task-resolution/SKILL.md` | Dice rolling — 2d6, d20, and d100 resolution with effect margins, difficulty, boon/bane |
+| `.claude/skills/2d6mcp-rules-reference/SKILL.md` | Rules lookup and table rolling — OGL, DW, BRP, 5E, 4E-compatible, BYOD search strategies |
+| `.claude/skills/2d6mcp-character-creation/SKILL.md` | Multi-system character creation — UPP, characteristics, careers, classes, skills |
 | `.claude/skills/2d6mcp-byod/SKILL.md` | BYOD sync, listing, inspection, troubleshooting |
 
 ### Cursor (`.cursor/rules/`)
@@ -198,7 +198,7 @@ apps/worker/src/
 
 packages/shared/src/
   index.ts             # Re-exports all modules
-  dice.ts              # parseDiceNotation, roll2d6, rollCustom
+  dice.ts              # parseDiceNotation, roll2d6, rollD20, rollPercentile, rollDamage, rollCustom
   tables.ts            # rollOnTable, normalizeDiceType, rollD66
   keywords.ts          # extractKeywords, fuzzyAlternatives, fuzzyKeywordList, STOPWORDS
   prompts.ts           # DEFAULT_SYSTEM_PROMPT, SYSTEM_PROMPT_LARGE, quality filter
@@ -212,8 +212,11 @@ packages/shared/src/
 | Tool | Purpose |
 |------|---------|
 | `roll_2d6` | Roll 2d6 with modifier, compare against target |
+| `roll_d20` | Roll d20 with modifier, advantage/disadvantage, AC/DC comparison, critical hits, fumbles |
+| `roll_percentile` | Roll d100 with BRP-style roll-under, critical success, and fumble detection |
+| `roll_damage` | Roll damage dice with optional type (e.g., `"2d6+3 fire"`, `"1d8 piercing"`) |
 | `roll_custom` | Roll any dice notation (`3d6`, `d66`, `4d6+2`) |
-| `roll_table` | Roll on a named table from OGL database |
+| `roll_table` | Roll on a named table from any rules system (use `system` param: ogl/dw/brp/5ecompatible/orcus) |
 | `query_ogl_rules` | Search OGL rules for skills, careers, equipment, tables |
 | `query_dw_rules` | Search DW rules for moves, classes, spells, equipment, monsters, GM tools |
 | `query_brp_rules` | Search BRP rules for characteristics, skills, professions, weapons, armor, spot rules, foes |
@@ -304,7 +307,7 @@ packages/shared/src/
 - `data/dw/CC-BY-3.0.txt` contains the full CC-BY-3.0 license text
 - `data/dw/ATTRIBUTION` contains Dungeon World derivation and attribution details
 - `data/5ecompatible/SRD-NOTICE.txt` contains 5E-compatible SRD attribution details
-- `data/orcus/ATTRIBUTION` contains Orcus retro-clone derivation and attribution details
+- `data/orcus/ATTRIBUTION` contains Orcus 4e-compatible derivation and attribution details
 
 ## BYOD Consent Gate
 

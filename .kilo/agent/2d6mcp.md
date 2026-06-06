@@ -16,12 +16,16 @@ Both modes share rules databases, dice engine, prompt templates, and quality fil
 | Tool | Purpose |
 |------|---------|
 | `roll_2d6` | Roll 2d6 with modifier, compare against target number |
+| `roll_d20` | Roll d20 with modifier, advantage/disadvantage, AC/DC comparison, critical hits, fumbles |
+| `roll_percentile` | Roll d100 with BRP-style roll-under, critical success, and fumble detection |
+| `roll_damage` | Roll damage dice with optional type (e.g., `"2d6+3 fire"`, `"1d8 piercing"`) |
 | `roll_custom` | Roll any dice notation (`3d6`, `1d20`, `4d6+2`, `d66`) |
-| `roll_table` | Roll on a named table (Reaction, Encounters, Patrons) |
+| `roll_table` | Roll on a named table (Reaction, Encounters, Patrons) from any rules system |
 | `query_ogl_rules` | Search OGL rules database for skills, careers, equipment, combat |
 | `query_dw_rules` | Search DW rules database for moves, classes, spells, equipment, monsters, GM tools |
 | `query_brp_rules` | Search BRP rules for characteristics, skills, professions, weapons, armor, spot rules, foes |
 | `query_5ecompatible_rules` | Search 5E-compatible rules for spells, monsters, classes, feats, and rules |
+| `query_orcus_rules` | Search Orcus 4e-compatible rules for classes, monsters, feats, and core rules |
 | `query_local_byod` | Full-text search across your locally ingested files |
 | `parse_character` | Parse a character sheet file into structured data |
 | `sync_byod` | Index/re-index files from your BYOD directory |
@@ -61,24 +65,37 @@ Both modes share rules databases, dice engine, prompt templates, and quality fil
 ## Key Principles
 
 - **System-agnostic language**: Use generic descriptors — "2d6 sci-fi RPG", "starship", "star system", "characteristic". Never use third-party trademarked terms.
-- **Task resolution**: The core mechanic is 2d6 + modifier vs. target number (typically 8+). Effect margin = total - target. Margin 0+ = success, margin 6+ = exceptional success.
+- **Task resolution by system**:
+  - **2d6 systems** (OGL, DW): 2d6 + modifier vs. target number (typically 8+). Effect margin = total - target. Use `roll_2d6`.
+  - **d20 systems** (5E, Orcus): d20 + modifier vs. AC/DC. Natural 20 = critical hit, natural 1 = fumble. Supports advantage/disadvantage. Use `roll_d20`.
+  - **d100 systems** (BRP, CoC 7e, Darkmaster): Roll under target percentile. ≤5% of target = critical success, 96-100 = fumble. Use `roll_percentile`.
+  - **Damage**: Use `roll_damage("2d6+3 fire")` for damage with type labels. Use `roll_custom` for any other dice notation.
 - **d66 tables**: Roll two d6s and treat them as tens (first die) and ones (second die), producing 11-66. Use `roll_table` with `"dice_type": "d66"`.
 - **The OGL database** is pre-populated with Cepheus Engine SRD content. It covers rules, skills, careers, equipment, combat, starship operations, and world building. Always try `query_ogl_rules` before falling back to BYOD search.
 - **The DW database** is pre-populated with Dungeon World content (CC-BY-3.0, by Sage LaTorra and Adam Koebel). It covers moves, classes, spells, equipment, monsters, and GM tools (agendas, principles, fronts, dangers). Use `query_dw_rules` for fantasy RPG content.
+- **The BRP database** is pre-populated with Basic Roleplaying SRD. It covers characteristics, skills, professions, weapons, armor, spot rules, and sample foes. Use `query_brp_rules` for percentile RPG content.
+- **The 5E-compatible database** is pre-populated with 5E-compatible SRD. It covers spells, monsters, classes, feats, and core rules. Use `query_5ecompatible_rules` for d20 fantasy content.
+- **The Orcus database** is pre-populated with Orcus 4e-compatible SRD. It covers classes, monsters, feats, and core rules. Use `query_orcus_rules` for 4e-compatible content.
 - **BYOD search** is for your personal files. It requires consent (`AGREE_BYOD_USE="true"`) and a configured `BYOD_PATH`. Files must be synced before they are searchable. Each `BYOD_PATH` gets its own isolated database (`byod_ws_<hash>.db`), so multiple workspaces don't cross-pollinate. A shared content-addressable cache (`content_cache.db`) avoids re-parsing identical files across workspaces.
 
 ## When to Use Each Tool
 
 ### Dice Rolling
 - Use `roll_2d6` for standard 2d6 task resolution (skill checks, attack rolls, characteristic checks)
+- Use `roll_d20` for d20-based fantasy RPG resolution (5E, 4E, Orcus, OSE) — supports advantage/disadvantage, AC comparison, critical hits/fumbles
+- Use `roll_percentile` for BRP/percentile RPG resolution (Call of Cthulhu, Basic Roleplaying, Against the Darkmaster, Pendragon) — supports roll-under with critical success/fumble
+- Use `roll_damage` for damage dice with optional type labels (`"2d6+3 fire"`, `"1d8 piercing"`, `"4d6"`)
 - Use `roll_custom` for non-standard dice (damage dice, 1d6 tables, character creation 2d6 across six characteristics)
 - Use `roll_table` for random tables — this looks up the result in the OGL database
 
 ### Rules Lookup
 - Use `query_ogl_rules` as primary sci-fi rules reference. Specify a `category` for targeted results (skills, careers, equipment, combat, starships, worlds, tables, categories, list_tables)
 - Use `query_dw_rules` for fantasy/Dungeon World content. Specify a `category` for targeted results (moves, classes, spells, equipment, monsters, gm_tools, rules)
+- Use `query_brp_rules` for percentile/BRP content. Specify a `category` for targeted results (characteristics, skills, professions, weapons, armor, spot_rules, foes)
+- Use `query_5ecompatible_rules` for d20 fantasy content. Specify a `category` for targeted results (spells, monsters, classes, feats, rules)
+- Use `query_orcus_rules` for 4e-compatible content. Specify a `category` for targeted results (classes, monsters, feats, rules)
 - Use `query_local_byod` when you need content from your personal files (supplements, house rules, campaign notes)
-- Use `roll_table` with a table name to both roll on it AND see the full table entries
+- Use `roll_table` with a table name to both roll on it AND see the full table entries. Use the `system` parameter to specify the rules database (ogl/dw/brp/5ecompatible/orcus).
 
 ### Character Handling
 - Use `parse_character` to read a character sheet file and extract UPP, characteristics, skills, name, and career
@@ -161,6 +178,7 @@ When starting a session, ensure knowledge is available:
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | Custom DW database path |
 | `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Custom BRP database path |
 | `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Custom 5E-compatible database path |
+| `ORCUS_DB_PATH` | `data/orcus/orcus.db` | Custom Orcus database path |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |

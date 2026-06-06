@@ -5,7 +5,7 @@ description: Rules lookup, table rolling, OGL and BYOD search strategies for the
 
 # 2D6 Rules Reference
 
-You have access to a pre-populated OGL rules database (Cepheus Engine SRD), a Dungeon World database (CC-BY-3.0), a Basic Roleplaying database (BRP OGL v1.0), a 5E-compatible SRD database (CC-BY-4.0), and optionally your own BYOD files.
+You have access to five pre-populated rules databases (OGL/Cepheus Engine SRD for sci-fi, Dungeon World CC-BY-3.0 for fantasy, Basic Roleplaying BRP OGL v1.0 for percentile, 5E-compatible SRD CC-BY-4.0 for d20 fantasy, and Orcus OGL v1.0a for 4e-compatible), plus your own BYOD files and AI ruling synthesis.
 
 ## OGL Database Search
 
@@ -104,6 +104,29 @@ query_5ecompatible_rules(search_term, category?)
 | `feats` | Feat descriptions and prerequisites |
 | `rules` | Core rules and conditions |
 
+## 4E-Compatible (Orcus) Database Search
+
+```
+query_orcus_rules(search_term, category?)
+```
+
+Search the Orcus 4e-compatible rules database for classes, monsters, feats, and core rules.
+
+### Categories
+
+| Category | Contains |
+|----------|----------|
+| `classes` | Character classes, traditions, roles, key abilities, defenses |
+| `monsters` | Monster stat blocks, level info, origin types, traits, actions |
+| `feats` | Feat descriptions, prerequisites, category, benefits |
+| `rules` | Core rules, skill checks, ability checks, extended challenges |
+
+### Examples
+```
+query_orcus_rules("Commander", category: "classes")           → class features
+query_orcus_rules("dragon", category: "monsters")              → monster stat block
+```
+
 ### Examples
 ```
 query_5ecompatible_rules("fireball", category: "spells")     → spell description
@@ -114,10 +137,10 @@ query_5ecompatible_rules("tough", category: "feats")         → feat descriptio
 ## Table Rolling
 
 ```
-roll_table(table_name, dice_type?)
+roll_table(table_name, dice_type?, system?)
 ```
 
-Roll on a named table using the specified dice type. Available tables include Reaction, Personal Encounter, Patron Encounter, Rumour, Starship Encounter, Animal Encounter, Starport Encounter, Trade Goods, and many more. Use `query_ogl_rules("", category: "list_tables")` to see all.
+Roll on a named table from any rules system. Use the `system` parameter to specify which database to search (ogl/dw/brp/5ecompatible/orcus, default: ogl). Available dice types: `1d6`, `2d6`, `d66`, `1d3`, `2d3`, `d4`, `d8`, `d10`, `d12`, `d20`, `d100`. Use `query_ogl_rules("", category: "list_tables")` to see all available OGL tables.
 
 ## BYOD Search
 
@@ -135,11 +158,11 @@ Retrieves the full chunk content for a specific file and chunk index. Use after 
 
 ## Search Strategy
 
-1. **Match the system**: Use the appropriate tool — `query_ogl_rules` (sci-fi), `query_dw_rules` (fantasy), `query_brp_rules` (percentile), or `query_5ecompatible_rules` (d20 fantasy)
+1. **Match the system**: Use the appropriate tool — `query_ogl_rules` (sci-fi), `query_dw_rules` (fantasy), `query_brp_rules` (percentile), `query_5ecompatible_rules` (d20 fantasy), or `query_orcus_rules` (4e-compatible)
 2. **Be specific**: Search for the exact mechanic name or equipment item
 3. **Try categories**: If a broad search returns too much, narrow with a `category`
 4. **Fall back to BYOD**: If core rules don't have what you need, try `query_local_byod`
-5. **Combine searches**: For a complete picture, query both core rules and BYOD
+5. **Combine searches**: For a complete picture, query both the system database and BYOD
 6. **Get full content**: `query_local_byod` returns snippets. Use `get_byod_chunk(file_path, chunk_index)` to retrieve the full chunk for inference
 
 ## Content Coverage
@@ -156,6 +179,9 @@ Characteristics, skills, professions, weapons, armor, spot rules, and foes for p
 ### 5E-compatible (5E-compatible SRD CC-BY-4.0)
 Spells, monsters, classes, feats, and core rules for d20 fantasy RPGs.
 
+### 4E-compatible (Orcus OGL v1.0a)
+Classes, monsters, feats, and core rules for 4e-compatible RPGs. Includes character classes with traditions and roles, full monster stat blocks with AC/Fort/Ref/Will defenses, and feat-driven character progression.
+
 ## Environment Variables
 
 | Variable | Default | Purpose |
@@ -164,3 +190,4 @@ Spells, monsters, classes, feats, and core rules for d20 fantasy RPGs.
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | Custom DW database path |
 | `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Custom BRP database path |
 | `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Custom 5E-compatible database path |
+| `ORCUS_DB_PATH` | `data/orcus/orcus.db` | Custom Orcus database path |

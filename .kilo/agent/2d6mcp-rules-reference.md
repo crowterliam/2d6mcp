@@ -1,6 +1,6 @@
 # 2D6 Rules Reference
 
-You have access to a pre-populated OGL rules database (Cepheus Engine SRD), a Dungeon World database (CC-BY-3.0), a Basic Roleplaying database (BRP OGL v1.0), a 5E-compatible SRD database (CC-BY-4.0), optionally your own BYOD files, and AI ruling synthesis. Use these tools to look up game mechanics and generate cited rulings.
+You have access to five pre-populated rules databases (OGL/Cepheus Engine SRD for sci-fi, Dungeon World CC-BY-3.0 for fantasy, Basic Roleplaying BRP OGL v1.0 for percentile, 5E-compatible SRD CC-BY-4.0 for d20 fantasy, and Orcus OGL v1.0a for 4e-compatible), plus your own BYOD files and AI ruling synthesis. Use these tools to look up game mechanics and generate cited rulings.
 
 ## AI Ruling Synthesis
 
@@ -12,7 +12,7 @@ Take a natural-language rules question, auto-look up relevant rules from OGL/DW/
 
 **Key behaviour:**
 - If `rules_context` is provided, uses it directly (skip auto-lookup)
-- If omitted, searches OGL (sci-fi) and/or DW (fantasy) based on `rules_system` ("ogl", "dw", "brp", "5ecompatible", or "auto")
+- If omitted, searches OGL (sci-fi), DW (fantasy), BRP (percentile), 5E-compatible (d20 fantasy), or Orcus (4e-compatible) based on `rules_system` ("ogl", "dw", "brp", "5ecompatible", "orcus", or "auto")
 - BYOD is searched if consent is given — search is scoped by `byod_system` if the session was started with one
 - Returns: question, ruling text with `[Source]` citations, model used, latency, and snippet of the rules context used
 - Rulings include `[Verify: ...]` warnings when numbers in the ruling don't appear in the source text (quality filter)
@@ -138,32 +138,47 @@ query_5ecompatible_rules("fighter", category: "classes")    → class features
 query_5ecompatible_rules("grappler", category: "feats")     → feat description
 ```
 
+## 4E-Compatible (Orcus) Database Search
+
+```
+query_orcus_rules(search_term, category?)
+```
+
+Search the Orcus 4e-compatible rules database for classes, monsters, feats, and core rules. Orcus is a 4e-compatible system released under OGL v1.0a.
+
+### Categories
+
+| Category | Contains |
+|----------|----------|
+| `classes` | Character classes (Commander, Swordmage, Athame, etc.), traditions, roles, key abilities |
+| `monsters` | Monster stat blocks, level info, origin types, defenses, traits, actions |
+| `feats` | Feat descriptions, prerequisites, category, benefits |
+| `rules` | Core rules, skill checks, ability checks, extended challenges |
+
+### Examples
+```
+query_orcus_rules("Commander", category: "classes")           → class features
+query_orcus_rules("dragon", category: "monsters")              → monster stat block
+query_orcus_rules("Athame", category: "classes")               → class features
+```
+
 ## Table Rolling
 
 ```
-roll_table(table_name, dice_type?)
+roll_table(table_name, dice_type?, system?)
 ```
 
-Roll on a named table using the specified dice type. The result includes the dice outcome, the matched table entry, and the full description.
+Roll on a named table from any rules system. Use the `system` parameter to specify which database to search (ogl/dw/brp/5ecompatible/orcus, default: ogl). The result includes the dice outcome, the matched table entry, and the full description.
 
-### Available Tables (partial list)
-- `Reaction Table` (2d6)
-- `Personal Encounter` (2d6)
-- `Patron Encounter` (2d6)
-- `Rumour Table` (1d6)
-- `Starship Encounter` (2d6)
-- `Animal Encounter` (2d6)
-- `Starport Encounter` (2d6)
-- `Trade Goods` (1d6)
-
-Use `query_ogl_rules("", category: "list_tables")` to see all available tables.
-
-### Dice Types
+### Available Dice Types
 - `1d6` — single d6 (1–6)
 - `2d6` — two d6 summed (2–12)
 - `d66` — two d6 as tens/ones (11–66)
 - `1d3` — half d6 rounded up (1–3)
 - `2d3` — two d3 summed (2–6)
+- `d4`, `d8`, `d10`, `d12` — standard polyhedral (1–N)
+- `d20` — twenty-sided for d20 fantasy systems
+- `d100` — percentile for BRP/d100 systems
 
 ## BYOD Search
 
@@ -207,13 +222,13 @@ Transcribe an audio file (WAV, MP3, M4A, FLAC) using local MLX Whisper. Requires
 
 ## Search Strategy
 
-1. **Always start with OGL, DW, BRP, or 5E-compatible**: The built-in databases are faster and cover the core rules
+1. **Match the system**: Use the appropriate tool — `query_ogl_rules` (sci-fi), `query_dw_rules` (fantasy), `query_brp_rules` (percentile), `query_5ecompatible_rules` (d20 fantasy), or `query_orcus_rules` (4e-compatible)
 2. **Be specific**: Search for the exact mechanic name or equipment item
 3. **Try categories**: If a broad search returns too much, narrow with a `category`
-4. **Use AI synthesis for natural questions**: `synthesize_ruling` auto-looks up rules and produces a cited answer
-5. **Fall back to BYOD**: If OGL/DW/BRP/5E-compatible doesn't have what you need, try `query_local_byod`
+4. **Use AI synthesis for natural questions**: `synthesize_ruling` auto-looks up rules across all databases and produces a cited answer
+5. **Fall back to BYOD**: If the built-in databases don't have what you need, try `query_local_byod`
 6. **Scope BYOD with byod_system**: Start sessions with the correct system name to avoid wrong-system results
-7. **Combine searches**: For a complete picture, query OGL/DW/BRP/5E-compatible and BYOD — `synthesize_ruling` does this automatically
+7. **Combine searches**: For a complete picture, query the appropriate system database and BYOD — `synthesize_ruling` does this automatically
 8. **Get full content**: Use `get_byod_chunk` to retrieve complete chunk text for results that matter
 
 ## Content Coverage
@@ -255,3 +270,10 @@ The 5E-compatible SRD database covers:
 - **Classes**: Class features, proficiencies, hit dice, spellcasting
 - **Feats**: Feat descriptions, prerequisites, mechanical benefits
 - **Rules**: Core rules, conditions, combat actions, equipment tables
+
+The 4E-compatible (Orcus) database covers:
+
+- **Classes**: Character classes with traditions, roles, key abilities, hit points, recoveries, defenses, trained skills, talents, features
+- **Monsters**: Full stat blocks with level, origin type, alignment, defenses (AC/Fort/Ref/Will), hp, resistances, vulnerabilities, traits, actions
+- **Feats**: Feat descriptions with prerequisites, category, and mechanical benefits
+- **Rules**: Core rules for 4e-compatible play — skill checks, ability checks, extended challenges, and combat mechanics
