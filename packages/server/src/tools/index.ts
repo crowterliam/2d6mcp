@@ -3,7 +3,7 @@
 
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { getToolDefinitions } from "./definitions.js";
-import { handleRoll2d6, handleRollCustom, handleRollTable } from "./handlers/dice.js";
+import { handleRoll2d6, handleRollCustom, handleRollTable, handleRollD20, handleRollPercentile, handleRollDamage } from "./handlers/dice.js";
 import { handleQueryOglRules } from "./handlers/ogl.js";
 import { handleQueryDwRules } from "./handlers/dw.js";
 import { handleQueryBrpRules } from "./handlers/brp.js";
@@ -53,6 +53,12 @@ export async function dispatchToolCall(
   switch (name) {
     case "roll_2d6":
       return handleRoll2d6(args);
+    case "roll_d20":
+      return handleRollD20(args);
+    case "roll_percentile":
+      return handleRollPercentile(args);
+    case "roll_damage":
+      return handleRollDamage(args);
     case "roll_custom":
       return handleRollCustom(args);
     case "roll_table":
