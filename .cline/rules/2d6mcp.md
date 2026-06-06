@@ -18,12 +18,16 @@ Both modes share rules databases, dice engine, prompt templates, and quality fil
 | Tool | Purpose |
 |------|---------|
 | `roll_2d6` | Roll 2d6 with modifier vs. target. Returns dice, total, effect margin. |
+| `roll_d20` | Roll d20 with modifier, advantage/disadvantage, AC/DC comparison. Returns dice, hit/miss, critical (nat 20), fumble (nat 1). |
+| `roll_percentile` | Roll d100 with BRP-style roll-under. Returns tens/ones, total, success, critical (≤5%), fumble (96-100). |
+| `roll_damage` | Roll damage dice with optional type (e.g., `"2d6+3 fire"`). |
 | `roll_custom` | Roll any dice notation (`3d6`, `1d20`, `4d6+2`, `d66`). |
-| `roll_table` | Roll on a named table from the OGL database. |
+| `roll_table` | Roll on a named table from any rules system. Use `system` param to specify database. |
 | `query_ogl_rules` | Search OGL rules by term and optional category. |
 | `query_dw_rules` | Search DW rules by term and optional category (moves, classes, spells, equipment, monsters, gm_tools, rules). |
 | `query_brp_rules` | Search BRP rules for characteristics, skills, professions, weapons, armor, spot rules, foes |
 | `query_5ecompatible_rules` | Search 5E-compatible rules for spells, monsters, classes, feats, and rules |
+| `query_orcus_rules` | Search Orcus 4e-compatible rules for classes, monsters, feats, and core rules |
 | `query_local_byod` | Full-text search personal ingested files (requires consent). |
 | `parse_character` | Parse character sheet into structured data. |
 | `sync_byod` | Index BYOD files in time-budgeted batches. Re-call if `complete: false`. |
@@ -62,16 +66,20 @@ Both modes share rules databases, dice engine, prompt templates, and quality fil
 
 ## Core Mechanics
 
-- **Task resolution**: 2d6 + modifier vs. target (typically 8+). Effect margin = total - target. Margin 0+ = success, 6+ = exceptional.
-- **Difficulty**: Modifiers +6 (simple) to -6 (formidable). Or adjust target: 6+ easy, 8+ average, 10+ difficult, 12+ very difficult, 14+ formidable.
+- **Multi-system resolution**:
+  - **2d6 (OGL/DW)**: 2d6 + modifier vs. target (typically 8+). Effect margin = total - target. Use `roll_2d6`.
+  - **d20 (5E/Orcus)**: d20 + modifier vs. AC/DC. Nat 20 = critical hit, nat 1 = fumble. Supports advantage/disadvantage. Use `roll_d20`.
+  - **d100 (BRP/CoC)**: Roll under target. ≤5% = critical, 96-100 = fumble. Use `roll_percentile`.
+  - **Damage**: Use `roll_damage("2d6+3 fire")` for weapon damage.
+- **Difficulty (2d6)**: Modifiers +6 (simple) to -6 (formidable). Or adjust target: 6+ easy, 8+ average, 10+ difficult, 12+ very difficult, 14+ formidable.
 - **d66 tables**: Two d6s as tens/ones (11–66). `roll_table` with `"dice_type": "d66"`.
 - **Categories**: `skills`, `careers`, `equipment`, `tables`, `combat`, `starships`, `worlds`, `categories`, `list_tables`.
-- **OGL for sci-fi, DW for fantasy, BRP for percentile, 5E-compatible for d20 fantasy**: The OGL database covers sci-fi rules. The DW database covers fantasy rules (moves, classes, spells, monsters, GM tools). The BRP database covers percentile RPG rules. The 5E-compatible database covers d20 fantasy rules. Fall back to BYOD for personal content.
+- **OGL for sci-fi, DW for fantasy, BRP for percentile, 5E-compatible for d20 fantasy, Orcus for 4e-compatible**: The OGL database covers sci-fi rules. The DW database covers fantasy rules (moves, classes, spells, monsters, GM tools). The BRP database covers percentile RPG rules. The 5E-compatible database covers d20 fantasy rules. The Orcus database covers 4e-compatible rules. Fall back to BYOD for personal content.
 - **BYOD consent**: `AGREE_BYOD_USE="true"` and `BYOD_PATH` required.
 
 ## Key Workflows
 
-**Task resolution**: `roll_2d6(modifier, target)` or `roll_custom("Nd6+M")`. Report margin and outcome.
+**Task resolution**: `roll_2d6(modifier, target)` for 2d6, `roll_d20(modifier, target, advantage)` for d20, `roll_percentile(target)` for d100, `roll_damage("2d6+3 fire")` for damage. Report margin and outcome.
 
 **Rules lookup**: `query_ogl_rules("term", category: "category")` for sci-fi. `query_dw_rules("term", category: "category")` for fantasy. Narrow with category for targeted results.
 
@@ -101,6 +109,7 @@ Both modes share rules databases, dice engine, prompt templates, and quality fil
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | DW database path |
 | `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Custom BRP database path |
 | `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Custom 5E-compatible database path |
+| `ORCUS_DB_PATH` | `data/orcus/orcus.db` | Custom Orcus database path |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |

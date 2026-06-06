@@ -39,12 +39,16 @@ Agent instructions: `.kilo/agent/`, `.claude/skills/`, `.cursor/rules/`, `.cline
 | Tool | Purpose |
 |------|---------|
 | `roll_2d6` | 2d6 + modifier vs. target, effect margin |
+| `roll_d20` | d20 + modifier vs. AC/DC with advantage/disadvantage, critical hits, fumbles |
+| `roll_percentile` | d100 percentile roll-under with critical success and fumble detection |
+| `roll_damage` | Damage dice with optional type (`"2d6+3 fire"`, `"1d8 piercing"`) |
 | `roll_custom` | Any dice notation |
-| `roll_table` | Named table from OGL database |
+| `roll_table` | Named table from any rules system (use `system` param) |
 | `query_ogl_rules` | Search OGL rules (skills, careers, equipment, combat, starships, worlds) |
 | `query_dw_rules` | Search DW rules (moves, classes, spells, equipment, monsters, GM tools) |
 | `query_brp_rules` | Search BRP rules for characteristics, skills, professions, weapons, armor, spot rules, foes |
 | `query_5ecompatible_rules` | Search 5E-compatible rules for spells, monsters, classes, feats, and rules |
+| `query_orcus_rules` | Search Orcus 4e-compatible rules for classes, monsters, feats, and core rules |
 | `query_local_byod` | Search personal ingested files |
 | `parse_character` | Parse character sheet to structured data |
 | `sync_byod` | Index BYOD files (time-budgeted, re-call until complete) |
@@ -83,6 +87,7 @@ Agent instructions: `.kilo/agent/`, `.claude/skills/`, `.cursor/rules/`, `.cline
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | DW database path |
 | `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Custom BRP database path |
 | `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Custom 5E-compatible database path |
+| `ORCUS_DB_PATH` | `data/orcus/orcus.db` | Custom Orcus database path |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LLM model |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
