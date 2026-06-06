@@ -10,7 +10,7 @@ import {
 import { loadConfig } from "./config.js";
 import { checkByodConsent } from "./byod/gate.js";
 import { getToolDefinitions, dispatchToolCall } from "./tools/index.js";
-import { ensureOglDb, ensureDwDb, syncByodIndex, getServerVersion } from "./tools/helpers.js";
+import { ensureOglDb, ensureDwDb, ensureOrcusDb, syncByodIndex, getServerVersion } from "./tools/helpers.js";
 
 export async function startServer(): Promise<void> {
   const version = getServerVersion();
@@ -40,6 +40,7 @@ export async function startServer(): Promise<void> {
 
   ensureOglDb();
   ensureDwDb();
+  ensureOrcusDb();
 
   const config = loadConfig();
   const consent = checkByodConsent();

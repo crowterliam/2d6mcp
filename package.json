@@ -17,6 +17,7 @@
     "populate-dw": "node packages/server/dist/cli.js populate-dw",
     "populate-brp": "node packages/server/dist/cli.js populate-brp",
     "populate-5ecompatible": "node packages/server/dist/cli.js populate-5ecompatible",
+    "populate-orcus": "node packages/server/dist/cli.js populate-orcus",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

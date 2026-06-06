@@ -224,6 +224,25 @@ export function getToolDefinitions(): Tool[] {
       },
     },
     {
+      name: "query_orcus_rules",
+      description:
+        "Search the Orcus d20-compatible retro-clone rules database for rules, classes, monsters, and feats. Orcus is a retro-clone of 4th Edition by Chris Sakkas (Sanglorian), released under OGL v1.0a. See data/orcus/ATTRIBUTION for full details.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          search_term: {
+            type: "string",
+            description: "Search term (e.g., 'combat', 'Commander', 'dragon', 'Athame', 'skill check', 'extended challenge')",
+          },
+          category: {
+            type: "string",
+            description: "Optional category filter: 'rules', 'classes', 'monsters', 'feats', 'list_classes', 'list_monsters', 'list_feats'",
+          },
+        },
+        required: ["search_term"],
+      },
+    },
+    {
       name: "query_dw_rules",
       description:
         "Search the Dungeon World rules database for moves, classes, spells, equipment, monsters, or GM tools. DW data is derived from Dungeon World by Sage LaTorra and Adam Koebel (CC-BY-3.0), converted to Markdown by agude. See data/dw/ATTRIBUTION for full attribution.",
@@ -416,8 +435,8 @@ export function getToolDefinitions(): Tool[] {
           },
           rules_system: {
             type: "string",
-            enum: ["ogl", "dw", "brp", "5ecompatible"],
-            description: "Rules system for this session. 'ogl' = sci-fi 2d6 RPG (Cepheus Engine), 'dw' = fantasy 2d6 RPG (Dungeon World), 'brp' = Basic Roleplaying (d100 percentile system), '5ecompatible' = 5E-compatible fantasy SRD (CC-BY-4.0). Default: ogl.",
+            enum: ["ogl", "dw", "brp", "5ecompatible", "orcus"],
+            description: "Rules system for this session. 'ogl' = sci-fi 2d6 RPG (Cepheus Engine), 'dw' = fantasy 2d6 RPG (Dungeon World), 'brp' = Basic Roleplaying (d100 percentile system), '5ecompatible' = 5E-compatible fantasy SRD (CC-BY-4.0), 'orcus' = d20-compatible retro-clone (OGL v1.0a). Default: ogl.",
             default: "ogl",
           },
           byod_system: {
@@ -561,7 +580,7 @@ export function getToolDefinitions(): Tool[] {
           },
           rules_system: {
             type: "string",
-            enum: ["ogl", "dw", "brp", "5ecompatible", "auto"],
+            enum: ["ogl", "dw", "brp", "5ecompatible", "orcus", "auto"],
             description: "Which rules DB to search. 'auto' searches all. Default: 'auto'.",
             default: "auto",
           },
