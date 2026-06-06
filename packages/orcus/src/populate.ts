@@ -71,12 +71,18 @@ function seedSections(db: Database.Database, sourcePath: string): void {
   const stmt = db.prepare("INSERT INTO orcus_sections (section, topic, content) VALUES (?, ?, ?)");
 
   // Strip YAML frontmatter and HTML/markdown meta
-  const clean = content
+  let clean = content
     .replace(/^---[\s\S]*?---\n/m, "")
-    .replace(/<div[^>]*>[\s\S]*?<\/div>/g, "")
-    .replace(/<figure>[\s\S]*?<\/figure>/g, "")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&[a-z]+;/g, "");
+    .replace(/<div[^>]*>[\s\S]*?<\/div>/gi, "")
+    .replace(/<figure>[\s\S]*?<\/figure>/gi, "")
+    .replace(/&[a-z]+;/gi, "");
+  // Iterative tag stripping to prevent nested-tag bypass (CodeQL
+  // js/incomplete-multi-character-sanitization)
+  let prev = "";
+  while (prev !== clean) {
+    prev = clean;
+    clean = clean.replace(/<[^>]*>/g, "");
+  }
 
   // Split on h2 (##) or h1 (#) headings
   const blocks = clean.split(/\n(?=#{1,2}\s)/);
@@ -302,11 +308,22 @@ function parseMonsterBlock(block: string): ParsedMonster | null {
   // Extract name from h4
   const nameMatch = block.match(/(?:<h4[^>]*>|####\s+)(.+?)(?:<\/h4>|$)/);
   if (!nameMatch) return null;
-  const name = nameMatch[1].replace(/<[^>]+>/g, "").trim();
+  let name = nameMatch[1];
+  let prevName = "";
+  while (prevName !== name) {
+    prevName = name;
+    name = name.replace(/<[^>]*>/g, "");
+  }
+  name = name.trim();
   if (!name || name.startsWith("<")) return null;
 
   // Strip HTML tags for text parsing
-  const text = block.replace(/<[^>]+>/g, " ").replace(/&[a-z]+;/g, "").replace(/\*\*/g, "");
+  let text = block.replace(/&[a-z]+;/gi, "").replace(/\*\*/g, "");
+  let prevText = "";
+  while (prevText !== text) {
+    prevText = text;
+    text = text.replace(/<[^>]*>/g, " ");
+  }
 
   // Level info
   const levelMatch = text.match(/Level\s+(\d+)\s*(?:Elite\s+)?(\w+)/i);
