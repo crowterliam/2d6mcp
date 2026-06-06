@@ -91,12 +91,16 @@ BYOD is self-hosted only and is not available in the hosted Cloudflare Worker.
 | Tool | Description |
 |------|-------------|
 | `roll_2d6` | Roll 2d6 with modifier, compare against target, return effect margin |
+| `roll_d20` | Roll d20 with modifier, advantage/disadvantage, AC/DC comparison, critical hits and fumbles |
+| `roll_percentile` | Roll d100 with BRP-style roll-under, critical success, and fumble detection |
+| `roll_damage` | Roll damage dice with optional type (`"2d6+3 fire"`, `"1d8 piercing"`) |
 | `roll_custom` | Roll any dice notation (`3d6`, `1d20`, `4d6+2`) |
-| `roll_table` | Roll on a named table (`Reaction Table`, `Personal Encounter`, `Patron Encounter`) |
+| `roll_table` | Roll on a named table from any rules system (use `system` param) |
 | `query_ogl_rules` | Search the OGL database for rules, skills, careers, equipment, or tables |
 | `query_dw_rules` | Search the Dungeon World database for moves, classes, spells, equipment, monsters, GM tools |
 | `query_brp_rules` | Search the Basic Roleplaying database for characteristics, skills, professions, weapons, armor, spot rules |
 | `query_5ecompatible_rules` | Search the 5E-compatible database for spells, monsters, classes, feats, and rules |
+| `query_orcus_rules` | Search the Orcus 4e-compatible database for classes, monsters, feats, and rules |
 | `query_local_byod` | Search your locally ingested BYOD files (requires consent) |
 | `parse_character` | Parse a character sheet file into structured JSON |
 | `sync_byod` | Index/re-index all files in your BYOD directory |
@@ -216,6 +220,7 @@ npm run start         # run the MCP server (packages/server/dist/index.js)
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | Path to custom DW SQLite database |
 | `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Path to custom BRP SQLite database |
 | `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Path to custom 5E-compatible SQLite database |
+| `ORCUS_DB_PATH` | `data/orcus/orcus.db` | Path to custom Orcus SQLite database |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LLM model |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
