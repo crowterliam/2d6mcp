@@ -18,7 +18,7 @@
   "license": "AGPL-3.0-only",
   "dependencies": {
     "@2d6mcp/shared": "*",
-    "hono": "^4.6.0",
+    "hono": "^4.12.23",
     "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
