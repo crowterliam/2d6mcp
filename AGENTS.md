@@ -10,7 +10,7 @@ This project provides two deployment modes for a 2d6-based tabletop RPG AI assis
 1. **Self-Hosted MCP Server** (`packages/server/`) — stdio transport, local MLX, BYOD, session DB, 32 tools
 2. **Hosted Cloudflare Worker** (`apps/worker/`) — Discord bot, Workers AI (Whisper + Qwen3 MoE), D1, R2, OAuth2
 
-Both modes share the same rules databases (OGL/Cepheus Engine SRD for sci-fi, Dungeon World CC-BY-3.0 for fantasy, Basic Roleplaying SRD for percentile RPGs, 5E-compatible SRD CC-BY-4.0 for d20 fantasy), dice engine, prompt templates, and quality filters via `packages/shared/`.
+Both modes share the same rules databases (OGL/Cepheus Engine SRD for sci-fi, Dungeon World CC-BY-3.0 for fantasy, Basic Roleplaying SRD for percentile RPGs, 5E-compatible SRD CC-BY-4.0 for d20 fantasy, Orcus OGL v1.0a for d20-compatible retro-clone), dice engine, prompt templates, and quality filters via `packages/shared/`.
 
 The project is system-agnostic and avoids all third-party trademarks.
 
@@ -27,13 +27,15 @@ The project is system-agnostic and avoids all third-party trademarks.
 │   ├── ogl/                     # @2d6mcp/ogl — OGL SQLite queries
 │   ├── dw/                      # @2d6mcp/dw — DW SQLite queries
 │   ├── brp/                     # @2d6mcp/brp — BRP SQLite queries
-│   └── 5ecompatible/            # @2d6mcp/5ecompatible — 5E-compatible SQLite queries
+│   ├── 5ecompatible/            # @2d6mcp/5ecompatible — 5E-compatible SQLite queries
+│   └── orcus/                   # @2d6mcp/orcus — Orcus d20-compatible SQLite queries
 ├── data/
 │   ├── ogl/cepheus.db           # Bundled OGL database
 │   ├── dw/dungeon-world.db      # Bundled DW database
 │   ├── brp/basic-roleplaying.db # Bundled BRP database
-│   └── 5ecompatible/5ecompatible-srd.db  # Bundled 5E-compatible database
-└── tests/                       # Vitest test suite (209 tests)
+│   ├── 5ecompatible/5ecompatible-srd.db  # Bundled 5E-compatible database
+│   └── orcus/orcus.db           # Bundled Orcus database
+└── tests/                       # Vitest test suite (270 tests)
 ```
 
 ## Build & Test Commands
@@ -50,6 +52,7 @@ npm run populate-ogl     # regenerate OGL SQLite database
 npm run populate-dw      # regenerate DW SQLite database
 npm run populate-brp     # regenerate BRP SQLite database
 npm run populate-5ecompatible  # regenerate 5E-compatible SQLite database
+npm run populate-orcus     # regenerate Orcus SQLite database
 ```
 
 ### Worker-specific commands (in `apps/worker/`)
@@ -140,6 +143,9 @@ packages/server/src/
   5ecompatible/
     database.ts     # 5E-compatible SQLite connection + schema setup (IMPORTS from @2d6mcp/5ecompatible)
     queries.ts      # 5E-compatible rule search queries
+  orcus/
+    database.ts     # Orcus SQLite connection + schema setup (IMPORTS from @2d6mcp/orcus)
+    queries.ts      # Orcus rule search queries
   byod/
     gate.ts         # Consent gate check
     ingest.ts       # File walking, PDF/text/md parsing
@@ -212,6 +218,7 @@ packages/shared/src/
 | `query_dw_rules` | Search DW rules for moves, classes, spells, equipment, monsters, GM tools |
 | `query_brp_rules` | Search BRP rules for characteristics, skills, professions, weapons, armor, spot rules, foes |
 | `query_5ecompatible_rules` | Search 5E-compatible rules for spells, monsters, classes, feats |
+| `query_orcus_rules` | Search Orcus d20-compatible rules for classes, monsters, feats, and core rules |
 | `query_local_byod` | Full-text search across personal ingested files |
 | `parse_character` | Parse character sheet into structured data |
 | `sync_byod` | Index/re-index files from BYOD directory |
@@ -225,7 +232,7 @@ packages/shared/src/
 | `discord_remove_webhook` | Remove a stored Discord webhook by name |
 | `discord_list_webhooks` | List all configured webhooks (URLs partially masked) |
 | `discord_test_webhook` | Send a test message to verify webhook connectivity |
-| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM. Auto-looks up OGL/DW/BRP/5E-compatible/BYOD rules, returns a cited ruling. Requires `mlx_lm.generate`. |
+| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM. Auto-looks up OGL/DW/BRP/5E/Orcus/BYOD rules, returns a cited ruling. Requires `mlx_lm.generate`. |
 | `resolve_from_context` | Full producer pipeline: take recent session transcript, detect rules question, look up rules, synthesize ruling, log it. |
 | `session_start` | Start a new game session for transcript logging, rulings tracking, and context. Returns a session ID. |
 | `session_end` | End the active game session. |
@@ -257,7 +264,7 @@ packages/shared/src/
 
 - **Session lifecycle**: Start with `session_start`, log with `log_transcript`, end with `session_end`.
 - **BYOD system scoping**: Pass `byod_system` to `session_start` to filter BYOD searches.
-- **Ruling synthesis**: `synthesize_ruling` auto-looks up OGL/DW/BRP/5E-compatible/BYOD rules, passes to MLX LLM, returns cited ruling with quality filter.
+- **Ruling synthesis**: `synthesize_ruling` auto-looks up OGL/DW/BRP/5E/Orcus/BYOD rules, passes to MLX LLM, returns cited ruling with quality filter.
 - **Audio transcription**: `transcribe_audio` processes files in 2-minute chunks with progress tracking. Call repeatedly until `complete: true`.
 
 ### Hosted (Cloudflare Workers AI)
@@ -291,11 +298,13 @@ packages/shared/src/
 - All files under `data/dw/`: CC-BY-3.0
 - All files under `data/brp/`: BRP OGL v1.0
 - All files under `data/5ecompatible/`: CC-BY-4.0
+- All files under `data/orcus/`: OGL v1.0a
 - `LICENSE.md` describes the firewall in detail
 - `OGL-1.0a.txt` contains the full OGL text with Cepheus SRD copyright attributions
 - `data/dw/CC-BY-3.0.txt` contains the full CC-BY-3.0 license text
 - `data/dw/ATTRIBUTION` contains Dungeon World derivation and attribution details
 - `data/5ecompatible/SRD-NOTICE.txt` contains 5E-compatible SRD attribution details
+- `data/orcus/ATTRIBUTION` contains Orcus retro-clone derivation and attribution details
 
 ## BYOD Consent Gate
 
@@ -325,6 +334,7 @@ Never reference any third-party game system or trademarked terms. Use generic de
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | Custom DW database path |
 | `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Custom BRP database path |
 | `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Custom 5E-compatible database path |
+| `ORCUS_DB_PATH` | `data/orcus/orcus.db` | Custom Orcus database path |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
