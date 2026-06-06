@@ -141,7 +141,8 @@ function truncateRepetition(text: string): string {
 const NUMBER_PATTERN = /(\d+d\d+(?:[+-]\d+)?|\b\d+\.?\d*\s*(?:DM|hp|hit points?|ac|armor class|Cr\d*|credits?|meters?|tons?|points?|damage|XP|parsecs?)\b|\bCr\d+\b)/gi;
 
 function extractNumericTerms(text: string): string[] {
-  const matches = text.match(NUMBER_PATTERN) || [];
+  const safe = text.length > 5000 ? text.substring(0, 5000) : text;
+  const matches = safe.match(NUMBER_PATTERN) || [];
   return [...new Set(matches.map((m) => m.toLowerCase()))];
 }
 

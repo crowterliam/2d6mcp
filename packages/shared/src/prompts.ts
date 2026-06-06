@@ -74,9 +74,11 @@ const STAT_PATTERN = /\b\d+(?:\.\d+)?\s*(?:DM|hp|hit points?|ac|armor class|Cr\d
 const CREDIT_PATTERN = /\bCr\d{1,10}\b/gi;
 
 function extractNumericTerms(text: string): string[] {
-  const dice = text.match(DICE_PATTERN) || [];
-  const stats = text.match(STAT_PATTERN) || [];
-  const credits = text.match(CREDIT_PATTERN) || [];
+  // Truncate input to prevent ReDoS on pathological strings
+  const safe = text.length > 5000 ? text.substring(0, 5000) : text;
+  const dice = safe.match(DICE_PATTERN) || [];
+  const stats = safe.match(STAT_PATTERN) || [];
+  const credits = safe.match(CREDIT_PATTERN) || [];
   return [...new Set([...dice, ...stats, ...credits].map((m) => m.toLowerCase()))];
 }
 
