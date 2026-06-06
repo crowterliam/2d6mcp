@@ -8,6 +8,7 @@ import { handleQueryOglRules } from "./handlers/ogl.js";
 import { handleQueryDwRules } from "./handlers/dw.js";
 import { handleQueryBrpRules } from "./handlers/brp.js";
 import { handleQuery5ecompatibleRules } from "./handlers/5ecompatible.js";
+import { handleQueryOrcusRules } from "./handlers/orcus.js";
 import {
   handleQueryLocalByod,
   handleSyncByod,
@@ -64,6 +65,8 @@ export async function dispatchToolCall(
       return handleQueryBrpRules(args);
     case "query_5ecompatible_rules":
       return handleQuery5ecompatibleRules(args);
+    case "query_orcus_rules":
+      return handleQueryOrcusRules(args);
     case "query_local_byod":
       return handleQueryLocalByod(args);
     case "sync_byod":

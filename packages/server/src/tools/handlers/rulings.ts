@@ -7,6 +7,7 @@ import { getDatabase } from "@2d6mcp/ogl/database";
 import { ensureDwSchema } from "@2d6mcp/dw/database";
 import { ensureBrpSchema } from "@2d6mcp/brp/database";
 import { ensure5ecompatibleSchema } from "@2d6mcp/5ecompatible/database";
+import { ensureOrcusSchema } from "@2d6mcp/orcus/database";
 import {
   searchOglRules,
   searchOglSkills,
@@ -37,12 +38,18 @@ import {
   search5ecompatibleClasses,
   search5ecompatibleFeats,
 } from "@2d6mcp/5ecompatible";
+import {
+  searchOrcusRules,
+  searchOrcusClasses,
+  searchOrcusMonsters,
+  searchOrcusFeats,
+} from "@2d6mcp/orcus";
 import { openSessionDb, getRecentRulings, getRecentContext, storeRuling, logTranscript, getTranscript, getSession, getOrCreateProgress, updateProgress, markChunkProcessed, getNextUnprocessedChunk, deleteProgress } from "../../session/database.js";
 import { transcribeAudioBuffer, isMLXWhisperAvailable } from "../../audio/mlx-transcribe.js";
 import { synthesizeRuling as mlxSynthesizeRuling, isMLXLLMAvailable } from "../../rulings/mlx-synthesize.js";
 import { checkByodConsent, getByodPath } from "../../byod/gate.js";
 import { getByodDatabase, searchByodIndex } from "../../byod/search.js";
-import { ensureOglDb, ensureDwDb, ensureBrpDb, ensure5ecompatibleDb, resolveSafePath, extractKeywords, extractKeywordList, fuzzyKeywordList } from "../helpers.js";
+import { ensureOglDb, ensureDwDb, ensureBrpDb, ensure5ecompatibleDb, ensureOrcusDb, resolveSafePath, extractKeywords, extractKeywordList, fuzzyKeywordList } from "../helpers.js";
 import { isAudioLong, chunkAudio, transcribeChunk, cleanupChunks, getChunkFiles } from "../../audio/chunker.js";
 
 function scoreAndTakeTop(chunks: string[], originalKeywords: string[], fuzzyKeywords: string[], maxChunks: number = 3): string[] {
@@ -280,9 +287,40 @@ export async function handleSynthesizeRuling(args: Record<string, unknown> | und
       }
     }
 
+    if (rulesSystem === "orcus" || rulesSystem === "auto") {
+      const { dbPath: orcusPath } = ensureOrcusDb();
+      const orcusDb = ensureOrcusSchema(orcusPath);
+
+      const orcusRules = searchOrcusRules(orcusDb, question);
+      for (const r of orcusRules) {
+        if (typeof r === "object" && r !== null && "title" in r && "snippet" in r) {
+          const rule = r as { title: string; snippet: string; section: string };
+          chunks.push(`[Orcus: ${rule.section} > ${rule.title}]\n${rule.snippet.replace(/<mark>/g, "**").replace(/<\/mark>/g, "**")}`);
+        }
+      }
+
+      if (keywords) {
+        const orcusKwList = fuzzyKeywordList(extractKeywordList(question));
+        for (const kw of orcusKwList) {
+          const orcusClasses = searchOrcusClasses(orcusDb, kw);
+          for (const c of orcusClasses) {
+            chunks.push(`[Orcus Class: ${c.name} (${c.tradition} ${c.role})]\n${c.description}`);
+          }
+          const orcusMonsters = searchOrcusMonsters(orcusDb, kw);
+          for (const m of orcusMonsters) {
+            chunks.push(`[Orcus Monster: ${m.name} (${m.levelInfo})]\n${m.description}`);
+          }
+          const orcusFeats = searchOrcusFeats(orcusDb, kw);
+          for (const f of orcusFeats) {
+            chunks.push(`[Orcus Feat: ${f.name} (${f.category})]\n${f.description}`);
+          }
+        }
+      }
+    }
+
     rulesContext = scoreAndTakeTop(chunks, extractKeywordList(question), fuzzyKeywordList(extractKeywordList(question))).join("\n\n");
     if (!rulesContext) {
-      rulesContext = "No matching rules found in OGL, Dungeon World, Basic Roleplaying, 5E-compatible SRD, or BYOD databases.";
+      rulesContext = "No matching rules found in OGL, Dungeon World, Basic Roleplaying, 5E-compatible SRD, Orcus, or BYOD databases.";
     }
   }
 

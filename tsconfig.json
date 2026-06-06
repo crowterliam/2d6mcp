@@ -6,6 +6,7 @@
     { "path": "packages/dw" },
     { "path": "packages/brp" },
     { "path": "packages/5ecompatible" },
+    { "path": "packages/orcus" },
     { "path": "packages/server" }
   ]
 }

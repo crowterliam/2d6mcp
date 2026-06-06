@@ -9,6 +9,7 @@ import { populateOglDatabase } from "@2d6mcp/ogl/populate";
 import { populateDwDatabase } from "@2d6mcp/dw/populate";
 import { populateBrpDatabase } from "@2d6mcp/brp/populate";
 import { populate5ecompatibleDatabase } from "@2d6mcp/5ecompatible/populate";
+import { populateOrcusDatabase } from "@2d6mcp/orcus/populate";
 
 function cmdSetup(): void {
   if (existsSync(BYOD_CONSENT_FILE)) {
@@ -67,9 +68,11 @@ Usage:
    2d6mcp populate-dw --force   Force regeneration of DW database
     2d6mcp populate-brp  Generate or regenerate the Basic Roleplaying SQLite database
     2d6mcp populate-brp --force  Force regeneration of BRP database
-     2d6mcp populate-5ecompatible  Generate or regenerate the 5E-compatible SRD database
-     2d6mcp populate-5ecompatible --force  Force regeneration of 5E database
-     2d6mcp help          Show this help
+  2d6mcp populate-5ecompatible  Generate or regenerate the 5E-compatible SRD database
+  2d6mcp populate-5ecompatible --force  Force regeneration of 5E database
+  2d6mcp populate-orcus  Generate or regenerate the Orcus d20-compatible database
+  2d6mcp populate-orcus --force  Force regeneration of Orcus database
+  2d6mcp help          Show this help
 
  Environment:
    AGREE_BYOD_USE=true   Enable BYOD via env var
@@ -78,6 +81,7 @@ Usage:
     DW_DB_PATH=/path/to/db         Custom DW database path (optional)
     BRP_DB_PATH=/path/to/db        Custom BRP database path (optional)
     SR5E_DB_PATH=/path/to/db       Custom 5E-compatible database path (optional)
+  ORCUS_DB_PATH=/path/to/db       Custom Orcus database path (optional)
 `);
 }
 
@@ -132,6 +136,23 @@ function cmdPopulate5ecompatible(): void {
   console.log(result.message);
 }
 
+function cmdPopulateOrcus(): void {
+  const dbPath = resolve(PROJECT_ROOT, "data", "orcus", "orcus.db");
+  const force = process.argv.includes("--force");
+
+  if (existsSync(dbPath) && !force) {
+    console.log("Orcus database already exists. Use --force to overwrite.");
+    return;
+  }
+
+  if (force && existsSync(dbPath)) {
+    unlinkSync(dbPath);
+  }
+
+  const result = populateOrcusDatabase(dbPath);
+  console.log(result.message);
+}
+
 const command = process.argv[2]?.toLowerCase() || "help";
 
 switch (command) {
@@ -149,6 +170,9 @@ switch (command) {
     break;
   case "populate-5ecompatible":
     cmdPopulate5ecompatible();
+    break;
+  case "populate-orcus":
+    cmdPopulateOrcus();
     break;
   case "help":
   case "--help":

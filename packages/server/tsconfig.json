@@ -9,6 +9,9 @@
   "references": [
     { "path": "../shared" },
     { "path": "../ogl" },
-    { "path": "../dw" }
+    { "path": "../dw" },
+    { "path": "../brp" },
+    { "path": "../5ecompatible" },
+    { "path": "../orcus" }
   ]
 }
