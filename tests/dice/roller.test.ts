@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { parseDiceNotation, roll2d6, rollCustom } from "@2d6mcp/shared/dice";
+import {
+  parseDiceNotation,
+  parseDamageNotation,
+  roll2d6,
+  rollCustom,
+  rollDamage,
+} from "@2d6mcp/shared/dice";
 
 describe("parseDiceNotation", () => {
   it("parses basic 2d6", () => {
@@ -160,5 +166,44 @@ describe("rollCustom", () => {
 
   it("throws on invalid notation", () => {
     expect(() => rollCustom("invalid")).toThrow();
+  });
+});
+
+describe("parseDamageNotation", () => {
+  it("parses basic damage dice", () => {
+    expect(parseDamageNotation("2d6")).toEqual({
+      count: 2,
+      sides: 6,
+      modifier: 0,
+      damageType: null,
+    });
+  });
+
+  it("parses modifier and damage type", () => {
+    expect(parseDamageNotation("2d6+3 fire")).toEqual({
+      count: 2,
+      sides: 6,
+      modifier: 3,
+      damageType: "fire",
+    });
+  });
+
+  it("rejects overlong notation to avoid ReDoS", () => {
+    const long = "2d6 " + "a".repeat(200);
+    expect(() => parseDamageNotation(long)).toThrow("Invalid damage notation");
+  });
+
+  it("rejects adversarial repeated-space payloads quickly", () => {
+    const adversarial = "2d6" + " ".repeat(10_000) + "fire";
+    expect(() => parseDamageNotation(adversarial)).toThrow("Invalid damage notation");
+  });
+});
+
+describe("rollDamage", () => {
+  it("rolls damage with type in description", () => {
+    const result = rollDamage("1d6+1 slashing");
+    expect(result.dice).toHaveLength(1);
+    expect(result.damageType).toBe("slashing");
+    expect(result.description).toContain("slashing");
   });
 });
