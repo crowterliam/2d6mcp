@@ -253,7 +253,7 @@ export function rollPercentile(
 // Damage dice parser & roller — parses expressions like "2d6+3 fire"
 // ---------------------------------------------------------------------------
 
-const DAMAGE_REGEX = /^(\d+)?d(\d+)([+-]\d+)?(?:\s+(.+))?$/i;
+const MAX_NOTATION_LENGTH = 100;
 
 export interface RollDamageResult {
   dice: number[];
@@ -270,22 +270,29 @@ export function parseDamageNotation(notation: string): {
   modifier: number;
   damageType: string | null;
 } {
-  const match = notation.trim().match(DAMAGE_REGEX);
-  if (!match) {
+  const trimmed = notation.trim();
+  if (trimmed.length === 0 || trimmed.length > MAX_NOTATION_LENGTH) {
     throw new Error(
       `Invalid damage notation: "${notation}". Expected format like "2d6", "2d6+3 fire", "1d8 piercing".`
     );
   }
-  const count = match[1] ? parseInt(match[1], 10) : 1;
-  const sides = parseInt(match[2], 10);
-  const modifier = match[3] ? parseInt(match[3], 10) : 0;
-  const damageType = match[4] ? match[4].trim() : null;
 
-  if (sides < 2) throw new Error("Damage dice must have at least 2 sides.");
-  if (count < 1) throw new Error("Must roll at least 1 damage die.");
-  if (count > 100) throw new Error("Cannot roll more than 100 damage dice.");
+  const spaceIdx = trimmed.indexOf(" ");
+  const dicePart = spaceIdx === -1 ? trimmed : trimmed.slice(0, spaceIdx);
+  const damageType =
+    spaceIdx === -1 ? null : trimmed.slice(spaceIdx + 1).trim() || null;
 
-  return { count, sides, modifier, damageType };
+  const parsed = parseDiceNotation(dicePart);
+  if (parsed.sides < 2) throw new Error("Damage dice must have at least 2 sides.");
+  if (parsed.count < 1) throw new Error("Must roll at least 1 damage die.");
+  if (parsed.count > 100) throw new Error("Cannot roll more than 100 damage dice.");
+
+  return {
+    count: parsed.count,
+    sides: parsed.sides,
+    modifier: parsed.modifier,
+    damageType,
+  };
 }
 
 export function rollDamage(notation: string): RollDamageResult {
