@@ -12,9 +12,15 @@ dist/
 .wrangler/
 wrangler.toml
 
+# macOS system files
+.DS_Store
+
 # Build artifacts
 *.tsbuildinfo
 coverage/
+
+# Node ABI version cache (auto-generated)
+.node-version-cache
 
 # Generated seed files
 **/seed.sql
@@ -24,3 +30,5 @@ tests/audio/fixtures/
 
 # BYOD integration test — references copyrighted PDF content
 tests/byod/byod-integration.test.ts
+ships
+.kilo/agent/rules/ship-design.md

@@ -7,10 +7,8 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { loadConfig } from "./config.js";
-import { checkByodConsent } from "./byod/gate.js";
 import { getToolDefinitions, dispatchToolCall } from "./tools/index.js";
-import { ensureOglDb, ensureDwDb, ensureOrcusDb, syncByodIndex, getServerVersion } from "./tools/helpers.js";
+import { ensureOglDb, ensureDwDb, ensureOrcusDb, getServerVersion } from "./tools/helpers.js";
 
 export async function startServer(): Promise<void> {
   const version = getServerVersion();
@@ -41,21 +39,6 @@ export async function startServer(): Promise<void> {
   ensureOglDb();
   ensureDwDb();
   ensureOrcusDb();
-
-  const config = loadConfig();
-  const consent = checkByodConsent();
-  if (consent.allowed) {
-    setImmediate(() => {
-      syncByodIndex(config)
-        .then((result) => {
-          process.stderr.write(`2d6mcp: ${result.message}\n`);
-        })
-        .catch((err: unknown) => {
-          const msg = err instanceof Error ? err.message : "Unknown error";
-          process.stderr.write(`2d6mcp: BYOD sync failed: ${msg}\n`);
-        });
-    });
-  }
 
   await server.connect(transport);
 }

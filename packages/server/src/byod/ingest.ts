@@ -4,7 +4,6 @@
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, extname, resolve } from "node:path";
 import { createHash } from "node:crypto";
-import { PDFParse } from "pdf-parse";
 import { DOMParser } from "@xmldom/xmldom";
 
 const TEXT_EXTENSIONS = new Set([".txt", ".json", ".xml", ".csv"]);
@@ -369,6 +368,19 @@ async function ingestPdfFile(
   file: IngestedFile,
   options: IngestOptions
 ): Promise<IngestedChunk[]> {
+  if (typeof (globalThis as Record<string, unknown>).DOMMatrix === "undefined") {
+    (globalThis as Record<string, unknown>).DOMMatrix = class {
+      a = 1; b = 0; c = 0; d = 1; e = 0; f = 0;
+      get is2D() { return true; }
+      get isIdentity() { return this.a === 1 && this.b === 0 && this.c === 0 && this.d === 1 && this.e === 0 && this.f === 0; }
+      translate(x: number, y: number) { this.e += x; this.f += y; return this as unknown; }
+      scale(sx: number, sy = sx) { this.a *= sx; this.d *= sy; return this as unknown; }
+      multiply() { return this as unknown; }
+      transformPoint(p: { x: number; y: number }) { return p; }
+      inverse() { return new ((globalThis as Record<string, unknown>).DOMMatrix as new () => unknown)(); }
+    };
+  }
+  const { PDFParse } = await import("pdf-parse");
   const pdf = new PDFParse({ data: readFileSync(file.path) });
 
   try {
