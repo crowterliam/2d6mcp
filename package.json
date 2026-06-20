@@ -22,7 +22,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --build --noEmit",
-    "lint": "echo 'lint not configured'"
+    "lint": "echo 'lint not configured'",
+    "postinstall": "npm rebuild better-sqlite3 && node -e \"require('fs').writeFileSync(require('path').join(__dirname,'node_modules/better-sqlite3/build/Release/.node-abi'), process.versions.modules)\""
   },
   "license": "AGPL-3.0-only",
   "author": "Jupiter Industries <liam@evaunit.one> (https://jupiter.industries)",
@@ -46,5 +47,8 @@
     "form-data": "^4.0.4",
     "shell-quote": "^1.8.4",
     "postcss": "^8.5.10"
+  },
+  "dependencies": {
+    "better-sqlite3": "11.10.0"
   }
 }

@@ -165,7 +165,8 @@ export async function syncFile(
   }
 
   const stat = statSync(resolved);
-  if (stat.size > 50 * 1024 * 1024) {
+  if (stat.size > config.byodMaxFileSize) {
+    const limitMb = (config.byodMaxFileSize / (1024 * 1024)).toFixed(0);
     return {
       relativePath,
       fileName: name,
@@ -174,7 +175,7 @@ export async function syncFile(
       status: "failed",
       chunks: 0,
       elapsedMs: 0,
-      message: `File exceeds 50 MB limit (${(stat.size / (1024 * 1024)).toFixed(1)} MB).`,
+      message: `File exceeds ${limitMb} MB limit (${(stat.size / (1024 * 1024)).toFixed(1)} MB).`,
     };
   }
 
