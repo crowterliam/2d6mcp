@@ -7,10 +7,7 @@
 // Open Game License v1.0a.
 
 import Database from "better-sqlite3";
-
-function sanitizeFts5Query(term: string): string {
-  return term.replace(/[*"()^]/g, "").trim();
-}
+import { fts5QueryStrategy, searchWithFuzzyFallback } from "@2d6mcp/shared";
 
 export interface RuleSearchResult {
   title: string;
@@ -30,21 +27,22 @@ export function searchOglRules(db: Database.Database, searchTerm: string): RuleS
     LIMIT 20
   `);
 
-  const safeTerm = sanitizeFts5Query(searchTerm);
-  if (!safeTerm) return [];
-
-  try {
-    const rows = ftsQuery.all(safeTerm) as { section: string; subsection: string | null; snippet: string }[];
-    for (const row of rows) {
-      results.push({
-        title: row.subsection || row.section,
-        snippet: row.snippet,
-        section: row.section,
-        subsection: row.subsection,
-      });
+  // Try exact → prefix-wildcard → fuzzy OR, stopping at the first match
+  for (const ftsMatch of fts5QueryStrategy(searchTerm)) {
+    try {
+      const rows = ftsQuery.all(ftsMatch) as { section: string; subsection: string | null; snippet: string }[];
+      for (const row of rows) {
+        results.push({
+          title: row.subsection || row.section,
+          snippet: row.snippet,
+          section: row.section,
+          subsection: row.subsection,
+        });
+      }
+      if (results.length > 0) return results;
+    } catch {
+      // FTS5 may error on malformed queries; try next strategy
     }
-  } catch {
-    // FTS5 may error on malformed queries; fall through
   }
 
   return results;
@@ -90,8 +88,9 @@ export function searchOglSkills(
     ORDER BY name
     LIMIT 20
   `);
-  const like = `%${searchTerm}%`;
-  return stmt.all(like, like) as { name: string; description: string; characteristic: string }[];
+  return searchWithFuzzyFallback(searchTerm, (term) =>
+    stmt.all(`%${term}%`, `%${term}%`) as { name: string; description: string; characteristic: string }[]
+  );
 }
 
 export function searchOglCareers(
@@ -105,8 +104,9 @@ export function searchOglCareers(
     ORDER BY name
     LIMIT 20
   `);
-  const like = `%${searchTerm}%`;
-  return stmt.all(like, like) as { name: string; description: string; qualification: string }[];
+  return searchWithFuzzyFallback(searchTerm, (term) =>
+    stmt.all(`%${term}%`, `%${term}%`) as { name: string; description: string; qualification: string }[]
+  );
 }
 
 export function searchOglEquipment(
@@ -120,9 +120,14 @@ export function searchOglEquipment(
     ORDER BY name
     LIMIT 20
   `);
-  const like = `%${searchTerm}%`;
-  const rows = stmt.all(like, like, like) as { name: string; category: string; tech_level: number; cost: string; description: string }[];
-  return rows.map((r) => ({
+  return searchWithFuzzyFallback(
+    searchTerm,
+    (term) =>
+      stmt.all(`%${term}%`, `%${term}%`, `%${term}%`) as {
+        name: string; category: string; tech_level: number; cost: string; description: string;
+      }[],
+    (r) => r.name,
+  ).map((r) => ({
     name: r.name,
     category: r.category,
     techLevel: r.tech_level,
@@ -147,22 +152,31 @@ export function listOglTables(db: Database.Database): { name: string; descriptio
 }
 
 export function searchCombat(db: Database.Database, searchTerm: string): { topic: string; content: string; category: string }[] {
-  const like = `%${searchTerm}%`;
-  return db.prepare(
+  const stmt = db.prepare(
     "SELECT topic, content, category FROM combat WHERE topic LIKE ? OR content LIKE ? OR category LIKE ? ORDER BY category, topic LIMIT 20"
-  ).all(like, like, like) as { topic: string; content: string; category: string }[];
+  );
+  return searchWithFuzzyFallback(searchTerm, (term) =>
+    stmt.all(`%${term}%`, `%${term}%`, `%${term}%`) as { topic: string; content: string; category: string }[],
+    (r) => `${r.category}:${r.topic}`,
+  );
 }
 
 export function searchShipOps(db: Database.Database, searchTerm: string): { topic: string; content: string; category: string }[] {
-  const like = `%${searchTerm}%`;
-  return db.prepare(
+  const stmt = db.prepare(
     "SELECT topic, content, category FROM starship_operations WHERE topic LIKE ? OR content LIKE ? OR category LIKE ? ORDER BY category, topic LIMIT 20"
-  ).all(like, like, like) as { topic: string; content: string; category: string }[];
+  );
+  return searchWithFuzzyFallback(searchTerm, (term) =>
+    stmt.all(`%${term}%`, `%${term}%`, `%${term}%`) as { topic: string; content: string; category: string }[],
+    (r) => `${r.category}:${r.topic}`,
+  );
 }
 
 export function searchWorldBuilding(db: Database.Database, searchTerm: string): { topic: string; content: string; category: string }[] {
-  const like = `%${searchTerm}%`;
-  return db.prepare(
+  const stmt = db.prepare(
     "SELECT topic, content, category FROM world_building WHERE topic LIKE ? OR content LIKE ? OR category LIKE ? ORDER BY category, topic LIMIT 20"
-  ).all(like, like, like) as { topic: string; content: string; category: string }[];
+  );
+  return searchWithFuzzyFallback(searchTerm, (term) =>
+    stmt.all(`%${term}%`, `%${term}%`, `%${term}%`) as { topic: string; content: string; category: string }[],
+    (r) => `${r.category}:${r.topic}`,
+  );
 }

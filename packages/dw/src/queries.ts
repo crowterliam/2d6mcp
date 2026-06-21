@@ -8,10 +8,7 @@
 // governed by the Creative Commons Attribution 3.0 Unported License.
 
 import Database from "better-sqlite3";
-
-function sanitizeFts5Query(term: string): string {
-  return term.replace(/[*"()^]/g, "").trim();
-}
+import { fts5QueryStrategy, searchWithFuzzyFallback } from "@2d6mcp/shared";
 
 export interface DwMove {
   name: string;
@@ -85,9 +82,6 @@ export interface DwSearchResult {
 }
 
 export function searchDwRules(db: Database.Database, searchTerm: string): DwSearchResult[] {
-  const safeTerm = sanitizeFts5Query(searchTerm);
-  if (!safeTerm) return [];
-
   const stmt = db.prepare(`
     SELECT section_title, subsection_title, snippet(dw_sections_fts, 0, '<mark>', '</mark>', '...', 40) AS snippet
     FROM dw_sections_fts
@@ -96,59 +90,84 @@ export function searchDwRules(db: Database.Database, searchTerm: string): DwSear
     LIMIT 20
   `);
 
-  try {
-    const rows = stmt.all(safeTerm) as { section_title: string; subsection_title: string | null; snippet: string }[];
-    return rows.map((r) => ({
-      title: r.subsection_title || r.section_title,
-      snippet: r.snippet,
-      section: r.section_title,
-      subsection: r.subsection_title,
-    }));
-  } catch {
-    return [];
+  // Try exact → prefix-wildcard → fuzzy OR, stopping at the first match
+  for (const ftsMatch of fts5QueryStrategy(searchTerm)) {
+    try {
+      const rows = stmt.all(ftsMatch) as { section_title: string; subsection_title: string | null; snippet: string }[];
+      if (rows.length > 0) {
+        return rows.map((r) => ({
+          title: r.subsection_title || r.section_title,
+          snippet: r.snippet,
+          section: r.section_title,
+          subsection: r.subsection_title,
+        }));
+      }
+    } catch {
+      // FTS5 may error on malformed queries; try next strategy
+    }
   }
+
+  return [];
 }
 
 export function searchDwMoves(db: Database.Database, searchTerm: string): DwMove[] {
-  const like = `%${searchTerm}%`;
-  return db.prepare(
+  const stmt = db.prepare(
     "SELECT name, description, stat, category, on_success, on_partial, on_miss, source_class FROM dw_moves WHERE name LIKE ? OR description LIKE ? OR category LIKE ? ORDER BY category, name LIMIT 20"
-  ).all(like, like, like) as DwMove[];
+  );
+  return searchWithFuzzyFallback(searchTerm, (term) =>
+    stmt.all(`%${term}%`, `%${term}%`, `%${term}%`) as DwMove[],
+    (m) => m.name,
+  );
 }
 
 export function searchDwClasses(db: Database.Database, searchTerm: string): DwClass[] {
-  const like = `%${searchTerm}%`;
-  return db.prepare(
+  const stmt = db.prepare(
     "SELECT name, description, base_hp, base_damage, names, look, stats, alignment, bonds, starting_moves, advanced_moves FROM dw_classes WHERE name LIKE ? OR description LIKE ? ORDER BY name LIMIT 20"
-  ).all(like, like) as DwClass[];
+  );
+  return searchWithFuzzyFallback(searchTerm, (term) =>
+    stmt.all(`%${term}%`, `%${term}%`) as DwClass[],
+    (c) => c.name,
+  );
 }
 
 export function searchDwSpells(db: Database.Database, searchTerm: string): DwSpell[] {
-  const like = `%${searchTerm}%`;
-  return db.prepare(
+  const stmt = db.prepare(
     "SELECT name, level, spell_class, tags, description FROM dw_spells WHERE name LIKE ? OR description LIKE ? OR spell_class LIKE ? ORDER BY level, name LIMIT 30"
-  ).all(like, like, like) as DwSpell[];
+  );
+  return searchWithFuzzyFallback(searchTerm, (term) =>
+    stmt.all(`%${term}%`, `%${term}%`, `%${term}%`) as DwSpell[],
+    (s) => `${s.spell_class}:${s.name}`,
+  );
 }
 
 export function searchDwEquipment(db: Database.Database, searchTerm: string): DwEquipment[] {
-  const like = `%${searchTerm}%`;
-  return db.prepare(
+  const stmt = db.prepare(
     "SELECT name, category, tags, cost, weight, damage, armor, description FROM dw_equipment WHERE name LIKE ? OR category LIKE ? OR tags LIKE ? OR description LIKE ? ORDER BY category, name LIMIT 30"
-  ).all(like, like, like, like) as DwEquipment[];
+  );
+  return searchWithFuzzyFallback(searchTerm, (term) =>
+    stmt.all(`%${term}%`, `%${term}%`, `%${term}%`, `%${term}%`) as DwEquipment[],
+    (e) => `${e.category}:${e.name}`,
+  );
 }
 
 export function searchDwMonsters(db: Database.Database, searchTerm: string): DwMonster[] {
-  const like = `%${searchTerm}%`;
-  return db.prepare(
+  const stmt = db.prepare(
     "SELECT name, tags, damage, hp, armor, attack_tags, special_qualities, description, instinct, moves, source_setting FROM dw_monsters WHERE name LIKE ? OR tags LIKE ? OR instinct LIKE ? OR source_setting LIKE ? ORDER BY source_setting, name LIMIT 30"
-  ).all(like, like, like, like) as DwMonster[];
+  );
+  return searchWithFuzzyFallback(searchTerm, (term) =>
+    stmt.all(`%${term}%`, `%${term}%`, `%${term}%`, `%${term}%`) as DwMonster[],
+    (m) => `${m.source_setting}:${m.name}`,
+  );
 }
 
 export function searchDwGmTools(db: Database.Database, searchTerm: string): DwGmTool[] {
-  const like = `%${searchTerm}%`;
-  return db.prepare(
+  const stmt = db.prepare(
     "SELECT topic, content, category FROM dw_gm_tools WHERE topic LIKE ? OR content LIKE ? OR category LIKE ? ORDER BY category, topic LIMIT 30"
-  ).all(like, like, like) as DwGmTool[];
+  );
+  return searchWithFuzzyFallback(searchTerm, (term) =>
+    stmt.all(`%${term}%`, `%${term}%`, `%${term}%`) as DwGmTool[],
+    (g) => `${g.category ?? ""}:${g.topic}`,
+  );
 }
 
 export function listDwMoveCategories(db: Database.Database): { category: string; count: number }[] {
