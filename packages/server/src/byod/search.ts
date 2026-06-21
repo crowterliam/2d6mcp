@@ -5,25 +5,8 @@ import Database from "better-sqlite3";
 import { existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { createHash } from "node:crypto";
+import { fts5QueryStrategy } from "@2d6mcp/shared";
 import { PROJECT_ROOT } from "../config.js";
-
-function sanitizeFts5Query(term: string): string {
-  let cleaned = term.replace(/[\x00-\x1F\x7F]/g, "").trim();
-  if (!cleaned) return "";
-
-  cleaned = cleaned.replace(/"(?:(?!").)*"/g, (m) => m);
-
-  const outsideQuotes = cleaned.replace(/"(?:(?!").)*"/g, "");
-  if (outsideQuotes.includes("*")) {
-    cleaned = cleaned
-      .replace(/(\S)\*+/g, "$1*")
-      .replace(/\*(\S)/g, "* $1");
-  }
-
-  cleaned = cleaned.replace(/[()^]/g, "");
-
-  return cleaned.trim();
-}
 
 const BYOD_DB_PREFIX = "byod_ws_";
 const BYOD_DB_SUFFIX = ".db";
@@ -364,24 +347,14 @@ function tryFts5Query(
   }
 }
 
-function tokenizeForOr(safeTerm: string): string | null {
-  const tokens = safeTerm
-    .split(/\s+/)
-    .map((t) => sanitizeFts5Query(t).trim())
-    .filter((t) => t.length > 0);
-
-  if (tokens.length < 3) return null;
-
-  return tokens.join(" OR ");
-}
-
 export function searchByodIndex(
   db: Database.Database,
   searchTerm: string,
   limit = 20
 ): SearchResult[] {
-  const safeTerm = sanitizeFts5Query(searchTerm);
-  if (!safeTerm) return [];
+  // Try exact → prefix-wildcard → fuzzy OR, stopping at the first match
+  const strategies = fts5QueryStrategy(searchTerm);
+  if (strategies.length === 0) return [];
 
   const stmt = db.prepare(`
     SELECT byod_fts.title, snippet(byod_fts, 1, '<mark>', '</mark>', '...', 64) AS snippet, byod_fts.file_name, byod_chunks.file_path
@@ -392,15 +365,12 @@ export function searchByodIndex(
     LIMIT ?
   `);
 
-  let results = tryFts5Query(db, stmt, safeTerm, limit);
-  if (results.length > 0) return results;
-
-  const orQuery = tokenizeForOr(safeTerm);
-  if (orQuery) {
-    results = tryFts5Query(db, stmt, orQuery, limit);
+  for (const ftsMatch of strategies) {
+    const results = tryFts5Query(db, stmt, ftsMatch, limit);
+    if (results.length > 0) return results;
   }
 
-  return results;
+  return [];
 }
 
 export function closeByodDatabase(byodPath?: string): void {

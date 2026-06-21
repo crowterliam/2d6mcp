@@ -200,7 +200,7 @@ packages/shared/src/
   index.ts             # Re-exports all modules
   dice.ts              # parseDiceNotation, roll2d6, rollD20, rollPercentile, rollDamage, rollCustom
   tables.ts            # rollOnTable, normalizeDiceType, rollD66
-  keywords.ts          # extractKeywords, fuzzyAlternatives, fuzzyKeywordList, STOPWORDS
+  keywords.ts          # extractKeywords, fuzzyAlternatives, fuzzyKeywordList, STOPWORDS, FTS5/LIKE fuzzy query builders (sanitizeFts5Query, buildPrefixFtsQuery, buildFuzzyFtsQuery, fts5QueryStrategy, fuzzyLikeVariants, searchWithFuzzyFallback, levenshtein/OSA)
   prompts.ts           # DEFAULT_SYSTEM_PROMPT, SYSTEM_PROMPT_LARGE, quality filter
   types.ts             # Shared interfaces (RulingResult, RulingSource, etc.)
 ```

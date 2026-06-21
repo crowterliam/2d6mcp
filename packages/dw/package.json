@@ -17,6 +17,7 @@
   },
   "license": "AGPL-3.0-only",
   "dependencies": {
+    "@2d6mcp/shared": "*",
     "better-sqlite3": "^11.8.0"
   }
 }

@@ -13,10 +13,7 @@
 // Used with permission.
 
 import Database from "better-sqlite3";
-
-function sanitizeFts5Query(term: string): string {
-  return term.replace(/[*"()^]/g, "").trim();
-}
+import { fts5QueryStrategy, searchWithFuzzyFallback } from "@2d6mcp/shared";
 
 export interface BrpSearchResult {
   title: string;
@@ -36,21 +33,22 @@ export function searchBrpRules(db: Database.Database, searchTerm: string): BrpSe
     LIMIT 20
   `);
 
-  const safeTerm = sanitizeFts5Query(searchTerm);
-  if (!safeTerm) return [];
-
-  try {
-    const rows = ftsQuery.all(safeTerm) as { section: string; subsection: string | null; snippet: string }[];
-    for (const row of rows) {
-      results.push({
-        title: row.subsection || row.section,
-        snippet: row.snippet,
-        section: row.section,
-        subsection: row.subsection,
-      });
+  // Try exact → prefix-wildcard → fuzzy OR, stopping at the first match
+  for (const ftsMatch of fts5QueryStrategy(searchTerm)) {
+    try {
+      const rows = ftsQuery.all(ftsMatch) as { section: string; subsection: string | null; snippet: string }[];
+      for (const row of rows) {
+        results.push({
+          title: row.subsection || row.section,
+          snippet: row.snippet,
+          section: row.section,
+          subsection: row.subsection,
+        });
+      }
+      if (results.length > 0) return results;
+    } catch {
+      // FTS5 may error on malformed queries; try next strategy
     }
-  } catch {
-    // FTS5 may error on malformed queries; fall through
   }
 
   return results;
@@ -75,11 +73,14 @@ export function searchBrpCharacteristics(
     ORDER BY name
     LIMIT 20
   `);
-  const like = `%${searchTerm}%`;
-  const rows = stmt.all(like, like, like) as {
-    name: string; abbreviation: string; dice: string; description: string; characteristic_roll: string;
-  }[];
-  return rows.map((r) => ({
+  return searchWithFuzzyFallback(
+    searchTerm,
+    (term) =>
+      stmt.all(`%${term}%`, `%${term}%`, `%${term}%`) as {
+        name: string; abbreviation: string; dice: string; description: string; characteristic_roll: string;
+      }[],
+    (r) => r.name,
+  ).map((r) => ({
     name: r.name,
     abbreviation: r.abbreviation,
     dice: r.dice,
@@ -105,8 +106,10 @@ export function searchBrpDerivedCharacteristics(
     ORDER BY name
     LIMIT 20
   `);
-  const like = `%${searchTerm}%`;
-  return stmt.all(like, like) as DerivedCharacteristicResult[];
+  return searchWithFuzzyFallback(searchTerm, (term) =>
+    stmt.all(`%${term}%`, `%${term}%`) as DerivedCharacteristicResult[],
+    (r) => r.name,
+  );
 }
 
 export interface SkillResult {
@@ -127,11 +130,14 @@ export function searchBrpSkills(
     ORDER BY name
     LIMIT 30
   `);
-  const like = `%${searchTerm}%`;
-  const rows = stmt.all(like, like) as {
-    name: string; base_chance: string; description: string; specialty_note: string | null;
-  }[];
-  return rows.map((r) => ({
+  return searchWithFuzzyFallback(
+    searchTerm,
+    (term) =>
+      stmt.all(`%${term}%`, `%${term}%`) as {
+        name: string; base_chance: string; description: string; specialty_note: string | null;
+      }[],
+    (r) => r.name,
+  ).map((r) => ({
     name: r.name,
     baseChance: r.base_chance,
     description: r.description,
@@ -156,11 +162,14 @@ export function searchBrpProfessions(
     ORDER BY name
     LIMIT 20
   `);
-  const like = `%${searchTerm}%`;
-  const rows = stmt.all(like, like) as {
-    name: string; description: string; professional_skills: string;
-  }[];
-  return rows.map((r) => ({
+  return searchWithFuzzyFallback(
+    searchTerm,
+    (term) =>
+      stmt.all(`%${term}%`, `%${term}%`) as {
+        name: string; description: string; professional_skills: string;
+      }[],
+    (r) => r.name,
+  ).map((r) => ({
     name: r.name,
     description: r.description,
     professionalSkills: r.professional_skills,
@@ -188,11 +197,14 @@ export function searchBrpWeaponsMelee(
     ORDER BY name
     LIMIT 30
   `);
-  const like = `%${searchTerm}%`;
-  const rows = stmt.all(like, like, like) as {
-    name: string; skill: string; base_chance: number; damage: string; hands: string; hit_points: number; range: string | null;
-  }[];
-  return rows.map((r) => ({
+  return searchWithFuzzyFallback(
+    searchTerm,
+    (term) =>
+      stmt.all(`%${term}%`, `%${term}%`, `%${term}%`) as {
+        name: string; skill: string; base_chance: number; damage: string; hands: string; hit_points: number; range: string | null;
+      }[],
+    (r) => r.name,
+  ).map((r) => ({
     name: r.name,
     skill: r.skill,
     baseChance: r.base_chance,
@@ -225,11 +237,14 @@ export function searchBrpWeaponsMissile(
     ORDER BY name
     LIMIT 30
   `);
-  const like = `%${searchTerm}%`;
-  const rows = stmt.all(like, like, like) as {
-    name: string; skill: string; base_chance: number; damage: string; hands: string; hit_points: number; range: string; notes: string | null;
-  }[];
-  return rows.map((r) => ({
+  return searchWithFuzzyFallback(
+    searchTerm,
+    (term) =>
+      stmt.all(`%${term}%`, `%${term}%`, `%${term}%`) as {
+        name: string; skill: string; base_chance: number; damage: string; hands: string; hit_points: number; range: string; notes: string | null;
+      }[],
+    (r) => r.name,
+  ).map((r) => ({
     name: r.name,
     skill: r.skill,
     baseChance: r.base_chance,
@@ -258,11 +273,14 @@ export function searchBrpArmor(
     ORDER BY name
     LIMIT 20
   `);
-  const like = `%${searchTerm}%`;
-  const rows = stmt.all(like) as {
-    name: string; armor_points: number; skill_modifier: string;
-  }[];
-  return rows.map((r) => ({
+  return searchWithFuzzyFallback(
+    searchTerm,
+    (term) =>
+      stmt.all(`%${term}%`) as {
+        name: string; armor_points: number; skill_modifier: string;
+      }[],
+    (r) => r.name,
+  ).map((r) => ({
     name: r.name,
     armorPoints: r.armor_points,
     skillModifier: r.skill_modifier,
@@ -288,11 +306,14 @@ export function searchBrpShields(
     ORDER BY name
     LIMIT 20
   `);
-  const like = `%${searchTerm}%`;
-  const rows = stmt.all(like) as {
-    name: string; base_chance: number; skill: string; hit_points: number; damage: string;
-  }[];
-  return rows.map((r) => ({
+  return searchWithFuzzyFallback(
+    searchTerm,
+    (term) =>
+      stmt.all(`%${term}%`) as {
+        name: string; base_chance: number; skill: string; hit_points: number; damage: string;
+      }[],
+    (r) => r.name,
+  ).map((r) => ({
     name: r.name,
     baseChance: r.base_chance,
     skill: r.skill,
@@ -318,8 +339,10 @@ export function searchBrpSpotRules(
     ORDER BY category, topic
     LIMIT 30
   `);
-  const like = `%${searchTerm}%`;
-  return stmt.all(like, like, like) as SpotRuleResult[];
+  return searchWithFuzzyFallback(searchTerm, (term) =>
+    stmt.all(`%${term}%`, `%${term}%`, `%${term}%`) as SpotRuleResult[],
+    (r) => `${r.category}:${r.topic}`,
+  );
 }
 
 export interface SampleFoeResult {
@@ -344,11 +367,14 @@ export function searchBrpSampleFoes(
     ORDER BY name
     LIMIT 10
   `);
-  const like = `%${searchTerm}%`;
-  const rows = stmt.all(like, like, like) as {
-    name: string; characteristics: string; move: number; hit_points: number; damage_bonus: string; armor: string; skills: string; attacks: string;
-  }[];
-  return rows.map((r) => ({
+  return searchWithFuzzyFallback(
+    searchTerm,
+    (term) =>
+      stmt.all(`%${term}%`, `%${term}%`, `%${term}%`) as {
+        name: string; characteristics: string; move: number; hit_points: number; damage_bonus: string; armor: string; skills: string; attacks: string;
+      }[],
+    (r) => r.name,
+  ).map((r) => ({
     name: r.name,
     characteristics: r.characteristics,
     move: r.move,
