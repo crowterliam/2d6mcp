@@ -6,10 +6,7 @@
 // database. The code itself is AGPL-3.0-only. The data it retrieves is governed by OGL v1.0a.
 
 import Database from "better-sqlite3";
-
-function sanitizeFts5Query(term: string): string {
-  return term.replace(/[*"()^]/g, "").trim();
-}
+import { fts5QueryStrategy, searchWithFuzzyFallback } from "@2d6mcp/shared";
 
 export interface OrcusSearchResult {
   title: string;
@@ -29,21 +26,22 @@ export function searchOrcusRules(db: Database.Database, searchTerm: string): Orc
     LIMIT 20
   `);
 
-  const safeTerm = sanitizeFts5Query(searchTerm);
-  if (!safeTerm) return [];
-
-  try {
-    const rows = ftsQuery.all(safeTerm) as { section: string; topic: string | null; snippet: string }[];
-    for (const row of rows) {
-      results.push({
-        title: row.topic || row.section,
-        snippet: row.snippet,
-        section: row.section,
-        topic: row.topic,
-      });
+  // Try exact → prefix-wildcard → fuzzy OR, stopping at the first match
+  for (const ftsMatch of fts5QueryStrategy(searchTerm)) {
+    try {
+      const rows = ftsQuery.all(ftsMatch) as { section: string; topic: string | null; snippet: string }[];
+      for (const row of rows) {
+        results.push({
+          title: row.topic || row.section,
+          snippet: row.snippet,
+          section: row.section,
+          topic: row.topic,
+        });
+      }
+      if (results.length > 0) return results;
+    } catch {
+      // FTS5 may error on malformed queries; try next strategy
     }
-  } catch {
-    // FTS5 may error on malformed queries
   }
 
   return results;
@@ -74,14 +72,17 @@ export function searchOrcusClasses(db: Database.Database, searchTerm: string): O
     ORDER BY name
     LIMIT 20
   `);
-  const like = `%${searchTerm}%`;
-  const rows = stmt.all(like, like, like, like, like) as {
-    name: string; tradition: string; role: string; key_ability: string;
-    hit_points: string; recoveries: string; defenses: string;
-    armor_proficiencies: string; weapon_proficiencies: string;
-    trained_skills: string; talents: string; features: string; description: string;
-  }[];
-  return rows.map((r) => ({
+  return searchWithFuzzyFallback(
+    searchTerm,
+    (term) =>
+      stmt.all(`%${term}%`, `%${term}%`, `%${term}%`, `%${term}%`, `%${term}%`) as {
+        name: string; tradition: string; role: string; key_ability: string;
+        hit_points: string; recoveries: string; defenses: string;
+        armor_proficiencies: string; weapon_proficiencies: string;
+        trained_skills: string; talents: string; features: string; description: string;
+      }[],
+    (r) => r.name,
+  ).map((r) => ({
     name: r.name,
     tradition: r.tradition,
     role: r.role,
@@ -121,15 +122,18 @@ export function searchOrcusMonsters(db: Database.Database, searchTerm: string): 
     ORDER BY name
     LIMIT 30
   `);
-  const like = `%${searchTerm}%`;
-  const rows = stmt.all(like, like, like, like, like) as {
-    name: string; level_info: string; size: string; origin_type: string;
-    alignment: string; hp: string; ac: number; fort: number; ref: number; will: number;
-    speed: string; resistances: string | null; vulnerabilities: string | null;
-    immunities: string | null; traits: string | null; actions: string | null;
-    senses: string | null; description: string;
-  }[];
-  return rows.map((r) => ({
+  return searchWithFuzzyFallback(
+    searchTerm,
+    (term) =>
+      stmt.all(`%${term}%`, `%${term}%`, `%${term}%`, `%${term}%`, `%${term}%`) as {
+        name: string; level_info: string; size: string; origin_type: string;
+        alignment: string; hp: string; ac: number; fort: number; ref: number; will: number;
+        speed: string; resistances: string | null; vulnerabilities: string | null;
+        immunities: string | null; traits: string | null; actions: string | null;
+        senses: string | null; description: string;
+      }[],
+    (r) => r.name,
+  ).map((r) => ({
     name: r.name,
     levelInfo: r.level_info,
     size: r.size,
@@ -165,8 +169,10 @@ export function searchOrcusFeats(db: Database.Database, searchTerm: string): Orc
     ORDER BY name
     LIMIT 20
   `);
-  const like = `%${searchTerm}%`;
-  return stmt.all(like, like, like) as OrcusFeatResult[];
+  return searchWithFuzzyFallback(searchTerm, (term) =>
+    stmt.all(`%${term}%`, `%${term}%`, `%${term}%`) as OrcusFeatResult[],
+    (r) => r.name,
+  );
 }
 
 export function listOrcusClasses(db: Database.Database): { name: string; tradition: string; role: string }[] {

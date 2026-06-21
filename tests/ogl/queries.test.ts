@@ -56,6 +56,17 @@ describe("OGL queries against bundled database", () => {
       const results = searchOglRules(db, "");
       expect(results).toEqual([]);
     });
+
+    it("finds results via prefix fallback for partial words", () => {
+      // "comb" is a prefix of "combat" — should match via prefix-wildcard strategy
+      const results = searchOglRules(db, "comb");
+      expect(results.length).toBeGreaterThan(0);
+    });
+
+    it("does not return results for partial words that match nothing", () => {
+      const results = searchOglRules(db, "zzqqxx");
+      expect(results).toEqual([]);
+    });
   });
 
   describe("searchOglSkills", () => {
@@ -72,6 +83,13 @@ describe("OGL queries against bundled database", () => {
         expect(results[0]).toHaveProperty("description");
         expect(results[0]).toHaveProperty("characteristic");
       }
+    });
+
+    it("finds skills via fuzzy fallback for typos", () => {
+      // "Pliot" is a transposition of "Pilot" — should match via fuzzy fallback
+      const results = searchOglSkills(db, "Pliot");
+      expect(results.length).toBeGreaterThan(0);
+      expect(results.some((r) => r.name.toLowerCase().includes("pilot"))).toBe(true);
     });
   });
 

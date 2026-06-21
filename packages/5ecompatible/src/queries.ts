@@ -9,10 +9,7 @@
 // by Wizards of the Coast LLC. Licensed under CC-BY-4.0.
 
 import Database from "better-sqlite3";
-
-function sanitizeFts5Query(term: string): string {
-  return term.replace(/[*"()^]/g, "").trim();
-}
+import { fts5QueryStrategy, searchWithFuzzyFallback } from "@2d6mcp/shared";
 
 export interface Sr5eSearchResult {
   title: string;
@@ -32,21 +29,22 @@ export function search5ecompatibleRules(db: Database.Database, searchTerm: strin
     LIMIT 20
   `);
 
-  const safeTerm = sanitizeFts5Query(searchTerm);
-  if (!safeTerm) return [];
-
-  try {
-    const rows = ftsQuery.all(safeTerm) as { section: string; topic: string | null; snippet: string }[];
-    for (const row of rows) {
-      results.push({
-        title: row.topic || row.section,
-        snippet: row.snippet,
-        section: row.section,
-        topic: row.topic,
-      });
+  // Try exact → prefix-wildcard → fuzzy OR, stopping at the first match
+  for (const ftsMatch of fts5QueryStrategy(searchTerm)) {
+    try {
+      const rows = ftsQuery.all(ftsMatch) as { section: string; topic: string | null; snippet: string }[];
+      for (const row of rows) {
+        results.push({
+          title: row.topic || row.section,
+          snippet: row.snippet,
+          section: row.section,
+          topic: row.topic,
+        });
+      }
+      if (results.length > 0) return results;
+    } catch {
+      // FTS5 may error on malformed queries; try next strategy
     }
-  } catch {
-    // FTS5 may error on malformed queries; fall through
   }
 
   return results;
@@ -73,12 +71,15 @@ export function search5ecompatibleSpells(db: Database.Database, searchTerm: stri
     ORDER BY level, name
     LIMIT 30
   `);
-  const like = `%${searchTerm}%`;
-  const rows = stmt.all(like, like, like, like) as {
-    name: string; level: number; school: string; casting_time: string; range: string;
-    components: string; duration: string; classes: string; description: string; higher_level: string | null;
-  }[];
-  return rows.map((r) => ({
+  return searchWithFuzzyFallback(
+    searchTerm,
+    (term) =>
+      stmt.all(`%${term}%`, `%${term}%`, `%${term}%`, `%${term}%`) as {
+        name: string; level: number; school: string; casting_time: string; range: string;
+        components: string; duration: string; classes: string; description: string; higher_level: string | null;
+      }[],
+    (r) => r.name,
+  ).map((r) => ({
     name: r.name,
     level: r.level,
     school: r.school,
@@ -115,13 +116,16 @@ export function search5ecompatibleMonsters(db: Database.Database, searchTerm: st
     ORDER BY name
     LIMIT 20
   `);
-  const like = `%${searchTerm}%`;
-  const rows = stmt.all(like, like, like, like) as {
-    name: string; size: string; type: string; alignment: string; ac: number; hp: string; speed: string;
-    strength: number; dexterity: number; constitution: number; intelligence: number; wisdom: number; charisma: number;
-    challenge_rating: string; traits: string | null; actions: string | null; senses: string | null; languages: string | null;
-  }[];
-  return rows.map((r) => ({
+  return searchWithFuzzyFallback(
+    searchTerm,
+    (term) =>
+      stmt.all(`%${term}%`, `%${term}%`, `%${term}%`, `%${term}%`) as {
+        name: string; size: string; type: string; alignment: string; ac: number; hp: string; speed: string;
+        strength: number; dexterity: number; constitution: number; intelligence: number; wisdom: number; charisma: number;
+        challenge_rating: string; traits: string | null; actions: string | null; senses: string | null; languages: string | null;
+      }[],
+    (r) => r.name,
+  ).map((r) => ({
     name: r.name,
     size: r.size,
     type: r.type,
@@ -156,11 +160,14 @@ export function search5ecompatibleClasses(db: Database.Database, searchTerm: str
     ORDER BY name
     LIMIT 20
   `);
-  const like = `%${searchTerm}%`;
-  const rows = stmt.all(like, like, like) as {
-    name: string; hit_die: string; primary_ability: string; saving_throws: string; description: string;
-  }[];
-  return rows.map((r) => ({
+  return searchWithFuzzyFallback(
+    searchTerm,
+    (term) =>
+      stmt.all(`%${term}%`, `%${term}%`, `%${term}%`) as {
+        name: string; hit_die: string; primary_ability: string; saving_throws: string; description: string;
+      }[],
+    (r) => r.name,
+  ).map((r) => ({
     name: r.name,
     hitDie: r.hit_die,
     primaryAbility: r.primary_ability,
@@ -183,8 +190,10 @@ export function search5ecompatibleFeats(db: Database.Database, searchTerm: strin
     ORDER BY name
     LIMIT 20
   `);
-  const like = `%${searchTerm}%`;
-  return stmt.all(like, like) as Sr5eFeatResult[];
+  return searchWithFuzzyFallback(searchTerm, (term) =>
+    stmt.all(`%${term}%`, `%${term}%`) as Sr5eFeatResult[],
+    (r) => r.name,
+  );
 }
 
 export function list5ecompatibleSpells(db: Database.Database): { name: string; level: number; school: string }[] {

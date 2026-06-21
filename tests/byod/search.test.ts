@@ -147,6 +147,53 @@ describe("searchByodIndex", () => {
     expect(results).toEqual([]);
     closeByodDatabase(byodPath);
   });
+
+  it("finds results via prefix fallback for partial words", async () => {
+    const { getByodDatabase, indexChunks, rebuildByodFts, searchByodIndex, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
+    const byodPath = uniqueByodPath();
+    mkdirSync(byodPath, { recursive: true });
+    const db = getByodDatabase(byodPath);
+    indexChunks(db, "rules.md", "rules.md", ".md", 100, "h1", null, [
+      { title: "Combat Rules", content: "When attacking, roll 2d6 and add your skill modifier", chunkIndex: 0 },
+    ]);
+    rebuildByodFts(db);
+
+    // "comb" is a prefix of "combat" — should match via prefix-wildcard strategy
+    const results = searchByodIndex(db, "comb");
+    expect(results.length).toBeGreaterThanOrEqual(1);
+    closeByodDatabase(byodPath);
+  });
+
+  it("finds results via fuzzy fallback for typos", async () => {
+    const { getByodDatabase, indexChunks, rebuildByodFts, searchByodIndex, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
+    const byodPath = uniqueByodPath();
+    mkdirSync(byodPath, { recursive: true });
+    const db = getByodDatabase(byodPath);
+    indexChunks(db, "rules.md", "rules.md", ".md", 100, "h1", null, [
+      { title: "Equipment", content: "The laser rifle is a standard weapon with high accuracy", chunkIndex: 0 },
+    ]);
+    rebuildByodFts(db);
+
+    // "lasre" is a transposition of "laser" — should match via fuzzy strategy
+    const results = searchByodIndex(db, "lasre");
+    expect(results.length).toBeGreaterThanOrEqual(1);
+    closeByodDatabase(byodPath);
+  });
+
+  it("returns empty when nothing matches even with fuzzy", async () => {
+    const { getByodDatabase, indexChunks, rebuildByodFts, searchByodIndex, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
+    const byodPath = uniqueByodPath();
+    mkdirSync(byodPath, { recursive: true });
+    const db = getByodDatabase(byodPath);
+    indexChunks(db, "test.md", "test.md", ".md", 100, "h1", null, [
+      { title: "Stuff", content: "Random content here", chunkIndex: 0 },
+    ]);
+    rebuildByodFts(db);
+
+    const results = searchByodIndex(db, "zzqqxxyyww");
+    expect(results).toEqual([]);
+    closeByodDatabase(byodPath);
+  });
 });
 
 describe("hasIndexedFiles", () => {
