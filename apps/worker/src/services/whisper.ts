@@ -4,7 +4,7 @@
 export async function transcribeWithWhisper(ai: Ai, audioData: number[]): Promise<string> {
   const result = await ai.run("@cf/openai/whisper-large-v3-turbo", {
     audio: audioData,
-  }) as { text: string };
+  } as unknown as Ai_Cf_Openai_Whisper_Large_V3_Turbo_Input);
 
   return result.text || "";
 }
