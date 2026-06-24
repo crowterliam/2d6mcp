@@ -18,11 +18,11 @@
   "license": "AGPL-3.0-only",
   "dependencies": {
     "@2d6mcp/shared": "*",
-    "hono": "^4.12.23",
+    "hono": "^4.12.26",
     "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250501.0",
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.103.0"
   }
 }
