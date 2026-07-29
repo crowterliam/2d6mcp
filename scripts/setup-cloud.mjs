@@ -9,12 +9,13 @@
 import { execSync, exec } from "node:child_process";
 import { createInterface } from "node:readline";
 import { randomBytes } from "node:crypto";
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, writeFileSync, readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const workerDir = resolve(__dirname, "..", "apps", "worker");
+const ROOT = resolve(__dirname, "..");
+const workerDir = resolve(ROOT, "apps", "worker");
 
 interface SetupConfig {
   accountId: string;
@@ -171,6 +172,7 @@ async function main() {
 
   // ── Step 5: Generate JWT secret ──
   const jwtSecret = randomBytes(32).toString("hex");
+  const workerApiKey = randomBytes(32).toString("hex");
 
   // ── Step 6: Write wrangler.toml ──
   step("Writing wrangler.toml...");
@@ -239,12 +241,13 @@ WEB_URL = "https://2d6mcp.pages.dev"
 
   // ── Step 10: Set secrets ──
   step("Setting secrets...");
-  const secrets: Record<string, string> = {
+  const secrets = {
     DISCORD_BOT_TOKEN: discordToken,
     DISCORD_PUBLIC_KEY: discordPublicKey,
     DISCORD_CLIENT_ID: discordClientId,
     DISCORD_CLIENT_SECRET: discordClientSecret,
     JWT_SECRET: jwtSecret,
+    WORKER_API_KEY: workerApiKey,
     STRIPE_SECRET_KEY: "placeholder_stripe_key",
     STRIPE_WEBHOOK_SECRET: "placeholder_webhook_secret",
   };
@@ -261,6 +264,23 @@ WEB_URL = "https://2d6mcp.pages.dev"
     }
   }
   success("Secrets configured");
+  // Write bridge env without printing the secret (CodeQL: clear-text logging).
+  try {
+    const bridgeEnvPath = resolve(ROOT, "apps", "bridge", ".env");
+    const existing = existsSync(bridgeEnvPath) ? readFileSync(bridgeEnvPath, "utf8") : "";
+    const lines = existing
+      ? existing.split(/\r?\n/).filter((l) => l.length > 0 && !l.startsWith("WORKER_API_KEY="))
+      : [
+          `DISCORD_BOT_TOKEN=${discordToken}`,
+          "WORKER_URL=https://2d6mcp.YOUR-SUBDOMAIN.workers.dev",
+          "HEALTH_PORT=3000",
+        ];
+    lines.push(`WORKER_API_KEY=${workerApiKey}`);
+    writeFileSync(bridgeEnvPath, `${lines.join("\n")}\n`, { mode: 0o600 });
+    success("Wrote WORKER_API_KEY to apps/bridge/.env (file is gitignored)");
+  } catch {
+    warn("Could not write apps/bridge/.env — set WORKER_API_KEY there manually to match the Worker secret.");
+  }
 
   // ── Step 11: Deploy ──
   step("Deploying Worker...");

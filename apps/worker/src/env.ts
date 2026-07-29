@@ -12,7 +12,13 @@ export interface Env {
   JWT_SECRET: string;
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
+  /** Shared secret for bridge ↔ Worker HTTP (audio-ingest, ask, warm, push-to-ask). */
+  WORKER_API_KEY: string;
   BRIDGE_URL: string;
   API_URL: string;
   WEB_URL: string;
+  STRIPE_PRICE_STANDARD_MONTHLY?: string;
+  STRIPE_PRICE_STANDARD_ANNUAL?: string;
+  STRIPE_PRICE_PRO_MONTHLY?: string;
+  STRIPE_PRICE_PRO_ANNUAL?: string;
 }

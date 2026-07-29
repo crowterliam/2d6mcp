@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
 import { readFileSync, existsSync, statSync } from "node:fs";
-import { resolve, join, extname } from "node:path";
+import { resolve, join, extname, sep } from "node:path";
 import { loadConfig, PROJECT_ROOT, type Config } from "../config.js";
 import { populateOglDatabase } from "@2d6mcp/ogl/populate";
 import { populateDwDatabase } from "@2d6mcp/dw/populate";
@@ -52,7 +52,7 @@ export function resolveSafePath(filePath: string): string | null {
   }
 
   for (const root of allowedRoots) {
-    if (resolved === root || resolved.startsWith(root + "/")) {
+    if (resolved === root || resolved.startsWith(root + sep)) {
       return resolved;
     }
   }

@@ -14,3 +14,9 @@ if (!config.discordToken) {
   console.error("DISCORD_BOT_TOKEN is required. Set it in the environment.");
   process.exit(1);
 }
+
+if (!config.workerApiKey) {
+  console.warn(
+    "WORKER_API_KEY is not set. Audio ingest and Worker API calls will fail once the Worker requires it.",
+  );
+}

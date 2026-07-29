@@ -4,8 +4,16 @@
 import { Hono } from "hono";
 import type { Env } from "../env.js";
 import { roll2d6, rollCustom } from "@2d6mcp/shared/dice";
+import { requireWorkerApiKey } from "../middleware/api-key.js";
+import { rateLimitAsk } from "../middleware/rate-limit.js";
 
 const api = new Hono<{ Bindings: Env }>();
+
+api.use("/api/audio-ingest", requireWorkerApiKey);
+api.use("/api/transcribe", requireWorkerApiKey);
+api.use("/api/ask", requireWorkerApiKey);
+api.use("/api/roll", requireWorkerApiKey);
+api.use("/api/warm", requireWorkerApiKey);
 
 // ── Audio ingest from bridge ──
 api.post("/api/audio-ingest", async (c) => {
@@ -34,15 +42,21 @@ api.post("/api/transcribe", async (c) => {
   return c.json({ text });
 });
 
-// ── Ask (text-based ruling) ──
+// ── Ask (text-based ruling) — hosted rules: OGL + DW only ──
 api.post("/api/ask", async (c) => {
   const { question, rules_system } = await c.req.json<{ question: string; rules_system?: "ogl" | "dw" | "auto" }>();
   if (!question) return c.json({ error: "question is required" }, 400);
 
+  const guildId = c.req.query("guild_id");
+  const rateKey = guildId || "anonymous";
+  const limit = await rateLimitAsk(c.env, rateKey);
+  if (!limit.allowed) {
+    return c.json({ error: limit.message || "Rate limited" }, 429);
+  }
+
   const { synthesizeRuling } = await import("../services/synthesize.js");
   const result = await synthesizeRuling(c.env, question, rules_system || "auto");
 
-  const guildId = c.req.query("guild_id");
   if (guildId) {
     const { insertRuling, getActiveSession } = await import("../db/queries.js");
     const active = await getActiveSession(c.env.DB, guildId);
@@ -86,7 +100,7 @@ api.post("/api/warm", async (c) => {
   return c.json({ ok: true });
 });
 
-// ── Health ──
+// ── Health (public) ──
 api.get("/api/health", async (c) => {
   return c.json({ status: "ok", timestamp: Date.now() });
 });

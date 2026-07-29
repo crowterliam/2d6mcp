@@ -101,8 +101,8 @@ export function getToolDefinitions(): Tool[] {
           },
           system: {
             type: "string",
-            enum: ["ogl", "dw", "brp", "5ecompatible", "orcus"],
-            description: "Rules system database to search for the table. Default: 'ogl'. Use '5ecompatible' or 'orcus' for d20 fantasy tables, 'brp' for percentile tables.",
+            enum: ["ogl"],
+            description: "Rules system database to search for the table. Only OGL tables are indexed today. Default: 'ogl'.",
             default: "ogl",
           },
         },
@@ -716,6 +716,40 @@ export function getToolDefinitions(): Tool[] {
         type: "object",
         properties: {
           file_path: { type: "string", description: "Optional: path to the audio file to reset. If omitted, clears ALL transcription progress." },
+        },
+      },
+    },
+    {
+      name: "roll_byod_table",
+      description:
+        "Search your BYOD index for a random table by name or description, parse its die-range entries, roll the appropriate dice, and return the matching result. Works with any system's tables (d100 encounter tables, d20 treasure tables, 2d6 reaction tables, d66 tables, etc.). System-agnostic.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          table_name: {
+            type: "string",
+            description: "Name or description of the table to find and roll on (e.g., 'encounter', 'treasure', 'reaction', 'random dungeon')",
+          },
+        },
+        required: ["table_name"],
+      },
+    },
+    {
+      name: "list_byod_tables",
+      description:
+        "Discover random tables available in your BYOD index. Searches for structured die-range tables and returns their names, dice types, entry counts, and sample entries. Use this to find tables before rolling on them with roll_byod_table. System-agnostic.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          search_term: {
+            type: "string",
+            description: "Search term to find tables (e.g., 'encounter', 'treasure', 'NPC'). Omit for a broad search across all tables.",
+          },
+          max_results: {
+            type: "integer",
+            description: "Maximum number of tables to return (default 10, max 30)",
+            default: 10,
+          },
         },
       },
     },

@@ -31,9 +31,8 @@ packages/
   server/    @2d6mcp/server  — MCP server (depends on shared, ogl, dw)
 apps/
   worker/    @2d6mcp/worker  — Cloudflare Worker (depends on shared)
-  bridge/    Discord voice relay (Fly.io)
-  web/       Vite + React SPA dashboard
-  recorder/  Browser PWA
+  bridge/    Discord voice relay (VPS + systemd)
+  # Planned (not in tree): web/ (Phase 3 dashboard), recorder/ (Phase 4 PWA)
 ```
 
 Packages reference each other via `@2d6mcp/` namespace. The root `tsc --build` handles dependency ordering.

@@ -34,12 +34,16 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
 
 client.once(Events.ClientReady, (ready) => {
   console.log(`Bridge ready — logged in as ${ready.user.tag}`);
-  void fetch(`${config.workerUrl}/api/warm`, { method: "POST" }).catch(() => {});
+  const warmHeaders: Record<string, string> = {};
+  if (config.workerApiKey) {
+    warmHeaders.Authorization = `Bearer ${config.workerApiKey}`;
+  }
+  void fetch(`${config.workerUrl}/api/warm`, { method: "POST", headers: warmHeaders }).catch(() => {});
 });
 
 console.log("Starting bridge...");
 await client.login(config.discordToken);
-startHealthServer(3000, config.workerUrl);
+startHealthServer(config.healthPort, config.workerUrl, config.workerApiKey);
 
 setInterval(() => {
   updateHealthState({ guilds: getVoiceCount(), memoryBytes: getTotalMemory() });
