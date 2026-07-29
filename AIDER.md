@@ -25,9 +25,8 @@ packages/           # npm workspaces
   5ecompatible/     # @2d6mcp/5ecompatible — 5E-compatible rules (CC-BY-4.0)
 apps/
   worker/           # Cloudflare Worker (Hono + Workers AI + D1 + R2)
-  bridge/           # Discord voice relay (Fly.io, Phase 2)
-  web/              # Vite + React SPA dashboard (Phase 3)
-  recorder/         # Browser PWA (Phase 4)
+  bridge/           # Discord voice relay (VPS + systemd, Phase 2)
+  # Planned (not in tree): web/ (Phase 3), recorder/ (Phase 4)
 data/               # SQLite databases (shared)
 tests/              # Vitest test suite (209 tests, 18 files)
 ```
@@ -43,7 +42,7 @@ Agent instructions: `.kilo/agent/`, `.claude/skills/`, `.cursor/rules/`, `.cline
 | `roll_percentile` | d100 percentile roll-under with critical success and fumble detection |
 | `roll_damage` | Damage dice with optional type (`"2d6+3 fire"`, `"1d8 piercing"`) |
 | `roll_custom` | Any dice notation |
-| `roll_table` | Named table from any rules system (use `system` param) |
+| `roll_table` | Named OGL table (`system` is OGL-only today) |
 | `query_ogl_rules` | Search OGL rules (skills, careers, equipment, combat, starships, worlds) |
 | `query_dw_rules` | Search DW rules (moves, classes, spells, equipment, monsters, GM tools) |
 | `query_brp_rules` | Search BRP rules for characteristics, skills, professions, weapons, armor, spot rules, foes |

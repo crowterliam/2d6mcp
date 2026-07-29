@@ -3,22 +3,31 @@
 //
 // Tests for API routes — uses Hono's testRequest with mocked Cloudflare bindings.
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { Hono } from "hono";
+
+const API_KEY = "test-api-key-for-routes-32chars!!";
 
 // Build a minimal test app with the same routes as the Worker API
 function createTestApp() {
   const app = new Hono();
 
-  // Health
+  function requireKey(c: { req: { header: (n: string) => string | undefined }; json: (b: unknown, s?: number) => Response }, next: () => Promise<void>) {
+    const auth = c.req.header("Authorization");
+    if (auth !== `Bearer ${API_KEY}`) return c.json({ error: "Unauthorized" }, 401);
+    return next();
+  }
+
+  // Health — public
   app.get("/api/health", (c) => c.json({ status: "ok", timestamp: Date.now() }));
 
-  // Roll — uses shared dice
+  // Roll — requires API key
   app.post("/api/roll", async (c) => {
+    const denied = await requireKey(c, async () => {});
+    if (denied) return denied;
     const { notation } = await c.req.json<{ notation: string }>();
     if (!notation) return c.json({ error: "notation required" }, 400);
 
-    // inline roll for testing without importing
     if (notation === "2d6+1") return c.json({ dice: [4, 5], modifier: 1, total: 10 });
     if (notation === "3d6") {
       const dice = [3, 5, 2];
@@ -28,13 +37,21 @@ function createTestApp() {
     return c.json({ error: "invalid notation" }, 400);
   });
 
-  // Warm — stubs the AI calls
-  app.post("/api/warm", (c) => c.json({ ok: true }));
+  // Warm — requires API key
+  app.post("/api/warm", async (c) => {
+    const denied = await requireKey(c, async () => {});
+    if (denied) return denied;
+    return c.json({ ok: true });
+  });
 
   // 404
   app.notFound((c) => c.json({ error: "Not found" }, 404));
 
   return app;
+}
+
+function authHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  return { Authorization: `Bearer ${API_KEY}`, ...extra };
 }
 
 describe("API routes", () => {
@@ -58,10 +75,19 @@ describe("API routes", () => {
   });
 
   describe("POST /api/roll", () => {
-    it("rolls 2d6+1", async () => {
+    it("rejects missing API key", async () => {
       const res = await request("/api/roll", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notation: "2d6+1" }),
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it("rolls 2d6+1", async () => {
+      const res = await request("/api/roll", {
+        method: "POST",
+        headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ notation: "2d6+1" }),
       });
       expect(res.status).toBe(200);
@@ -74,7 +100,7 @@ describe("API routes", () => {
     it("rolls 3d6", async () => {
       const res = await request("/api/roll", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ notation: "3d6" }),
       });
       expect(res.status).toBe(200);
@@ -86,7 +112,7 @@ describe("API routes", () => {
     it("handles d66 notation", async () => {
       const res = await request("/api/roll", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ notation: "d66" }),
       });
       expect(res.status).toBe(200);
@@ -97,7 +123,7 @@ describe("API routes", () => {
     it("returns 400 for missing notation", async () => {
       const res = await request("/api/roll", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({}),
       });
       expect(res.status).toBe(400);
@@ -106,7 +132,7 @@ describe("API routes", () => {
     it("returns 400 for invalid notation", async () => {
       const res = await request("/api/roll", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ notation: "xyz" }),
       });
       expect(res.status).toBe(400);
@@ -114,8 +140,16 @@ describe("API routes", () => {
   });
 
   describe("POST /api/warm", () => {
-    it("returns ok", async () => {
+    it("rejects missing API key", async () => {
       const res = await request("/api/warm", { method: "POST" });
+      expect(res.status).toBe(401);
+    });
+
+    it("returns ok", async () => {
+      const res = await request("/api/warm", {
+        method: "POST",
+        headers: authHeaders(),
+      });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.ok).toBe(true);
@@ -132,8 +166,6 @@ describe("API routes", () => {
   describe("CORS headers", () => {
     it("handles OPTIONS preflight (no CORS middleware in test app)", async () => {
       const res = await request("/api/health", { method: "OPTIONS" });
-      // Without CORS middleware, OPTIONS returns 404 for unknown method
-      // but the route itself may still match
       expect(res.status).toBeGreaterThanOrEqual(200);
       expect(res.status).toBeLessThanOrEqual(404);
     });

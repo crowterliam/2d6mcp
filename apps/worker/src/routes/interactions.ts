@@ -223,7 +223,7 @@ interactions.post("/api/interactions", async (c) => {
 
       case "join":
       case "leave":
-        return c.json(respond("Voice commands are handled by the bridge. Ensure the bridge is deployed on Fly.io and your bot token is configured. See `apps/bridge/Bridge_SETUP.md`."));
+        return c.json(respond("Voice commands are handled by the bridge. Ensure the bridge is running on your VPS (systemd) and your bot token is configured. See `apps/bridge/Bridge_SETUP.md`."));
 
       case "push-to-ask": {
         const seconds = (opts.get("seconds") as number) || 30;
@@ -235,9 +235,20 @@ interactions.post("/api/interactions", async (c) => {
           }
 
           try {
-            const bridgeUrl = env.BRIDGE_URL || "https://2d6mcp-bridge.fly.dev";
+            const bridgeUrl = env.BRIDGE_URL;
+            if (!bridgeUrl) {
+              await editOriginalResponse(interaction.application_id, interaction.token, "BRIDGE_URL is not configured on the Worker.");
+              return;
+            }
+            if (!env.WORKER_API_KEY) {
+              await editOriginalResponse(interaction.application_id, interaction.token, "WORKER_API_KEY is not configured on the Worker.");
+              return;
+            }
             const res = await fetch(`${bridgeUrl}/push-to-ask?guild_id=${encodeURIComponent(guildId)}&seconds=${seconds}`, {
               method: "POST",
+              headers: {
+                Authorization: `Bearer ${env.WORKER_API_KEY}`,
+              },
               signal: AbortSignal.timeout(5000),
             });
             const data = await res.json() as { ok: boolean; error?: string; key?: string };
@@ -247,7 +258,7 @@ interactions.post("/api/interactions", async (c) => {
               await editOriginalResponse(interaction.application_id, interaction.token, data.error || "Not connected to voice. Join a voice channel first.");
             }
           } catch {
-            await editOriginalResponse(interaction.application_id, interaction.token, "Bridge is not reachable. Ensure it is deployed on Fly.io.");
+            await editOriginalResponse(interaction.application_id, interaction.token, "Bridge is not reachable. Ensure it is running on your VPS and BRIDGE_URL is set.");
           }
         })());
 

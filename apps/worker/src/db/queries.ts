@@ -22,6 +22,17 @@ export function updateGuildPlan(db: D1Database, guildId: string, plan: string, s
   ).bind(plan, stripeCustomerId, subscriptionStatus, guildId).run();
 }
 
+export function updateGuildSubscriptionByCustomer(
+  db: D1Database,
+  stripeCustomerId: string,
+  plan: string,
+  subscriptionStatus: string,
+): Promise<D1Result> {
+  return db.prepare(
+    "UPDATE guilds SET plan = ?, subscription_status = ?, updated_at = datetime('now') WHERE stripe_customer_id = ?"
+  ).bind(plan, subscriptionStatus, stripeCustomerId).run();
+}
+
 export function createSession(db: D1Database, id: string, guildId: string, name: string | null, rulesSystem: string, byodSystem: string | null): Promise<D1Result> {
   return db.prepare(
     "INSERT INTO sessions (id, guild_id, name, rules_system, byod_system) VALUES (?, ?, ?, ?, ?)"

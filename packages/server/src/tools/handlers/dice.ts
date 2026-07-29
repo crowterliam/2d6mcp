@@ -113,10 +113,27 @@ export async function handleRollTable(args: Record<string, unknown> | undefined)
       ? normalizeDiceType(args.dice_type)
       : "2d6";
   const system =
-    typeof args?.system === "string" &&
-    ["ogl", "dw", "brp", "5ecompatible", "orcus"].includes(args.system)
+    typeof args?.system === "string" && args.system === "ogl"
       ? args.system
       : "ogl";
+
+  if (typeof args?.system === "string" && args.system !== "ogl") {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              error: `Table lookup is only implemented for system "ogl" (got "${args.system}").`,
+            },
+            null,
+            2
+          ),
+        },
+      ],
+      isError: true,
+    };
+  }
 
   if (system === "ogl") {
     const { dbPath } = ensureOglDb();

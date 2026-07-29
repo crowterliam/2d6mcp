@@ -25,7 +25,8 @@ npm run build
 # 3. Create environment file
 cat > apps/bridge/.env << 'EOF'
 DISCORD_BOT_TOKEN=your-bot-token-here
-WORKER_URL=https://2d6mcp.3ivkf0oy1.workers.dev
+WORKER_URL=https://your-worker.workers.dev
+WORKER_API_KEY=same-as-worker-secret
 HEALTH_PORT=3000
 EOF
 
@@ -53,15 +54,16 @@ Enable these **Privileged Gateway Intents** in the Discord Developer Portal (Bot
 
 1. **Auto-join**: When a user enters any voice channel the bot can access, the bridge automatically connects. No slash commands needed.
 2. **Ring buffer**: Continuously captures 120 seconds of audio per guild in a 16kHz mono PCM buffer.
-3. **Push-to-ask**: Worker receives `/push-to-ask` → makes HTTP request to bridge → bridge flushes ring buffer → uploads WAV to Worker → Worker transcribes via Workers AI Whisper.
-4. **Health**: `GET /health` returns guild count, uptime, memory for monitoring.
+3. **Push-to-ask**: Worker receives `/push-to-ask` → authenticates with `WORKER_API_KEY` → HTTP request to bridge → bridge flushes ring buffer → uploads WAV to Worker (same Bearer) → Worker transcribes via Workers AI Whisper.
+4. **Health**: `GET /health` returns guild count, uptime, memory for monitoring (unauthenticated). `POST /push-to-ask` requires `Authorization: Bearer <WORKER_API_KEY>`.
 
 ## Manual Start (for development)
 
 ```bash
 cd apps/bridge
 export DISCORD_BOT_TOKEN=your-token
-export WORKER_URL=https://2d6mcp.3ivkf0oy1.workers.dev
+export WORKER_URL=https://your-worker.workers.dev
+export WORKER_API_KEY=same-as-worker-secret
 node dist/index.js
 ```
 

@@ -10,7 +10,7 @@ A system-agnostic Model Context Protocol (MCP) server and hosted Cloudflare Work
 | Mode | Description | Cost |
 |---|---|---|
 | **Self-Hosted MCP Server** | Run locally on your machine. Full BYOD support, MLX-powered audio transcription and ruling synthesis (macOS). Works in any AI harness (Claude, Kilo, Cursor, etc.) | Free (AGPL-3.0) |
-| **Hosted Discord Bot** | Deploy to Cloudflare Workers. Discord slash commands, Workers AI-powered rulings (Qwen3 MoE), web dashboard. Zero local setup beyond wrangler. | Free (self-deploy, AGPL-3.0) |
+| **Hosted Discord Bot** | Deploy to Cloudflare Workers. Discord slash commands, Workers AI-powered rulings (Qwen3 MoE). Optional future web dashboard (Phase 3). Zero local setup beyond wrangler. | Free (self-deploy, AGPL-3.0) |
 
 ## Features
 
@@ -146,9 +146,10 @@ BYOD is self-hosted only and is not available in the hosted Cloudflare Worker.
 2d6mcp/
 ├── apps/
 │   ├── worker/          # Cloudflare Worker — API, Discord bot, Workers AI, D1, R2
-│   ├── bridge/          # Discord voice relay (VPS — raw UDP required)
-│   ├── web/             # Vite + React SPA dashboard + landing (Phase 3)
-│   └── recorder/        # Browser PWA fallback audio capture (Phase 4)
+│   └── bridge/          # Discord voice relay (VPS + systemd; raw UDP required)
+│   # Planned (not in tree yet):
+│   # ├── web/           # Vite + React SPA dashboard + landing (Phase 3)
+│   # └── recorder/      # Browser PWA fallback audio capture (Phase 4)
 ├── packages/
 │   ├── server/          # MCP server — stdio transport, local MLX, BYOD, session DB
 │   ├── shared/          # @2d6mcp/shared — dice, keywords, prompts, quality filter
@@ -237,7 +238,8 @@ npm run start         # run the MCP server (packages/server/dist/index.js)
 | `DISCORD_CLIENT_SECRET` | `wrangler secret put` | Discord OAuth2 client secret |
 | `JWT_SECRET` | `wrangler secret put` | HMAC secret for user JWT tokens |
 | `API_URL` | `wrangler.toml` | Worker base URL |
-| `WEB_URL` | `wrangler.toml` | Web dashboard URL |
+| `WEB_URL` | `wrangler.toml` | Future web dashboard URL (Phase 3; redirects only today) |
+| `WORKER_API_KEY` | `wrangler secret` | Shared secret for bridge ↔ Worker HTTP API |
 
 ## License
 

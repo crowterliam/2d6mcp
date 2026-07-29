@@ -124,8 +124,9 @@ npx wrangler secret put DISCORD_PUBLIC_KEY          # 4. From Discord Dev Portal
 npx wrangler secret put DISCORD_CLIENT_ID           # 5. From Discord Dev Portal → General
 npx wrangler secret put DISCORD_CLIENT_SECRET       # 6. From Discord Dev Portal → OAuth2
 npx wrangler secret put JWT_SECRET                  # 7. Any random string (≥32 chars)
-npx wrangler secret put STRIPE_SECRET_KEY           # 8. Placeholder: sk_test_...
-npx wrangler secret put STRIPE_WEBHOOK_SECRET       # 9. Placeholder: whsec_...
+npx wrangler secret put WORKER_API_KEY              # 8. Shared with bridge (≥32 chars); same value in apps/bridge/.env
+npx wrangler secret put STRIPE_SECRET_KEY           # 9. Placeholder: sk_test_...
+npx wrangler secret put STRIPE_WEBHOOK_SECRET       # 10. Placeholder: whsec_...
 
 # Run database migration
 npx wrangler d1 execute 2d6mcp --remote --file src/db/schema.sql
@@ -205,7 +206,7 @@ Set via `wrangler secret put`. See [README.md](README.md) for the full list.
 
 **"BYOD Mode is disabled"**: Set `AGREE_BYOD_USE=true` in the harness config's `env` block, or run `npm run setup` in the 2d6mcp directory.
 
-**Interactions Endpoint won't verify**: Ensure all 6 secrets are set via `wrangler secret put` and `wrangler.toml` has no vars section with empty values. Redeploy after setting secrets.
+**Interactions Endpoint won't verify**: Ensure all secrets are set via `wrangler secret put` (including `WORKER_API_KEY`) and `wrangler.toml` has no vars section with empty values. Redeploy after setting secrets.
 
 **Worker returns 500**: Check `wrangler tail` for logs. Common causes: missing secrets, D1 not migrated, FTS5 tables not seeded.
 

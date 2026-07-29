@@ -5,19 +5,18 @@
 
 import { Hono } from "hono";
 import type { Env } from "../env.js";
-import { verifyToken } from "../middleware/jwt.js";
+import { verifyGuildAccess, verifyToken } from "../middleware/auth.js";
 import type { JwtPayload } from "../types.js";
 import {
-  createSession, endSession, getSession, listSessions,
+  createSession, endSession, listSessions, getSession,
   getTranscript, getRecentTranscript, searchTranscript,
-  getRecentRulings, getSessionRulings, deleteSession as dbDeleteSession,
+  getSessionRulings, deleteSession as dbDeleteSession,
   deleteTranscriptsForSession, deleteRulingsForSession,
   insertTranscript,
 } from "../db/queries.js";
 
-const guild = new Hono<{ Bindings: Env }>();
+const guild = new Hono<{ Bindings: Env; Variables: { jwt: JwtPayload } }>();
 
-// ── Auth middleware ──
 async function requireAuth(c: any, next: any) {
   const authHeader = c.req.header("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
@@ -30,7 +29,29 @@ async function requireAuth(c: any, next: any) {
   await next();
 }
 
+async function requireGuildAccess(c: any, next: any) {
+  const guildId = c.req.param("id") as string;
+  const jwt = c.get("jwt") as JwtPayload;
+  const allowed = await verifyGuildAccess(c.env, jwt, guildId);
+  if (!allowed) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+  await next();
+}
+
+/** Ensure :sessionId belongs to path guild :id. */
+async function requireSessionInGuild(c: any): Promise<Response | null> {
+  const guildId = c.req.param("id") as string;
+  const sessionId = c.req.param("sessionId") as string;
+  const session = await getSession(c.env.DB, sessionId);
+  if (!session || session.guild_id !== guildId) {
+    return c.json({ error: "Session not found" }, 404);
+  }
+  return null;
+}
+
 guild.use("/api/guild/:id/*", requireAuth);
+guild.use("/api/guild/:id/*", requireGuildAccess);
 
 // ── Session lifecycle ──
 guild.post("/api/guild/:id/session", async (c) => {
@@ -49,12 +70,16 @@ guild.get("/api/guild/:id/session", async (c) => {
 });
 
 guild.post("/api/guild/:id/session/:sessionId/end", async (c) => {
+  const denied = await requireSessionInGuild(c);
+  if (denied) return denied;
   const sessionId = c.req.param("sessionId");
   await endSession(c.env.DB, sessionId);
   return c.json({ ok: true });
 });
 
 guild.delete("/api/guild/:id/session/:sessionId", async (c) => {
+  const denied = await requireSessionInGuild(c);
+  if (denied) return denied;
   const sessionId = c.req.param("sessionId");
   await deleteTranscriptsForSession(c.env.DB, sessionId);
   await deleteRulingsForSession(c.env.DB, sessionId);
@@ -64,6 +89,8 @@ guild.delete("/api/guild/:id/session/:sessionId", async (c) => {
 
 // ── Transcript ──
 guild.post("/api/guild/:id/session/:sessionId/transcript", async (c) => {
+  const denied = await requireSessionInGuild(c);
+  if (denied) return denied;
   const guildId = c.req.param("id");
   const sessionId = c.req.param("sessionId");
   const { text, speaker, source, intent } = await c.req.json<{ text: string; speaker?: string; source?: string; intent?: string }>();
@@ -73,6 +100,8 @@ guild.post("/api/guild/:id/session/:sessionId/transcript", async (c) => {
 });
 
 guild.get("/api/guild/:id/session/:sessionId/transcript", async (c) => {
+  const denied = await requireSessionInGuild(c);
+  if (denied) return denied;
   const sessionId = c.req.param("sessionId");
   const result = await getTranscript(c.env.DB, sessionId);
   return c.json({ segments: result.results || [] });

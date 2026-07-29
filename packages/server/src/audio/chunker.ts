@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
-import { execFile, execSync } from "node:child_process";
+import { execFile, execFileSync, execSync } from "node:child_process";
 import { mkdirSync, existsSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, basename } from "node:path";
@@ -18,8 +18,9 @@ export interface ChunkManifest {
 
 export function isAudioLong(filePath: string, thresholdSeconds: number = 300): boolean {
   try {
-    const out = execSync(
-      `ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${filePath}"`,
+    const out = execFileSync(
+      "ffprobe",
+      ["-v", "quiet", "-show_entries", "format=duration", "-of", "csv=p=0", filePath],
       { timeout: 10000, encoding: "utf-8" }
     );
     const duration = parseFloat(out.trim());
