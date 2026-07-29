@@ -251,12 +251,13 @@ export function extractTableName(line: string): string | null {
   const trimmed = line.trim();
   if (!trimmed) return null;
 
-  // Prefer linear parses over nested regex quantifiers (CodeQL poly-redos).
+  // Prefer linear parses over regex (CodeQL poly-redos).
   if (trimmed.startsWith("#")) {
     let i = 0;
     while (i < trimmed.length && trimmed[i] === "#") i++;
     const rest = trimmed.slice(i).trim();
-    const tableIdx = rest.search(/\s+Table\b/i);
+    const lower = rest.toLowerCase();
+    const tableIdx = lower.indexOf(" table");
     const parenIdx = rest.indexOf("(");
     let end = rest.length;
     if (tableIdx >= 0) end = Math.min(end, tableIdx);
@@ -265,12 +266,20 @@ export function extractTableName(line: string): string | null {
     if (name) return name;
   }
 
-  const tableLabel = /\bTable\b/i.exec(trimmed);
-  if (tableLabel) {
-    const after = trimmed.slice(tableLabel.index! + tableLabel[0].length).replace(/^[\s:]+/, "");
-    if (after) {
-      return after.replace(/[:.]+$/, "").trim() || null;
+  const lowerFull = trimmed.toLowerCase();
+  const tableWord = lowerFull.indexOf("table");
+  if (tableWord >= 0) {
+    let after = trimmed.slice(tableWord + "table".length);
+    while (after.length > 0 && (after[0] === " " || after[0] === "\t" || after[0] === ":")) {
+      after = after.slice(1);
     }
+    while (after.length > 0) {
+      const last = after[after.length - 1];
+      if (last === ":" || last === ".") after = after.slice(0, -1);
+      else break;
+    }
+    after = after.trim();
+    if (after) return after;
   }
 
   const boldStart = trimmed.indexOf("**");
