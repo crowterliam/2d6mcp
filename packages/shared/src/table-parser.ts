@@ -249,15 +249,37 @@ export function parseTableFromText(text: string): ParsedTable | null {
 
 export function extractTableName(line: string): string | null {
   const trimmed = line.trim();
+  if (!trimmed) return null;
 
-  const headingMatch = trimmed.match(/^#+\s*(.+?)(?:\s*Table|\s*\()/i);
-  if (headingMatch) return headingMatch[1].trim();
+  // Prefer linear parses over nested regex quantifiers (CodeQL poly-redos).
+  if (trimmed.startsWith("#")) {
+    let i = 0;
+    while (i < trimmed.length && trimmed[i] === "#") i++;
+    const rest = trimmed.slice(i).trim();
+    const tableIdx = rest.search(/\s+Table\b/i);
+    const parenIdx = rest.indexOf("(");
+    let end = rest.length;
+    if (tableIdx >= 0) end = Math.min(end, tableIdx);
+    if (parenIdx >= 0) end = Math.min(end, parenIdx);
+    const name = rest.slice(0, end).trim();
+    if (name) return name;
+  }
 
-  const tableTitleMatch = trimmed.match(/^(?:Table\s+)?[\w\s]*Table[:\s]+(.+)/i);
-  if (tableTitleMatch) return tableTitleMatch[1].trim().replace(/[:.]+$/, "");
+  const tableLabel = /\bTable\b/i.exec(trimmed);
+  if (tableLabel) {
+    const after = trimmed.slice(tableLabel.index! + tableLabel[0].length).replace(/^[\s:]+/, "");
+    if (after) {
+      return after.replace(/[:.]+$/, "").trim() || null;
+    }
+  }
 
-  const bracketedMatch = trimmed.match(/\*\*(.+?)\*\*/);
-  if (bracketedMatch) return bracketedMatch[1].trim();
+  const boldStart = trimmed.indexOf("**");
+  if (boldStart >= 0) {
+    const boldEnd = trimmed.indexOf("**", boldStart + 2);
+    if (boldEnd > boldStart + 2) {
+      return trimmed.slice(boldStart + 2, boldEnd).trim() || null;
+    }
+  }
 
   return null;
 }
