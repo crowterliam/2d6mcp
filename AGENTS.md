@@ -355,10 +355,12 @@ Never reference any third-party game system or trademarked terms. Use generic de
 | `DISCORD_CLIENT_ID` | Discord application client ID |
 | `DISCORD_CLIENT_SECRET` | Discord OAuth2 client secret |
 | `JWT_SECRET` | HMAC secret for user session tokens |
+| `WORKER_API_KEY` | Shared secret with the voice bridge (HTTP API + push-to-ask) |
 | `STRIPE_SECRET_KEY` | Stripe secret key |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
 | `API_URL` | Worker base URL (set in `wrangler.toml`) |
-| `WEB_URL` | Web dashboard URL (set in `wrangler.toml`) |
+| `WEB_URL` | Future web dashboard URL (Phase 3; set in `wrangler.toml`) |
+| `BRIDGE_URL` | Public URL of the VPS bridge (set in `wrangler.toml` or secrets) |
 
 ### Security Note
 

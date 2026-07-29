@@ -19,12 +19,17 @@ export async function ingestAudio(
   const wavBuffer = buffer.flush(lastSeconds);
   if (!wavBuffer) return { ok: false };
 
+  const headers: Record<string, string> = {
+    "Content-Type": "application/octet-stream",
+  };
+  if (config.workerApiKey) {
+    headers.Authorization = `Bearer ${config.workerApiKey}`;
+  }
+
   const response = await fetch(`${config.workerUrl}/api/audio-ingest?guild_id=${encodeURIComponent(guildId)}`, {
     method: "POST",
     body: wavBuffer,
-    headers: {
-      "Content-Type": "application/octet-stream",
-    },
+    headers,
   });
 
   if (!response.ok) {

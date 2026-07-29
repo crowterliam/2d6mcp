@@ -15,13 +15,30 @@ export interface HealthState {
 
 let state: HealthState = { guilds: 0, uptime: 0, memoryBytes: 0 };
 let workerUrl = "";
+let workerApiKey = "";
 
 export function updateHealthState(s: Partial<HealthState>): void {
   state = { ...state, ...s };
 }
 
-export function startHealthServer(port: number, wrkUrl: string): void {
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
+
+function extractBearer(authHeader: string | undefined): string | null {
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  const token = authHeader.slice(7).trim();
+  return token.length > 0 ? token : null;
+}
+
+export function startHealthServer(port: number, wrkUrl: string, apiKey: string = ""): void {
   workerUrl = wrkUrl;
+  workerApiKey = apiKey;
 
   const server = createServer(async (req, res) => {
     try {
@@ -39,6 +56,18 @@ export function startHealthServer(port: number, wrkUrl: string): void {
 
       // ── Push-to-Ask (called by Worker) ──
       if (req.method === "POST" && req.url?.startsWith("/push-to-ask")) {
+        if (!workerApiKey) {
+          res.writeHead(503, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: "WORKER_API_KEY not configured on bridge" }));
+          return;
+        }
+        const token = extractBearer(req.headers.authorization);
+        if (!token || !timingSafeEqual(token, workerApiKey)) {
+          res.writeHead(401, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: "Unauthorized" }));
+          return;
+        }
+
         const url = new URL(req.url, `http://localhost:${port}`);
         const guildId = url.searchParams.get("guild_id");
         const seconds = parseInt(url.searchParams.get("seconds") || "30", 10);
@@ -58,6 +87,7 @@ export function startHealthServer(port: number, wrkUrl: string): void {
 
         const result = await ingestAudio(voiceState.ringBuffer, guildId, seconds, {
           workerUrl,
+          workerApiKey,
         });
 
         res.writeHead(200, { "Content-Type": "application/json" });

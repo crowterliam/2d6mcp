@@ -2,7 +2,7 @@
   "name": "@2d6mcp/bridge",
   "version": "0.7.0",
   "private": true,
-  "description": "2d6mcp Discord voice bridge — UDP audio relay to Cloudflare Worker (Fly.io)",
+  "description": "2d6mcp Discord voice bridge — UDP audio relay to Cloudflare Worker (VPS)",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

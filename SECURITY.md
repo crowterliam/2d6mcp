@@ -7,9 +7,9 @@ Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.4.x   | :white_check_mark: |
-| 0.3.x   | :white_check_mark: |
-| < 0.3   | :x:                |
+| 0.7.x   | :white_check_mark: |
+| 0.6.x   | :white_check_mark: |
+| < 0.6   | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -62,6 +62,7 @@ All production secrets for the Cloudflare Worker must be set via `wrangler secre
 - `DISCORD_CLIENT_ID`
 - `DISCORD_CLIENT_SECRET`
 - `JWT_SECRET`
+- `WORKER_API_KEY` (shared secret with the voice bridge)
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
 

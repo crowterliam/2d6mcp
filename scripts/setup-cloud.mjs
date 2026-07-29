@@ -171,6 +171,7 @@ async function main() {
 
   // ── Step 5: Generate JWT secret ──
   const jwtSecret = randomBytes(32).toString("hex");
+  const workerApiKey = randomBytes(32).toString("hex");
 
   // ── Step 6: Write wrangler.toml ──
   step("Writing wrangler.toml...");
@@ -245,6 +246,7 @@ WEB_URL = "https://2d6mcp.pages.dev"
     DISCORD_CLIENT_ID: discordClientId,
     DISCORD_CLIENT_SECRET: discordClientSecret,
     JWT_SECRET: jwtSecret,
+    WORKER_API_KEY: workerApiKey,
     STRIPE_SECRET_KEY: "placeholder_stripe_key",
     STRIPE_WEBHOOK_SECRET: "placeholder_webhook_secret",
   };
@@ -261,6 +263,7 @@ WEB_URL = "https://2d6mcp.pages.dev"
     }
   }
   success("Secrets configured");
+  console.log(`\n  Bridge WORKER_API_KEY (set the same value in apps/bridge/.env):\n  ${workerApiKey}\n`);
 
   // ── Step 11: Deploy ──
   step("Deploying Worker...");

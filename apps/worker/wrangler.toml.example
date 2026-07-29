@@ -26,12 +26,17 @@ bucket_name = "2d6mcp-audio"
 [vars]
 API_URL = "https://your-worker-name.your-subdomain.workers.dev"
 WEB_URL = "https://your-domain.com"
+# Public URL of your VPS bridge (required for /push-to-ask)
+# BRIDGE_URL = "https://bridge.example.com"
 
 # ── Secrets ──
 # Set ALL of these via `npx wrangler secret put <NAME>`. Do NOT paste values here.
 # Required: DISCORD_BOT_TOKEN, DISCORD_PUBLIC_KEY, DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET
 # Required: JWT_SECRET (any random string ≥32 chars)
+# Required: WORKER_API_KEY (shared secret with the voice bridge; random string ≥32 chars)
 # Optional: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
+# Optional: STRIPE_PRICE_STANDARD_MONTHLY, STRIPE_PRICE_STANDARD_ANNUAL,
+#           STRIPE_PRICE_PRO_MONTHLY, STRIPE_PRICE_PRO_ANNUAL
 # See README.md for setup instructions.
 
 # ── Staging env (optional) ──

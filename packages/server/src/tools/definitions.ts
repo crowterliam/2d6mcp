@@ -101,8 +101,8 @@ export function getToolDefinitions(): Tool[] {
           },
           system: {
             type: "string",
-            enum: ["ogl", "dw", "brp", "5ecompatible", "orcus"],
-            description: "Rules system database to search for the table. Default: 'ogl'. Use '5ecompatible' or 'orcus' for d20 fantasy tables, 'brp' for percentile tables.",
+            enum: ["ogl"],
+            description: "Rules system database to search for the table. Only OGL tables are indexed today. Default: 'ogl'.",
             default: "ogl",
           },
         },
