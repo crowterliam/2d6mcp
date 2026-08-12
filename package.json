@@ -2,7 +2,7 @@
   "name": "2d6mcp",
   "version": "0.7.0",
   "private": true,
-  "description": "2d6mcp \u2014 system-agnostic mechanical engine, dice roller, rules reference, and AI GM assistant for 2d6-based tabletop RPGs",
+  "description": "2d6mcp — system-agnostic mechanical engine, dice roller, rules reference, and AI GM assistant for 2d6-based tabletop RPGs",
   "workspaces": [
     "packages/*",
     "apps/*"
@@ -47,17 +47,23 @@
     "form-data": "^4.0.4",
     "shell-quote": "^1.8.4",
     "postcss": "^8.5.24",
-    "fast-uri": "^4.1.1",
+    "fast-uri": "^4.1.2",
+    "nanoid": "^3.3.18",
+    "ip-address": "^10.5.0",
+    "hono": "^4.13.1",
     "@hono/node-server": "^2.0.12",
     "sharp": "^0.35.3",
     "discord.js": {
-      "undici": "^6.27.0"
+      "undici": "^6.28.0"
     },
     "@discordjs/rest": {
-      "undici": "^6.27.0"
+      "undici": "^6.28.0"
     },
     "@discordjs/ws": {
-      "undici": "^6.27.0"
+      "undici": "^6.28.0"
+    },
+    "miniflare": {
+      "undici": "^7.29.0"
     }
   },
   "dependencies": {
