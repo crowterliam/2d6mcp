@@ -61,24 +61,31 @@ describe("retrieveRulesContext", () => {
 
   it("runs BYOD for ogl when consent is on", async () => {
     const byodPath = join(tmpdir(), `2d6mcp-retrieve-byod-${Date.now()}`);
-    mkdirSync(join(byodPath, "House Rules"), { recursive: true });
-    writeFileSync(join(byodPath, "House Rules", "house.md"), "House rule: cover always grants a -2 DM.");
+    mkdirSync(join(byodPath, "Housexyzzy"), { recursive: true });
+    writeFileSync(
+      join(byodPath, "Housexyzzy", "house.md"),
+      "Housexyzzygrant: cover always grants a -2 DM."
+    );
     process.env.AGREE_BYOD_USE = "true";
     process.env.BYOD_PATH = byodPath;
 
     const db = getByodDatabase(byodPath);
-    indexChunks(db, "House Rules/house.md", "house.md", ".md", 40, "h1", null, [
-      { title: "Cover", content: "House rule: cover always grants a -2 DM in combat.", chunkIndex: 0 },
+    indexChunks(db, "Housexyzzy/house.md", "house.md", ".md", 40, "h1", null, [
+      {
+        title: "Cover",
+        content: "Housexyzzygrant: cover always grants a -2 DM in combat.",
+        chunkIndex: 0,
+      },
     ]);
     rebuildByodFts(db);
 
     const result = await retrieveRulesContext({
-      question: "house rules cover combat modifier",
+      question: "housexyzzy housexyzzygrant",
       rulesSystem: "ogl",
     });
     expect(result.byodSearched).toBe(true);
     expect(result.systemsSearched).toEqual(["ogl"]);
-    expect(result.context).toMatch(/always grants a -2 DM/i);
+    expect(result.context).toMatch(/Housexyzzygrant/i);
 
     closeByodDatabase(byodPath);
     rmSync(byodPath, { recursive: true, force: true });

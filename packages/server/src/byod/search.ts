@@ -507,15 +507,11 @@ function tryFts5Query(stmt: Database.Statement, params: unknown[]): SearchResult
   }
 }
 
-function escapeLike(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
-}
-
 function bindPrefixParams(prefixes: string[]): unknown[] {
   const params: unknown[] = [];
   for (const prefix of prefixes) {
     const normalized = prefix.replace(/\\/g, "/");
-    params.push(normalized, `${escapeLike(normalized)}/%`);
+    params.push(normalized, `${normalized}/%`);
   }
   return params;
 }
@@ -534,7 +530,7 @@ export function searchByodIndex(
   const pathExpr = "replace(byod_chunks.file_path, char(92), '/')";
   const prefixClause =
     scoped.length > 0
-      ? ` AND (${scoped.map(() => `(${pathExpr} = ? OR ${pathExpr} LIKE ? ESCAPE char(92))`).join(" OR ")})`
+      ? ` AND (${scoped.map(() => `(${pathExpr} = ? OR ${pathExpr} LIKE ?)`).join(" OR ")})`
       : "";
 
   const stmt = db.prepare(`
