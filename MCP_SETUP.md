@@ -18,7 +18,37 @@ Verify with:
 node packages/server/dist/cli.js setup     # creates consent token for BYOD mode (optional)
 ```
 
-The MCP server binary is `packages/server/dist/index.js`. All harnesses launch it via `node`.
+The MCP server binary is `packages/server/dist/index.js`. All harnesses launch it via `node`, `npx`, or Docker.
+
+### npx
+
+```json
+{
+  "mcpServers": {
+    "2d6mcp": {
+      "command": "npx",
+      "args": ["-y", "crowterliam-2d6mcp"]
+    }
+  }
+}
+```
+
+### Docker
+
+```bash
+docker build -t 2d6mcp .
+```
+
+```json
+{
+  "mcpServers": {
+    "2d6mcp": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "2d6mcp"]
+    }
+  }
+}
+```
 
 ---
 

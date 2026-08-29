@@ -110,7 +110,9 @@ Slash commands are in `.kilo/command/`:
 ```
 packages/server/src/
   index.ts          # MCP server entry point (stdio transport)
-  server.ts         # Server class, tool registration
+  server.ts         # Server class, tool / prompt / resource registration
+  prompts.ts        # MCP prompt catalog (skill-check, lookup-rules, …)
+  resources.ts      # MCP resource catalog (2d6mcp://info, rules indexes, …)
   config.ts         # Environment config + BYOD gate
   cli.ts            # CLI entry for setup/populate commands
   ogl/
@@ -188,6 +190,12 @@ packages/shared/src/
 | `synthesize_ruling` | Cited rules ruling. Optional `from_context` uses recent transcript. Default `rules_system` from the session when `session_id` is set. BYOD runs whenever consent is on. |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. `action`: transcribe, list, or clear. Last chunk sets `complete: true`. |
 
+## Prompts and Resources
+
+MCP prompts (workflows): `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create-character`, `start-session`, `ask-ruling`, `index-documents`.
+
+MCP resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://systems`, `2d6mcp://docs/quickstart`, `2d6mcp://docs/environment`, `2d6mcp://license`, `2d6mcp://session/current`, `2d6mcp://rules/{system}`.
+
 ## Session Management & Ruling Synthesis
 
 - **Session lifecycle**: Start with `session` `action: start`, log with `log_transcript`, end with `session` `action: end`.
@@ -210,6 +218,7 @@ packages/shared/src/
 - All files under `data/brp/`: BRP OGL v1.0
 - All files under `data/5ecompatible/`: CC-BY-4.0
 - All files under `data/orcus/`: OGL v1.0a
+- `LICENSE` contains the AGPL-3.0 text
 - `LICENSE.md` describes the firewall in detail
 - `OGL-1.0a.txt` contains the full OGL text with Cepheus SRD copyright attributions
 - `data/dw/CC-BY-3.0.txt` contains the full CC-BY-3.0 license text

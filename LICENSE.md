@@ -1,5 +1,7 @@
 # Copyright & Multi-License Architecture
 
+The GNU Affero GPL v3 text for source code is in [`LICENSE`](LICENSE). This file describes how licenses apply across the repository.
+
 Copyright © 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
 All code in this repository is copyright Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers and licensed as described below.

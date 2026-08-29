@@ -5,8 +5,12 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "2d6mcp": "./dist/cli.js"
+    "2d6mcp": "./dist/index.js",
+    "crowterliam-2d6mcp": "./dist/index.js",
+    "2d6mcp-cli": "./dist/cli.js"
   },
+  "mcpName": "io.github.crowterliam/2d6mcp",
+  "files": ["dist"],
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",

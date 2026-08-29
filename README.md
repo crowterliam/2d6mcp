@@ -3,6 +3,9 @@
 SPDX-License-Identifier: AGPL-3.0-only
 Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+[![MCP](https://lobehub.com/badge/mcp/crowterliam-2d6mcp)](https://lobehub.com/mcp/crowterliam-2d6mcp)
+
 A system-agnostic Model Context Protocol (MCP) server providing a mechanical engine, dice roller, rules reference, and AI-powered rulings assistant for tabletop RPGs. Supports sci-fi (OGL/Cepheus Engine SRD), fantasy (Dungeon World, CC-BY-3.0), generic percentile (Basic Roleplaying SRD, BRP OGL v1.0), and d20 fantasy (5E-compatible SRD, CC-BY-4.0) games.
 
 ## Features
@@ -35,6 +38,38 @@ npm run start          # run the MCP server (stdio transport)
 
 ## MCP Client Configuration
 
+LobeHub and other clients that expect an npm package can use:
+
+```json
+{
+  "mcpServers": {
+    "2d6mcp": {
+      "command": "npx",
+      "args": ["-y", "crowterliam-2d6mcp"]
+    }
+  }
+}
+```
+
+Docker (stdio):
+
+```json
+{
+  "mcpServers": {
+    "2d6mcp": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "2d6mcp"]
+    }
+  }
+}
+```
+
+```bash
+docker build -t 2d6mcp .
+```
+
+From a local clone:
+
 ```json
 {
   "mcpServers": {
@@ -49,6 +84,8 @@ npm run start          # run the MCP server (stdio transport)
   }
 }
 ```
+
+Smithery: `smithery.yaml` at the repository root launches `packages/server/dist/index.js` over stdio.
 
 ## BYOD — Non-Commercial Use Disclosure
 
@@ -79,6 +116,23 @@ BYOD (Bring Your Own Documents) mode enables local file ingestion for personal, 
 | `search_transcript` | Search session transcripts with SQL LIKE |
 | `synthesize_ruling` | Cited rules ruling. Optional `from_context` uses recent transcript |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. Last chunk sets `complete: true` |
+
+## Prompts
+
+| Prompt | Purpose |
+|--------|---------|
+| `skill-check` | 2d6 task check via `roll` |
+| `d20-check` | d20 attack or ability check via `roll` |
+| `percentile-check` | d100 roll-under via `roll` |
+| `lookup-rules` | Licensed rules search via `query_rules` |
+| `create-character` | Character creation using `roll` and `query_rules` |
+| `start-session` | Start a logged session |
+| `ask-ruling` | Cited ruling via `synthesize_ruling` |
+| `index-documents` | BYOD ingest via `sync_byod` |
+
+## Resources
+
+Attachable context at `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://systems`, `2d6mcp://docs/quickstart`, `2d6mcp://docs/environment`, `2d6mcp://license`, `2d6mcp://session/current`, and `2d6mcp://rules/{system}` for each licensed database.
 
 ## Architecture
 
@@ -149,7 +203,7 @@ npm run start         # run the MCP server (packages/server/dist/index.js)
 
 This project uses a multi-license architecture:
 
-- **Source code** (`packages/**`, root config files): [AGPL-3.0-only](https://www.gnu.org/licenses/agpl-3.0.en.html)
+- **Source code** (`packages/**`, root config files): [AGPL-3.0-only](LICENSE)
 - **OGL game data** (`data/ogl/**`): [OGL v1.0a](OGL-1.0a.txt)
 - **Dungeon World data** (`data/dw/**`): [CC-BY-3.0](data/dw/CC-BY-3.0.txt)
 - **Basic Roleplaying data** (`data/brp/**`): [BRP Open Game License v1.0](data/brp/BRP-OGL-1.0.txt)

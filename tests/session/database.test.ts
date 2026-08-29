@@ -12,6 +12,7 @@ import {
   endSession,
   setSessionSummary,
   getSession,
+  getActiveSession,
   listSessions,
   logTranscript,
   getTranscript,
@@ -87,6 +88,16 @@ describe("session database", () => {
     const retrieved = getSession(db, session.id);
     expect(retrieved!.summary).toBe("Great session.");
     expect(retrieved!.summary_generated_at).toBeGreaterThan(0);
+  });
+
+  it("returns the open session as active", () => {
+    const db = openSessionDb(DB_PATH);
+    const first = createSession(db, "ogl", "Open");
+    const active = getActiveSession(db);
+    expect(active).not.toBeNull();
+    expect(active!.id).toBe(first.id);
+    endSession(db, first.id);
+    expect(getActiveSession(db)).toBeNull();
   });
 
   it("lists sessions", async () => {
