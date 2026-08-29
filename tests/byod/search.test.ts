@@ -33,6 +33,7 @@ describe("getByodDatabase", () => {
     expect(names).toContain("byod_files");
     expect(names).toContain("byod_chunks");
     expect(names).toContain("byod_fts");
+    expect(names).toContain("byod_walk");
     closeByodDatabase(byodPath);
   });
 
@@ -121,6 +122,24 @@ describe("searchByodIndex", () => {
     expect(results[0].title).toContain("Combat Rules");
     expect(results[0].filePath).toBe("rules.md");
     expect(results[0].chunkIndex).toBe(0);
+    closeByodDatabase(byodPath);
+  });
+
+  it("filters hits to matching path prefixes", async () => {
+    const { getByodDatabase, indexChunks, rebuildByodFts, searchByodIndex, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
+    const byodPath = uniqueByodPath();
+    mkdirSync(byodPath, { recursive: true });
+    const db = getByodDatabase(byodPath);
+    indexChunks(db, "Traveller/core.md", "core.md", ".md", 80, "h1", null, [
+      { title: "Jump", content: "Jump drives take one week in Traveller.", chunkIndex: 0 },
+    ]);
+    indexChunks(db, "Call of Cthulhu/sanity.md", "sanity.md", ".md", 80, "h2", null, [
+      { title: "Sanity", content: "Jumping at shadows costs sanity.", chunkIndex: 0 },
+    ]);
+    rebuildByodFts(db);
+
+    const scoped = searchByodIndex(db, "jump", 20, ["Traveller"]);
+    expect(scoped.map((r) => r.filePath)).toEqual(["Traveller/core.md"]);
     closeByodDatabase(byodPath);
   });
 

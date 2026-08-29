@@ -200,13 +200,17 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
     {
       name: "query_local_byod",
       description:
-        "Search your locally ingested files. Requires BYOD consent. Results include chunkIndex for get_byod_chunk. Set include_full to attach full chunk text.",
+        "Search personal RPG files. Matches top-level game folders to the query (or system), indexes only those collections, then searches. Does not crawl the whole library. If index_complete is false, call again to continue indexing. Already-indexed collections are reused. Results include chunkIndex for get_byod_chunk.",
       inputSchema: {
         type: "object",
         properties: {
           search_term: {
             type: "string",
-            description: "Search term to look up in your local index",
+            description: "Search term. Also used to choose which game folder to index (for example Traveller).",
+          },
+          system: {
+            type: "string",
+            description: "Optional game/collection name to index (for example \"traveller\" or \"call of cthulhu\").",
           },
           include_full: {
             type: "boolean",
@@ -220,13 +224,21 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
     {
       name: "sync_byod",
       description:
-        "Index files from your BYOD directory. Optional relative_path indexes a single file. Runs in time-budgeted batches; if complete is false, call again.",
+        "On-demand BYOD indexing. With no query, lists top-level game folders (does not crawl the library). With query or system, indexes matching folders only and refreshes them if files were added. Optional relative_path indexes one file. If complete is false, call again.",
       inputSchema: {
         type: "object",
         properties: {
+          query: {
+            type: "string",
+            description: "Game or collection to index, for example \"traveller\" or \"call of cthulhu\".",
+          },
+          system: {
+            type: "string",
+            description: "Alias for query.",
+          },
           relative_path: {
             type: "string",
-            description: "If set, index only this file (relative to BYOD_PATH) instead of a bulk sync",
+            description: "If set, index only this file (relative to BYOD_PATH)",
           },
         },
       },

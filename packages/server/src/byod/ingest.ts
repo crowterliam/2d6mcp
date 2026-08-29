@@ -2,8 +2,10 @@
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
+import { readdir, stat } from "node:fs/promises";
 import { join, extname, resolve } from "node:path";
 import { DOMParser } from "@xmldom/xmldom";
+import { toRelativePath } from "./paths.js";
 
 const TEXT_EXTENSIONS = new Set([".txt", ".json", ".xml", ".csv"]);
 const MARKDOWN_EXTENSIONS = new Set([".md", ".markdown"]);
@@ -15,6 +17,7 @@ const SUPPORTED_EXTENSIONS = new Set([
   ".pdf",
 ]);
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
+export const SLOW_FS_READDIR_MS = 200;
 
 export interface IngestedFile {
   path: string;
@@ -99,7 +102,7 @@ function walkDirectory(dir: string, baseDir: string, maxFileSize: number = MAX_F
 
           results.push({
             path: fullPath,
-            relativePath: fullPath.replace(baseDir + "/", ""),
+            relativePath: toRelativePath(baseDir, fullPath),
             name: entry,
             size: stat.size,
             ext,
@@ -122,6 +125,74 @@ export function discoverFiles(byodPath: string, maxFileSize: number = MAX_FILE_S
   const files = walkDirectory(resolved, resolved, maxFileSize);
   log(`discoverFiles: found ${files.length} files`);
   return files;
+}
+
+export interface DirectoryScan {
+  subdirsRelative: string[];
+  files: IngestedFile[];
+  readdirMs: number;
+}
+
+export async function scanByodDirectory(
+  absDir: string,
+  baseDir: string,
+  maxFileSize: number = MAX_FILE_SIZE_BYTES
+): Promise<DirectoryScan> {
+  const started = Date.now();
+  if (!existsSync(absDir)) {
+    return { subdirsRelative: [], files: [], readdirMs: Date.now() - started };
+  }
+
+  let entries;
+  try {
+    entries = await readdir(absDir, { withFileTypes: true });
+  } catch {
+    log(`Skipping ${absDir} — could not read directory`);
+    return { subdirsRelative: [], files: [], readdirMs: Date.now() - started };
+  }
+  const readdirMs = Date.now() - started;
+
+  const subdirsRelative: string[] = [];
+  const files: IngestedFile[] = [];
+
+  for (const entry of entries) {
+    if (entry.name.startsWith(".")) continue;
+    const fullPath = join(absDir, entry.name);
+    try {
+      let isDir = entry.isDirectory();
+      let isFile = entry.isFile();
+      if (!isDir && !isFile) {
+        const typed = await stat(fullPath);
+        isDir = typed.isDirectory();
+        isFile = typed.isFile();
+      }
+      if (isDir) {
+        subdirsRelative.push(toRelativePath(baseDir, fullPath));
+        continue;
+      }
+      if (!isFile) continue;
+      const ext = extname(entry.name).toLowerCase();
+      if (!SUPPORTED_EXTENSIONS.has(ext)) continue;
+      const st = await stat(fullPath);
+      if (st.size > maxFileSize) {
+        log(`Skipping ${entry.name} — exceeds ${formatSize(maxFileSize)} limit`);
+        continue;
+      }
+      files.push({
+        path: fullPath,
+        relativePath: toRelativePath(baseDir, fullPath),
+        name: entry.name,
+        size: st.size,
+        ext,
+        hash: `${st.mtimeMs}-${st.size}`,
+        contentHash: null,
+      });
+    } catch {
+      log(`Skipping ${entry.name} — could not stat file`);
+    }
+  }
+
+  return { subdirsRelative, files, readdirMs };
 }
 
 function readTextFile(filePath: string): string {

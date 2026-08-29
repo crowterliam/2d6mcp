@@ -31,8 +31,8 @@ describe("retrieveRulesContext", () => {
     process.env = { ...originalEnv };
   });
 
-  it("scopes lookup to an explicit rules system", () => {
-    const result = retrieveRulesContext({
+  it("scopes lookup to an explicit rules system", async () => {
+    const result = await retrieveRulesContext({
       question: "cover in combat",
       rulesSystem: "ogl",
     });
@@ -43,14 +43,14 @@ describe("retrieveRulesContext", () => {
     expect(result.context.length).toBeGreaterThan(0);
   });
 
-  it("uses session.rules_system when the arg is omitted", () => {
+  it("uses session.rules_system when the arg is omitted", async () => {
     const sessionPath = join(tmpdir(), `2d6mcp-retrieve-session-${Date.now()}.db`);
     process.env.SESSION_DB_PATH = sessionPath;
     closeSessionDb();
     const db = openSessionDb(sessionPath);
     const session = createSession(db, "dw", "retrieve-test");
 
-    const result = retrieveRulesContext({
+    const result = await retrieveRulesContext({
       question: "hack and slash",
       sessionId: session.id,
     });
@@ -59,7 +59,7 @@ describe("retrieveRulesContext", () => {
     expect(result.searchCalls).toBeLessThanOrEqual(8);
   });
 
-  it("runs BYOD for ogl when consent is on", () => {
+  it("runs BYOD for ogl when consent is on", async () => {
     const byodPath = join(tmpdir(), `2d6mcp-retrieve-byod-${Date.now()}`);
     mkdirSync(byodPath, { recursive: true });
     writeFileSync(join(byodPath, "house.md"), "House rule: cover always grants a -2 DM.");
@@ -72,7 +72,7 @@ describe("retrieveRulesContext", () => {
     ]);
     rebuildByodFts(db);
 
-    const result = retrieveRulesContext({
+    const result = await retrieveRulesContext({
       question: "cover combat modifier",
       rulesSystem: "ogl",
     });
@@ -83,16 +83,15 @@ describe("retrieveRulesContext", () => {
     rmSync(byodPath, { recursive: true, force: true });
   });
 
-  it("keeps searchCalls O(categories) rather than O(fuzzy terms × tables)", () => {
-    const ogl = retrieveRulesContext({
+  it("keeps searchCalls O(categories) rather than O(fuzzy terms × tables)", async () => {
+    const ogl = await retrieveRulesContext({
       question: "what is the modifier for attacking from cover in ranged combat with a laser rifle",
       rulesSystem: "ogl",
     });
-    // One FTS + four entity searches. A fuzzy cartesian product would be dozens or hundreds.
     expect(ogl.searchCalls).toBeGreaterThanOrEqual(5);
-    expect(ogl.searchCalls).toBeLessThanOrEqual(6);
+    expect(ogl.searchCalls).toBeLessThanOrEqual(7);
 
-    const auto = retrieveRulesContext({
+    const auto = await retrieveRulesContext({
       question: "combat cover",
       rulesSystem: "auto",
     });

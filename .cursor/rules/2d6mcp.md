@@ -17,8 +17,8 @@ It shares rules databases, dice engine, prompt templates, and quality filters vi
 | `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`). Infers mechanic from notation when omitted. |
 | `roll_table` | Roll on a named table. `source`: `ogl` or `byod`. Omit `table_name` with `source=byod` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
-| `query_local_byod` | Search ingested personal files. Returns `chunkIndex`. Optional `include_full`. |
-| `sync_byod` | Index BYOD files. Optional `relative_path` for a single file. |
+| `query_local_byod` | Search personal files. Indexes matching top-level game folders on demand, then searches. Optional `include_full`. |
+| `sync_byod` | On-demand index. No args lists folders. `query` indexes matching collections. Optional `relative_path` for one file. |
 | `clear_byod` | Delete the BYOD index. |
 | `list_byod_files` | List indexed files. Optional `relative_path` inspects one file. |
 | `get_byod_chunk` | Retrieve full chunk content by path + chunk index. |
@@ -46,7 +46,7 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 - **d66 tables**: Two d6s as tens and ones (11–66). Use `roll_table` with `"dice_type": "d66"`.
 - **Difficulty (2d6)**: Modifiers range from +6 (simple) to -6 (formidable). Or adjust target: easy = 6+, average = 8+, difficult = 10+, very difficult = 12+, formidable = 14+.
 - **OGL for sci-fi, DW for fantasy, BRP for percentile, 5E-compatible for d20 fantasy, Orcus for 4e-compatible, BYOD for personal content**: The OGL database covers sci-fi core rules. The DW database covers fantasy rules. The BRP database covers percentile RPG rules. The 5E-compatible database covers d20 fantasy rules. The Orcus database covers 4e-compatible rules. Fall back to BYOD for supplements and house rules.
-- **BYOD requires consent**: Set `AGREE_BYOD_USE="true"` and configure `BYOD_PATH`. Files must be synced before searchable.
+- **BYOD requires consent**: Set `AGREE_BYOD_USE="true"` and configure `BYOD_PATH`. Search indexes matching game folders on demand; do not crawl the whole library.
 
 ## Key Workflows
 
@@ -72,13 +72,14 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 4. Parse existing sheets: `parse_character(file_path)`
 
 ### BYOD Management
-1. Check indexed content: `list_byod_files`
-2. Sync new/changed files: `sync_byod` (re-call until `complete: true`)
-3. Inspect structure: `list_byod_files(relative_path)`
-4. Search personal content: `query_local_byod("search term")`
+1. Search personal content: `query_local_byod("search term")` — names the game when possible (for example include "traveller") so matching folders are indexed, then searched
+2. If `index_complete` is false, call `query_local_byod` again (or `sync_byod` with the same query) until complete
+3. Refresh a collection after adding files: `sync_byod` with `query` (re-call until `complete: true`)
+4. List top-level folders: `sync_byod` with no arguments (does not crawl the library)
 5. Index a single file: `sync_byod(relative_path)`
-6. Get full chunk content: `get_byod_chunk(file_path, chunk_index)` (after search returns snippets)
-7. Start fresh: `clear_byod`
+6. Inspect indexed files: `list_byod_files` / `list_byod_files(relative_path)`
+7. Get full chunk content: `get_byod_chunk(file_path, chunk_index)`
+8. Start fresh: `clear_byod`
 
 ### Session Management
 1. Start session: `session(action: "start", "Session Name")` — returns session ID

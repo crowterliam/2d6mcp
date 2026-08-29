@@ -79,13 +79,13 @@ function annotationsFor(name: CatalogToolName): ToolAnnotations {
     case "roll":
     case "roll_table":
     case "query_rules":
-    case "query_local_byod":
     case "list_byod_files":
     case "get_byod_chunk":
     case "parse_character":
     case "get_session_context":
     case "search_transcript":
       return READ_ONLY;
+    case "query_local_byod":
     case "sync_byod":
     case "log_transcript":
     case "synthesize_ruling":

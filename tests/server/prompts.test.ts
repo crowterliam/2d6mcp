@@ -41,6 +41,21 @@ describe("MCP prompts", () => {
     expect(text.text).toContain("hack and slash");
   });
 
+  it("renders index-documents as on-demand indexing", () => {
+    const listed = getPrompt("index-documents", {});
+    const listedText = listed.messages[0].content;
+    expect(listedText.type).toBe("text");
+    if (listedText.type !== "text") return;
+    expect(listedText.text).toContain("list top-level collections");
+    expect(listedText.text).not.toContain("Call sync_byod. If complete is false");
+
+    const queried = getPrompt("index-documents", { query: "traveller" });
+    const queriedText = queried.messages[0].content;
+    expect(queriedText.type).toBe("text");
+    if (queriedText.type !== "text") return;
+    expect(queriedText.text).toContain('query "traveller"');
+  });
+
   it("rejects unknown prompts", () => {
     expect(isPromptName("skill-check")).toBe(true);
     expect(isPromptName("not-a-prompt")).toBe(false);
