@@ -4,12 +4,13 @@
 
 import { writeFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
-import { PROJECT_ROOT, BYOD_CONSENT_FILE } from "./config.js";
+import { PROJECT_ROOT, BYOD_CONSENT_FILE, loadConfig, isByodEnabled } from "./config.js";
 import { populateOglDatabase } from "@2d6mcp/ogl/populate";
 import { populateDwDatabase } from "@2d6mcp/dw/populate";
 import { populateBrpDatabase } from "@2d6mcp/brp/populate";
 import { populate5ecompatibleDatabase } from "@2d6mcp/5ecompatible/populate";
 import { populateOrcusDatabase } from "@2d6mcp/orcus/populate";
+import { syncByodIndex } from "./tools/helpers.js";
 
 function cmdSetup(): void {
   if (existsSync(BYOD_CONSENT_FILE)) {
@@ -72,11 +73,14 @@ Usage:
   2d6mcp populate-5ecompatible --force  Force regeneration of 5E database
   2d6mcp populate-orcus  Generate or regenerate the Orcus d20-compatible database
   2d6mcp populate-orcus --force  Force regeneration of Orcus database
+  2d6mcp sync-byod     List top-level BYOD collections (no full-library crawl)
+  2d6mcp sync-byod <query>  Index matching collections until complete (e.g. traveller)
   2d6mcp help          Show this help
 
  Environment:
    AGREE_BYOD_USE=true   Enable BYOD via env var
     BYOD_PATH=/path/to/files       Directory of local RPG source files
+    BYOD_NETWORK=true              Force single-file index concurrency for high-latency filesystems
     OGL_DB_PATH=/path/to/db        Custom OGL database path (optional)
     DW_DB_PATH=/path/to/db         Custom DW database path (optional)
     BRP_DB_PATH=/path/to/db        Custom BRP database path (optional)
@@ -153,6 +157,49 @@ function cmdPopulateOrcus(): void {
   console.log(result.message);
 }
 
+async function cmdSyncByod(): Promise<void> {
+  if (!isByodEnabled()) {
+    console.error("BYOD is not enabled. Run `npm run setup` and set BYOD_PATH to an existing directory.");
+    process.exitCode = 1;
+    return;
+  }
+
+  const query = process.argv.slice(3).join(" ").trim();
+  const config = loadConfig();
+  if (!query) {
+    const result = await syncByodIndex(config);
+    console.log(result.message);
+    if (result.catalog) {
+      console.log(JSON.stringify(result.catalog, null, 2));
+    }
+    return;
+  }
+
+  let round = 0;
+  while (true) {
+    round += 1;
+    const result = await syncByodIndex(config, { query });
+    console.log(
+      JSON.stringify({
+        round,
+        complete: result.complete,
+        walkComplete: result.walkComplete,
+        matchedRoots: result.matchedRoots,
+        filesIndexed: result.filesIndexed,
+        discovered: result.discovered,
+        remaining: result.remaining,
+        dirsRemaining: result.dirsRemaining,
+        chunksIndexed: result.chunksIndexed,
+        elapsedMs: result.elapsedMs,
+        message: result.message,
+      })
+    );
+    if (result.complete) {
+      return;
+    }
+  }
+}
+
 const command = process.argv[2]?.toLowerCase() || "help";
 
 switch (command) {
@@ -173,6 +220,13 @@ switch (command) {
     break;
   case "populate-orcus":
     cmdPopulateOrcus();
+    break;
+  case "sync-byod":
+    cmdSyncByod().catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : "sync-byod failed";
+      console.error(message);
+      process.exit(1);
+    });
     break;
   case "help":
   case "--help":

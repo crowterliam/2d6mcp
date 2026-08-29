@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { mkdirSync, writeFileSync, rmSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, resolve, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { discoverFiles, ingestFile, type IngestedFile, type IngestOptions } from "../../packages/server/src/byod/ingest.js";
 
@@ -79,6 +79,7 @@ describe("discoverFiles", () => {
     const files = discoverFiles(TMP);
     const f = files.find((f) => f.name === "nested.txt");
     expect(f).toBeDefined();
+    expect(f!.relativePath).toBe(relative(TMP, f!.path));
     expect(f!.relativePath).toContain("subdir");
   });
 });

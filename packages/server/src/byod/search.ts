@@ -3,7 +3,7 @@
 
 import Database from "better-sqlite3";
 import { existsSync, mkdirSync, unlinkSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { fts5QueryStrategy } from "@2d6mcp/shared";
 import { PROJECT_ROOT } from "../config.js";
@@ -75,10 +75,163 @@ export function getByodDatabase(byodPath: string): Database.Database {
       chunk_index INTEGER,
       FOREIGN KEY (file_id) REFERENCES byod_files(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS byod_walk (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      pending_dirs TEXT NOT NULL,
+      pending_files TEXT NOT NULL,
+      walk_complete INTEGER NOT NULL DEFAULT 0,
+      discovered INTEGER NOT NULL DEFAULT 0,
+      slow_fs INTEGER NOT NULL DEFAULT 0,
+      scope_key TEXT NOT NULL DEFAULT '',
+      completed_roots TEXT NOT NULL DEFAULT '[]'
+    );
   `);
+
+  ensureWalkColumns(db);
 
   workspaceDbs.set(dbPath, db);
   return db;
+}
+
+function ensureWalkColumns(db: Database.Database): void {
+  const cols = db.prepare("PRAGMA table_info(byod_walk)").all() as { name: string }[];
+  const names = new Set(cols.map((c) => c.name));
+  if (!names.has("slow_fs")) {
+    db.exec("ALTER TABLE byod_walk ADD COLUMN slow_fs INTEGER NOT NULL DEFAULT 0;");
+  }
+  if (!names.has("discovered")) {
+    db.exec("ALTER TABLE byod_walk ADD COLUMN discovered INTEGER NOT NULL DEFAULT 0;");
+  }
+  if (!names.has("scope_key")) {
+    db.exec("ALTER TABLE byod_walk ADD COLUMN scope_key TEXT NOT NULL DEFAULT '';");
+  }
+  if (!names.has("completed_roots")) {
+    db.exec("ALTER TABLE byod_walk ADD COLUMN completed_roots TEXT NOT NULL DEFAULT '[]';");
+  }
+}
+
+export interface PersistedIngestedFile {
+  path: string;
+  relativePath: string;
+  name: string;
+  size: number;
+  ext: string;
+  hash: string;
+}
+
+export interface ByodWalkState {
+  pendingDirs: string[];
+  pendingFiles: PersistedIngestedFile[];
+  walkComplete: boolean;
+  discovered: number;
+  slowFs: boolean;
+  scopeKey: string;
+  completedRoots: string[];
+}
+
+export function scopeKeyFor(roots: string[]): string {
+  return JSON.stringify([...roots].sort());
+}
+
+export function freshWalkState(slowFs = false, pendingDirs: string[] = []): ByodWalkState {
+  return {
+    pendingDirs,
+    pendingFiles: [],
+    walkComplete: false,
+    discovered: 0,
+    slowFs,
+    scopeKey: scopeKeyFor(pendingDirs),
+    completedRoots: [],
+  };
+}
+
+export function loadWalkState(db: Database.Database): ByodWalkState | null {
+  const row = db
+    .prepare(
+      `SELECT pending_dirs, pending_files, walk_complete, discovered, slow_fs, scope_key, completed_roots FROM byod_walk WHERE id = 1`
+    )
+    .get() as
+    | {
+        pending_dirs: string;
+        pending_files: string;
+        walk_complete: number;
+        discovered: number;
+        slow_fs: number;
+        scope_key: string;
+        completed_roots: string;
+      }
+    | undefined;
+  if (!row) return null;
+
+  let pendingDirs: string[] = [];
+  let pendingFiles: PersistedIngestedFile[] = [];
+  try {
+    const dirs = JSON.parse(row.pending_dirs) as unknown;
+    pendingDirs = Array.isArray(dirs) ? dirs.filter((d): d is string => typeof d === "string") : [];
+  } catch {
+    pendingDirs = [];
+  }
+  try {
+    const files = JSON.parse(row.pending_files) as unknown;
+    pendingFiles = Array.isArray(files) ? files.filter(isPersistedIngestedFile) : [];
+  } catch {
+    pendingFiles = [];
+  }
+
+  let completedRoots: string[] = [];
+  try {
+    const roots = JSON.parse(row.completed_roots || "[]") as unknown;
+    completedRoots = Array.isArray(roots) ? roots.filter((r): r is string => typeof r === "string") : [];
+  } catch {
+    completedRoots = [];
+  }
+
+  return {
+    pendingDirs,
+    pendingFiles,
+    walkComplete: row.walk_complete === 1,
+    discovered: Number(row.discovered) || 0,
+    slowFs: row.slow_fs === 1,
+    scopeKey: row.scope_key || "",
+    completedRoots,
+  };
+}
+
+function isPersistedIngestedFile(value: unknown): value is PersistedIngestedFile {
+  if (typeof value !== "object" || value === null) return false;
+  const f = value as PersistedIngestedFile;
+  return (
+    typeof f.path === "string" &&
+    typeof f.relativePath === "string" &&
+    typeof f.name === "string" &&
+    typeof f.size === "number" &&
+    typeof f.ext === "string" &&
+    typeof f.hash === "string"
+  );
+}
+
+export function saveWalkState(db: Database.Database, state: ByodWalkState): void {
+  db.prepare(
+    `INSERT INTO byod_walk (id, pending_dirs, pending_files, walk_complete, discovered, slow_fs, scope_key, completed_roots)
+     VALUES (1, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       pending_dirs = excluded.pending_dirs,
+       pending_files = excluded.pending_files,
+       walk_complete = excluded.walk_complete,
+       discovered = excluded.discovered,
+       slow_fs = excluded.slow_fs,
+       scope_key = excluded.scope_key,
+       completed_roots = excluded.completed_roots`
+  ).run(
+    JSON.stringify(state.pendingDirs),
+    JSON.stringify(state.pendingFiles),
+    state.walkComplete ? 1 : 0,
+    state.discovered,
+    state.slowFs ? 1 : 0,
+    state.scopeKey,
+    JSON.stringify(state.completedRoots)
+  );
 }
 
 export function indexChunks(
@@ -330,14 +483,9 @@ export interface SearchResult {
   chunkIndex: number;
 }
 
-function tryFts5Query(
-  db: Database.Database,
-  stmt: Database.Statement,
-  query: string,
-  limit: number
-): SearchResult[] {
+function tryFts5Query(stmt: Database.Statement, params: unknown[]): SearchResult[] {
   try {
-    const rows = stmt.all(query, limit) as {
+    const rows = stmt.all(...params) as {
       title: string;
       snippet: string;
       file_name: string;
@@ -359,26 +507,44 @@ function tryFts5Query(
   }
 }
 
+function bindPrefixParams(prefixes: string[]): unknown[] {
+  const params: unknown[] = [];
+  for (const prefix of prefixes) {
+    const normalized = prefix.replace(/\\/g, "/");
+    params.push(normalized, `${normalized}/%`);
+  }
+  return params;
+}
+
 export function searchByodIndex(
   db: Database.Database,
   searchTerm: string,
-  limit = 20
+  limit = 20,
+  pathPrefixes?: string[]
 ): SearchResult[] {
-  // Try exact → prefix-wildcard → fuzzy OR, stopping at the first match
   const strategies = fts5QueryStrategy(searchTerm);
   if (strategies.length === 0) return [];
+  if (pathPrefixes && pathPrefixes.length === 0) return [];
+
+  const scoped = (pathPrefixes ?? []).filter((prefix) => prefix !== "");
+  const pathExpr = "replace(byod_chunks.file_path, char(92), '/')";
+  const prefixClause =
+    scoped.length > 0
+      ? ` AND (${scoped.map(() => `(${pathExpr} = ? OR ${pathExpr} LIKE ?)`).join(" OR ")})`
+      : "";
 
   const stmt = db.prepare(`
     SELECT byod_fts.title, snippet(byod_fts, 1, '<mark>', '</mark>', '...', 64) AS snippet, byod_fts.file_name, byod_chunks.file_path, byod_chunks.chunk_index
     FROM byod_fts
     JOIN byod_chunks ON byod_chunks.id = byod_fts.rowid
-    WHERE byod_fts MATCH ?
+    WHERE byod_fts MATCH ?${prefixClause}
     ORDER BY rank
     LIMIT ?
   `);
 
+  const prefixParams = bindPrefixParams(scoped);
   for (const ftsMatch of strategies) {
-    const results = tryFts5Query(db, stmt, ftsMatch, limit);
+    const results = tryFts5Query(stmt, [ftsMatch, ...prefixParams, limit]);
     if (results.length > 0) return results;
   }
 

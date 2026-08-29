@@ -72,7 +72,7 @@ export async function handleSynthesizeRuling(args: Record<string, unknown> | und
   let rulesContext = typeof args?.rules_context === "string" ? args.rules_context : undefined;
 
   if (!rulesContext) {
-    const retrieved = retrieveRulesContext({
+    const retrieved = await retrieveRulesContext({
       question,
       rulesSystem,
       sessionId,

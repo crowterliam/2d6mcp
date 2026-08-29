@@ -102,8 +102,8 @@ BYOD (Bring Your Own Documents) mode enables local file ingestion for personal, 
 | `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`). Infers mechanic from notation when omitted. |
 | `roll_table` | Roll on a named table. `source`: `ogl` or `byod`. Omit `table_name` with `source=byod` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
-| `query_local_byod` | Search ingested personal files. Returns `chunkIndex`. Optional `include_full`. |
-| `sync_byod` | Index BYOD files. Optional `relative_path` for a single file. |
+| `query_local_byod` | Search personal files. Indexes matching top-level game folders on demand, then searches. Optional `include_full`. |
+| `sync_byod` | On-demand index. No args lists folders. `query` indexes matching collections. Optional `relative_path` for one file. |
 | `clear_byod` | Delete the BYOD index. |
 | `list_byod_files` | List indexed files. Optional `relative_path` inspects one file. |
 | `get_byod_chunk` | Retrieve full chunk content by path + chunk index. |
@@ -128,7 +128,7 @@ BYOD (Bring Your Own Documents) mode enables local file ingestion for personal, 
 | `create-character` | Character creation using `roll` and `query_rules` |
 | `start-session` | Start a logged session |
 | `ask-ruling` | Cited ruling via `synthesize_ruling` |
-| `index-documents` | BYOD ingest via `sync_byod` |
+| `index-documents` | On-demand BYOD ingest via `sync_byod` |
 
 ## Resources
 
@@ -174,6 +174,7 @@ npm run build         # compile all packages (tsc --build)
 npm test              # run the Vitest suite
 npm run typecheck     # type-check without emitting
 npm run start         # run the MCP server (packages/server/dist/index.js)
+npm run sync-byod     # list BYOD collections; pass a query to index matches
 ```
 
 ## Environment Variables
@@ -187,6 +188,7 @@ npm run start         # run the MCP server (packages/server/dist/index.js)
 | `BYOD_MAX_FILES` | `2000` | Maximum files to process per sync |
 | `BYOD_MAX_CHUNKS_PER_FILE` | `500` | Maximum chunks from any single file |
 | `BYOD_SYNC_TIMEOUT_MS` | `15000` | Milliseconds per sync batch |
+| `BYOD_NETWORK` | `"false"` | Force single-file index concurrency for high-latency filesystems |
 | `BYOD_CONTENT_CACHE_PATH` | `data/byod/content_cache.db` | Shared content cache database |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Path to custom OGL SQLite database |
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | Path to custom DW SQLite database |

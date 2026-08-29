@@ -45,6 +45,7 @@ export interface Config {
   byodMaxChunksPerFile: number;
   byodSyncTimeoutMs: number;
   byodMaxFileSize: number;
+  byodNetwork: boolean;
 }
 
 const DEFAULT_CHUNK_SIZE = 8000;
@@ -107,6 +108,7 @@ export function loadConfig(): Config {
   const byodMaxChunksPerFile = parseIntEnv("BYOD_MAX_CHUNKS_PER_FILE", DEFAULT_MAX_CHUNKS_PER_FILE, 1, 2000);
   const byodSyncTimeoutMs = parseIntEnv("BYOD_SYNC_TIMEOUT_MS", DEFAULT_SYNC_TIMEOUT_MS, 1000, 300000);
   const byodMaxFileSize = parseIntEnv("BYOD_MAX_FILE_SIZE", DEFAULT_MAX_FILE_SIZE_BYTES, 1024 * 1024, 1024 * 1024 * 1024);
+  const byodNetwork = process.env.BYOD_NETWORK === "true";
 
   const oglDbPath =
     process.env.OGL_DB_PATH ||
@@ -151,7 +153,7 @@ export function loadConfig(): Config {
   const sttBackend = (process.env.STT_BACKEND === "whispercpp") ? "whispercpp" : "mlx";
   const llmBackend = (process.env.LLM_BACKEND === "llamacpp") ? "llamacpp" : "mlx";
 
-  return { byodConsented, byodPath, oglDbPath, dwDbPath, brpDbPath, sr5eDbPath, orcusDbPath, sessionDbPath, mlxWhisperModel, mlxLLMModel, whisperCppModel, llamaCppModel, sttBackend, llmBackend, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs, byodMaxFileSize };
+  return { byodConsented, byodPath, oglDbPath, dwDbPath, brpDbPath, sr5eDbPath, orcusDbPath, sessionDbPath, mlxWhisperModel, mlxLLMModel, whisperCppModel, llamaCppModel, sttBackend, llmBackend, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs, byodMaxFileSize, byodNetwork };
 }
 
 export function isByodEnabled(): boolean {

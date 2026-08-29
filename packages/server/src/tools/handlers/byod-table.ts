@@ -2,7 +2,9 @@
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
 import { checkByodConsent, getByodPath } from "../../byod/gate.js";
+import { loadConfig } from "../../config.js";
 import { getByodDatabase, searchByodIndex, getChunkContent } from "../../byod/search.js";
+import { ensureByodForQuery } from "../helpers.js";
 import { parseTableFromText, rollForTable, type ParsedTable } from "@2d6mcp/shared/table-parser";
 
 export async function handleRollByodTable(args: Record<string, unknown> | undefined): Promise<{
@@ -20,8 +22,11 @@ export async function handleRollByodTable(args: Record<string, unknown> | undefi
   }
 
   const byodPath = getByodPath();
+  const config = loadConfig();
+  const ensured = await ensureByodForQuery(config, tableName);
   const db = getByodDatabase(byodPath);
-  const results = searchByodIndex(db, tableName, 10);
+  const prefixes = ensured.matchedRoots.length > 0 ? ensured.matchedRoots : [];
+  const results = searchByodIndex(db, tableName, 10, prefixes);
 
   if (results.length === 0) {
     return {
@@ -119,12 +124,21 @@ export async function handleListByodTables(args: Record<string, unknown> | undef
 
   const searchTerm = typeof args?.search_term === "string" ? args.search_term.trim() : "";
   const maxResults = typeof args?.max_results === "number" ? Math.min(args.max_results, 30) : 10;
+  const searchQuery = searchTerm || "table d100 d20 2d6 1d6";
 
   const byodPath = getByodPath();
+  const config = loadConfig();
+  const ensured = searchTerm
+    ? await ensureByodForQuery(config, searchTerm)
+    : { matchedRoots: [] as string[] };
   const db = getByodDatabase(byodPath);
+  const prefixes = searchTerm
+    ? ensured.matchedRoots.length > 0
+      ? ensured.matchedRoots
+      : []
+    : undefined;
 
-  const searchQuery = searchTerm || "table d100 d20 2d6 1d6";
-  const results = searchByodIndex(db, searchQuery, Math.min(maxResults * 2, 40));
+  const results = searchByodIndex(db, searchQuery, Math.min(maxResults * 2, 40), prefixes);
 
   const found: {
     tableName: string;

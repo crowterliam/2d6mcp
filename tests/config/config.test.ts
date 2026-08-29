@@ -28,6 +28,7 @@ describe("loadConfig", () => {
     expect(config.byodMaxFiles).toBe(2000);
     expect(config.byodMaxChunksPerFile).toBe(500);
     expect(config.byodSyncTimeoutMs).toBe(15000);
+    expect(config.byodNetwork).toBe(false);
   });
 
   it("reads BYOD_PATH from env", () => {
@@ -66,6 +67,12 @@ describe("loadConfig", () => {
     process.env.BYOD_SYNC_TIMEOUT_MS = "999999";
     config = loadConfig();
     expect(config.byodSyncTimeoutMs).toBe(300000);
+  });
+
+  it("reads BYOD_NETWORK from env", () => {
+    expect(loadConfig().byodNetwork).toBe(false);
+    process.env.BYOD_NETWORK = "true";
+    expect(loadConfig().byodNetwork).toBe(true);
   });
 
   it("falls back to defaults for non-numeric env vars", () => {

@@ -47,6 +47,7 @@ npm run populate-dw      # regenerate DW SQLite database
 npm run populate-brp     # regenerate BRP SQLite database
 npm run populate-5ecompatible  # regenerate 5E-compatible SQLite database
 npm run populate-orcus     # regenerate Orcus SQLite database
+npm run sync-byod          # list BYOD collections; pass a query to index matches
 ```
 
 ## Agent Modes
@@ -133,6 +134,8 @@ packages/server/src/
   byod/
     gate.ts         # Consent gate check
     ingest.ts       # File walking, PDF/text/md parsing
+    catalog.ts      # Top-level collection list + query matching
+    paths.ts        # Windows-safe relative paths and prefix filters
     search.ts       # FTS5 search against BYOD index
     content-cache.ts # Content-addressable chunk cache
   character/
@@ -175,8 +178,8 @@ packages/shared/src/
 | `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`). Infers mechanic from notation when omitted. |
 | `roll_table` | Roll on a named table. `source`: `ogl` or `byod`. Omit `table_name` with `source=byod` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
-| `query_local_byod` | Search ingested personal files. Returns `chunkIndex`. Optional `include_full`. |
-| `sync_byod` | Index BYOD files. Optional `relative_path` for a single file. |
+| `query_local_byod` | Search personal files. Indexes matching top-level game folders on demand, then searches. Optional `include_full`. |
+| `sync_byod` | On-demand index. No args lists folders. `query` indexes matching collections. Optional `relative_path` for one file. |
 | `clear_byod` | Delete the BYOD index. |
 | `list_byod_files` | List indexed files. Optional `relative_path` inspects one file. |
 | `get_byod_chunk` | Retrieve full chunk content by path + chunk index. |
@@ -200,7 +203,7 @@ MCP resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://
 
 - **Session lifecycle**: Start with `session` `action: start`, log with `log_transcript`, end with `session` `action: end`.
 - **BYOD system scoping**: Pass `byod_system` on session start to filter BYOD searches.
-- **Ruling synthesis**: `synthesize_ruling` auto-looks up licensed rules and BYOD (when consent is on). Default `rules_system` comes from the session when `session_id` is set.
+- **Ruling synthesis**: `synthesize_ruling` auto-looks up licensed rules and BYOD (when consent is on). BYOD indexes matching top-level collections on demand from the question or session `byod_system`. Default `rules_system` comes from the session when `session_id` is set.
 - **Audio transcription**: `transcribe_audio` processes files longer than 180 seconds in 2-minute chunks. Call repeatedly until `complete: true`. The last chunk sets `complete` itself.
 
 ## Cross-Platform Backends
@@ -247,6 +250,7 @@ Never reference any third-party game system or trademarked terms. Use generic de
 | `BYOD_MAX_FILES` | `2000` | Max files per sync |
 | `BYOD_MAX_CHUNKS_PER_FILE` | `500` | Max chunks per file |
 | `BYOD_SYNC_TIMEOUT_MS` | `15000` | Max ms per sync batch |
+| `BYOD_NETWORK` | `"false"` | Force single-file index concurrency for high-latency filesystems |
 | `BYOD_CONTENT_CACHE_PATH` | `data/byod/content_cache.db` | Shared content-addressable cache path |
 | `OGL_DB_PATH` | `data/ogl/cepheus.db` | Custom OGL database path |
 | `DW_DB_PATH` | `data/dw/dungeon-world.db` | Custom DW database path |
