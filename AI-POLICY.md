@@ -23,10 +23,6 @@ The BYOD file ingestion system processes documents entirely on your local filesy
 
 When a search result is passed to a local language model for a ruling, only short snippets are included, not full documents. This snippet-based approach uses minimal extracts consistent with fair use and the terms of open content licences, ensuring that the system aids reference without redistributing works in full.
 
-## Hosted Deployment
-
-An optional hosted deployment is available for Discord communities via Cloudflare Workers. This mode uses Cloudflare Workers AI for speech recognition and language model inference. It is separate from the local deployment described above and requires intentional configuration. The hosted mode processes only the open gaming content bundled with the project and does not access your local files or BYOD content.
-
 ## What These Tools Actually Do
 
 The primary purpose of this software is retrieval and interpretation, not generation. The rules databases (OGL, Dungeon World, Basic Roleplaying, 5E-compatible SRD) are generated on first use from bundled seed data. When you ask a question, the system searches for the most relevant rules text, assembles it, and passes it to a language model with instructions to explain what those rules say. It cites its sources. It does not invent mechanics. The language model is acting as a research assistant who has already read the book, not as an author writing new material.

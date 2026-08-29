@@ -4,15 +4,13 @@
   "private": true,
   "description": "2d6mcp — system-agnostic mechanical engine, dice roller, rules reference, and AI GM assistant for 2d6-based tabletop RPGs",
   "workspaces": [
-    "packages/*",
-    "apps/*"
+    "packages/*"
   ],
   "scripts": {
-    "build": "tsc --build && npx tsc --project apps/bridge/tsconfig.json",
+    "build": "tsc --build",
     "start": "node packages/server/dist/index.js",
     "dev": "tsc --build --watch",
     "setup": "node packages/server/dist/cli.js setup",
-    "setup-cloud": "node scripts/setup-cloud.mjs",
     "populate-ogl": "node packages/server/dist/cli.js populate-ogl",
     "populate-dw": "node packages/server/dist/cli.js populate-dw",
     "populate-brp": "node packages/server/dist/cli.js populate-brp",
@@ -50,21 +48,7 @@
     "fast-uri": "^4.1.2",
     "nanoid": "^3.3.18",
     "ip-address": "^10.5.0",
-    "hono": "^4.13.1",
-    "@hono/node-server": "^2.0.12",
-    "sharp": "^0.35.3",
-    "discord.js": {
-      "undici": "^6.28.0"
-    },
-    "@discordjs/rest": {
-      "undici": "^6.28.0"
-    },
-    "@discordjs/ws": {
-      "undici": "^6.28.0"
-    },
-    "miniflare": {
-      "undici": "^7.29.0"
-    }
+    "sharp": "^0.35.3"
   },
   "dependencies": {
     "better-sqlite3": "11.10.0"

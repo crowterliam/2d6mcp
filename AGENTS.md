@@ -5,12 +5,9 @@ Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
 ## Project Identity
 
-This project provides two deployment modes for a 2d6-based tabletop RPG AI assistant:
+This project provides a self-hosted MCP server (`packages/server/`) — stdio transport, local MLX/llama.cpp, BYOD, session DB, and Discord webhook posting.
 
-1. **Self-Hosted MCP Server** (`packages/server/`) — stdio transport, local MLX, BYOD, session DB, 32 tools
-2. **Hosted Cloudflare Worker** (`apps/worker/`) — Discord bot, Workers AI (Whisper + Qwen3 MoE), D1, R2, OAuth2
-
-Both modes share the same rules databases (OGL/Cepheus Engine SRD for sci-fi, Dungeon World CC-BY-3.0 for fantasy, Basic Roleplaying SRD for percentile RPGs, 5E-compatible SRD CC-BY-4.0 for d20 fantasy, Orcus OGL v1.0a for 4e-compatible), dice engine, prompt templates, and quality filters via `packages/shared/`.
+It shares rules databases (OGL/Cepheus Engine SRD for sci-fi, Dungeon World CC-BY-3.0 for fantasy, Basic Roleplaying SRD for percentile RPGs, 5E-compatible SRD CC-BY-4.0 for d20 fantasy, Orcus OGL v1.0a for 4e-compatible), dice engine, prompt templates, and quality filters via `packages/shared/`.
 
 The project is system-agnostic and avoids all third-party trademarks.
 
@@ -18,9 +15,6 @@ The project is system-agnostic and avoids all third-party trademarks.
 
 ```
 2d6mcp/                          # npm workspaces monorepo
-├── apps/
-│   └── worker/                  # Cloudflare Worker (Hono + Workers AI + D1 + R2)
-│   └── bridge/                  # Discord voice relay (VPS, raw UDP required)
 ├── packages/
 │   ├── server/                  # MCP server (stdio transport, local MLX, BYOD)
 │   ├── shared/                  # @2d6mcp/shared — dice, keywords, prompts, quality filter
@@ -35,7 +29,7 @@ The project is system-agnostic and avoids all third-party trademarks.
 │   ├── brp/basic-roleplaying.db # Bundled BRP database
 │   ├── 5ecompatible/5ecompatible-srd.db  # Bundled 5E-compatible database
 │   └── orcus/orcus.db           # Bundled Orcus database
-└── tests/                       # Vitest test suite (270 tests)
+└── tests/                       # Vitest test suite
 ```
 
 ## Build & Test Commands
@@ -53,15 +47,6 @@ npm run populate-dw      # regenerate DW SQLite database
 npm run populate-brp     # regenerate BRP SQLite database
 npm run populate-5ecompatible  # regenerate 5E-compatible SQLite database
 npm run populate-orcus     # regenerate Orcus SQLite database
-```
-
-### Worker-specific commands (in `apps/worker/`)
-
-```bash
-npm run dev              # wrangler dev (local dev server)
-npm run deploy           # wrangler deploy (production)
-npm run db:migrate       # run D1 schema migration
-npm run db:migrate:local # run D1 migration against local dev DB
 ```
 
 ## Agent Modes
@@ -174,28 +159,6 @@ packages/server/src/
     definitions.ts     # All tool JSON schemas
     index.ts           # Handler dispatch table
 
-apps/worker/src/
-  index.ts             # Hono entry, CORS, route mounting
-  env.ts               # Typed Cloudflare bindings (AI, D1, R2, secrets)
-  types.ts             # Shared types for D1 rows, API payloads, JWT
-  middleware/
-    auth.ts            # JWT verification, Discord Ed25519 (tweetnacl)
-    jwt.ts             # Web Crypto API JWT sign/verify
-    rate-limit.ts      # D1-backed per-guild rate limiting
-  routes/
-    interactions.ts    # Discord Interactions endpoint (slash commands)
-    api.ts             # /api/ask, /api/roll, /api/transcribe, /api/warm, /api/health
-    auth.ts            # Discord OAuth2 (/api/auth/login, /callback, /me)
-    billing.ts         # Stripe checkout, portal, webhook
-    guild.ts           # Guild-scoped session CRUD
-  services/
-    whisper.ts         # Workers AI Whisper wrapper
-    llm.ts             # Workers AI Qwen3 MoE + Llama 3.2 3B fallback
-    synthesize.ts      # FTS5 rules search → prompt → LLM → quality filter
-  db/
-    schema.sql         # D1 schema: guilds, sessions, transcripts, rulings, FTS5 rules
-    queries.ts         # Typed prepared statements
-
 packages/shared/src/
   index.ts             # Re-exports all modules
   dice.ts              # parseDiceNotation, roll2d6, rollD20, rollPercentile, rollDamage, rollCustom
@@ -206,8 +169,6 @@ packages/shared/src/
 ```
 
 ## Available Tools
-
-### MCP Server Tools (Self-Hosted, `packages/server/`)
 
 | Tool | Purpose |
 |------|---------|
@@ -249,50 +210,19 @@ packages/shared/src/
 | `clear_transcription` | Reset transcription progress for a specific file, or clear all state. |
 | `delete_session` | Permanently delete a session and all its transcript segments and rulings. |
 
-### Discord Bot Commands (Hosted, `apps/worker/`)
-
-| Command | Description |
-|---------|-------------|
-| `/ask <question>` | AI ruling with FTS5 rules search + Qwen3 MoE + quality filter |
-| `/roll <notation>` | Dice rolling |
-| `/session start <name>` | Start a game session |
-| `/session end` | End the current session |
-| `/session context [minutes]` | View recent transcript and rulings |
-| `/search <query>` | FTS search across session transcripts |
-| `/help` | Show available commands |
-
 ## Session Management & Ruling Synthesis
-
-### Self-Hosted (MLX)
 
 - **Session lifecycle**: Start with `session_start`, log with `log_transcript`, end with `session_end`.
 - **BYOD system scoping**: Pass `byod_system` to `session_start` to filter BYOD searches.
 - **Ruling synthesis**: `synthesize_ruling` auto-looks up OGL/DW/BRP/5E/Orcus/BYOD rules, passes to MLX LLM, returns cited ruling with quality filter.
 - **Audio transcription**: `transcribe_audio` processes files in 2-minute chunks with progress tracking. Call repeatedly until `complete: true`.
 
-### Hosted (Cloudflare Workers AI)
-
-- **Discord slash commands**: `/ask` defers response (3s Discord timeout), calls Workers AI Qwen3 MoE, follows up with embed.
-- **FTS5 rules search**: D1 FTS5 queries with phrase-pair detection and OGL-preference weighting.
-- **Quality filter**: Shared `filterRulingQuality` from `@2d6mcp/shared` validates numbers against source text.
-- **Rate limiting**: 1 `/ask` per 10 seconds per guild, D1-backed counters.
-
 ## Cross-Platform Backends
-
-### Self-Hosted
 
 | Platform | STT Backend | LLM Backend |
 |---|---|---|
 | macOS (default) | `mlx` (MLX Whisper) | `mlx` (MLX LM) |
 | Windows/Linux | `whispercpp` (whisper.cpp) | `llamacpp` (llama.cpp) |
-
-### Hosted
-
-| Service | Model |
-|---|---|
-| STT | `@cf/openai/whisper-large-v3-turbo` (Workers AI) |
-| LLM | `@cf/qwen/qwen3-30b-a3b-fp8` (Workers AI, primary) |
-| LLM fallback | `@cf/meta/llama-3.2-3b-instruct` (Workers AI) |
 
 ## Multi-License Architecture
 
@@ -311,7 +241,7 @@ packages/shared/src/
 
 ## BYOD Consent Gate
 
-The server checks for `AGREE_BYOD_USE="true"` env var OR the presence of a `.mcp-byod-consent-accepted` token file in the project root before enabling BYOD tools. Without consent, BYOD tools return a clear disclaimer message. BYOD is self-hosted only — not available in the hosted Cloudflare Worker.
+The server checks for `AGREE_BYOD_USE="true"` env var OR the presence of a `.mcp-byod-consent-accepted` token file in the project root before enabling BYOD tools. Without consent, BYOD tools return a clear disclaimer message.
 
 ## Naming Conventions
 
@@ -320,8 +250,6 @@ Never reference any third-party game system or trademarked terms. Use generic de
 **Tool loyalty**: Once 2d6mcp tools are invoked (particularly BYOD — `query_local_byod`, `get_byod_chunk`, `synthesize_ruling`), continue using them for all game content. Do not switch to external file-reading MCP tools unless the user explicitly asks.
 
 ## Environment Variables
-
-### Self-Hosted MCP Server
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
@@ -346,25 +274,9 @@ Never reference any third-party game system or trademarked terms. Use generic de
 | `WHISPERCPP_MODEL` | `ggml-large-v3-turbo.bin` | whisper.cpp model path (Win/Linux) |
 | `LLAMACPP_MODEL` | `Llama-3.2-3B-Instruct.Q4_K_M.gguf` | llama.cpp model path (Win/Linux) |
 
-### Hosted Cloudflare Worker
-
-| Variable | Purpose |
-|----------|---------|
-| `DISCORD_BOT_TOKEN` | Discord bot token (set via `wrangler secret put`) |
-| `DISCORD_PUBLIC_KEY` | Discord interactions public key |
-| `DISCORD_CLIENT_ID` | Discord application client ID |
-| `DISCORD_CLIENT_SECRET` | Discord OAuth2 client secret |
-| `JWT_SECRET` | HMAC secret for user session tokens |
-| `WORKER_API_KEY` | Shared secret with the voice bridge (HTTP API + push-to-ask) |
-| `STRIPE_SECRET_KEY` | Stripe secret key |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
-| `API_URL` | Worker base URL (set in `wrangler.toml`) |
-| `WEB_URL` | Future web dashboard URL (Phase 3; set in `wrangler.toml`) |
-| `BRIDGE_URL` | Public URL of the VPS bridge (set in `wrangler.toml` or secrets) |
-
 ### Security Note
 
-**Never commit secrets to the repository.** `wrangler.toml` is gitignored — use `wrangler.toml.example` as a template. All secrets for the Cloudflare Worker must be set via `wrangler secret put`. `.dev.vars` is gitignored for local development. The self-hosted MCP server reads secrets from environment variables only — never from committed files.
+**Never commit secrets to the repository.** The MCP server reads secrets from environment variables only — never from committed files. Discord webhook URLs live in `.mcp-discord-webhooks.json` (gitignored).
 
 ## Development Workflow
 
@@ -380,7 +292,7 @@ These rules apply to **all AI coding agents** working on this repository. Follow
    ```
    type(scope): brief description
    
-   feat(worker): add /api/ask endpoint with Qwen3 MoE
+   feat(dice): add d66 table rolling
    fix(security): resolve ReDoS in quality filter regex
    docs(readme): update monorepo architecture diagram
    ```
@@ -393,14 +305,8 @@ Run these **before every commit** that includes code changes:
 
 ```bash
 npm run typecheck    # tsc --build --noEmit across all packages
-npm test             # 270 tests across 26 test files
+npm test             # vitest test suite
 npm run build        # full compilation (tsc --build)
-```
-
-If the Worker was modified, also run:
-
-```bash
-npx tsc --noEmit --project apps/worker/tsconfig.json
 ```
 
 ### Security Before Every Commit
@@ -411,15 +317,15 @@ npx tsc --noEmit --project apps/worker/tsconfig.json
    ```
    If this returns anything, the diff contains hardcoded credentials. Remove them.
 
-2. **Verify sensitive files are gitignored:**
+2. **Verify Discord webhook config is gitignored:**
    ```bash
-   git check-ignore apps/worker/wrangler.toml apps/worker/.dev.vars
+   git check-ignore .mcp-discord-webhooks.json
    ```
-   Both must return the file path (meaning they are ignored).
+   Must return the file path (meaning it is ignored).
 
 3. **Verify no build artifacts are staged:**
    ```bash
-   git diff --staged --name-only | grep -E '\.tsbuildinfo$|\.wrangler/|dist/'
+   git diff --staged --name-only | grep -E '\.tsbuildinfo$|dist/'
    ```
    Must return nothing.
 
@@ -444,30 +350,12 @@ When you add or change features, update documentation **in the same commit**:
 | Change type | Update these files |
 |---|---|
 | New MCP tool | `AGENTS.md` tools table, `README.md` tools table, harness files |
-| New Worker route | `AGENTS.md` package structure, `README.md` deployment section |
 | New env var | `AGENTS.md` env var tables, `README.md`, `.env.example` |
 | Architecture change | `AGENTS.md` architecture diagram, `README.md`, `CONTRIBUTING.md` |
 | Security change | `SECURITY.md`, `.env.example` |
 
-### Bridge Deployment (VPS)
-
-1. **Provision a VPS** with raw network access (Hetzner CX22 $4/mo recommended).
-2. **Clone + build:** `git clone`, `npm install`, `npm run build`
-3. **Configure .env:** `DISCORD_BOT_TOKEN` + `WORKER_URL`
-4. **Install systemd service:** `sudo cp apps/bridge/2d6mcp-bridge.service /etc/systemd/system/`
-5. **Start:** `sudo systemctl enable --now 2d6mcp-bridge`
-6. **Verify:** `curl http://localhost:3000/health`
-
-### Worker Deployment
-
-1. **Test locally first:** `cd apps/worker && npx wrangler dev`
-2. **Dry-run deploy:** `npx wrangler deploy --dry-run`
-3. **Set secrets before first deploy:** all via `wrangler secret put`, never in `wrangler.toml`
-4. **After deploy, test the live endpoint:** `curl https://2d6mcp.<subdomain>.workers.dev/api/health`
-
 ### Testing
 
-- Run `npm test` before every commit. All 270 tests must pass.
+- Run `npm test` before every commit. All tests must pass.
 - If you add new logic to `packages/shared/`, add corresponding tests in `tests/`.
-- If you add a new Worker route, test it locally with curl before committing.
 - Never commit code that breaks the build or any test.

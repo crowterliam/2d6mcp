@@ -3,18 +3,9 @@
 SPDX-License-Identifier: AGPL-3.0-only
 Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
-This guide covers connecting the 2d6mcp server to common AI coding harnesses (self-hosted mode) and deploying the Discord bot (Cloudflare hosted mode). After setup, your AI assistant gains dice rolling, rules lookup, character parsing, and BYOD file search capabilities for 2d6-based tabletop RPGs.
+This guide covers connecting the 2d6mcp server to common AI coding harnesses. After setup, your AI assistant gains dice rolling, rules lookup, character parsing, Discord webhook posting, and BYOD file search capabilities for 2d6-based tabletop RPGs.
 
-## Deployment Options
-
-| Mode | Setup Time | Requires |
-|---|---|---|
-| **Self-Hosted MCP Server** | ~3 min | Node.js, macOS/Linux/Windows |
-| **Hosted Discord Bot** | ~15 min | Cloudflare account, Discord bot app |
-
----
-
-## Prerequisites (Both Modes)
+## Prerequisites
 
 ```bash
 cd /path/to/2d6mcp
@@ -31,7 +22,7 @@ The MCP server binary is `packages/server/dist/index.js`. All harnesses launch i
 
 ---
 
-## Self-Hosted MCP Server
+## MCP Server
 
 ### Claude Desktop
 
@@ -98,70 +89,6 @@ See full setup instructions in [MCP_SETUP.md](MCP_SETUP.md) or [README.md](READM
 
 ---
 
-## Hosted Discord Bot (Cloudflare)
-
-### Prerequisites
-
-- Cloudflare account with Workers Paid plan ($5/mo)
-- Discord bot application (created in [Discord Developer Portal](https://discord.com/developers/applications))
-- Node.js 20+ and npm
-
-### Setup Steps
-
-```bash
-cd apps/worker
-
-# Copy config template (wrangler.toml is gitignored)
-cp wrangler.toml.example wrangler.toml
-
-# Create infrastructure
-npx wrangler d1 create 2d6mcp                      # 1. D1 database
-npx wrangler r2 bucket create 2d6mcp-audio         # 2. R2 bucket
-
-# Set secrets (run each, paste value when prompted)
-npx wrangler secret put DISCORD_BOT_TOKEN           # 3. From Discord Dev Portal → Bot
-npx wrangler secret put DISCORD_PUBLIC_KEY          # 4. From Discord Dev Portal → General
-npx wrangler secret put DISCORD_CLIENT_ID           # 5. From Discord Dev Portal → General
-npx wrangler secret put DISCORD_CLIENT_SECRET       # 6. From Discord Dev Portal → OAuth2
-npx wrangler secret put JWT_SECRET                  # 7. Any random string (≥32 chars)
-npx wrangler secret put WORKER_API_KEY              # 8. Shared with bridge (≥32 chars); same value in apps/bridge/.env
-npx wrangler secret put STRIPE_SECRET_KEY           # 9. Placeholder: sk_test_...
-npx wrangler secret put STRIPE_WEBHOOK_SECRET       # 10. Placeholder: whsec_...
-
-# Run database migration
-npx wrangler d1 execute 2d6mcp --remote --file src/db/schema.sql
-
-# Seed rules data (OGL + DW)
-# For self-hosted: npm run populate-ogl && npm run populate-dw && npm run populate-brp && npm run populate-5ecompatible
-node scripts/seed-d1.mjs
-npx wrangler d1 execute 2d6mcp --remote --file src/db/seed.sql
-
-# Deploy
-npx wrangler deploy
-```
-
-### Configure Discord
-
-1. Go to [Discord Developer Portal](https://discord.com/developers/applications) → Your App → General Information
-2. Set **Interactions Endpoint URL** to `https://2d6mcp.YOUR-SUBDOMAIN.workers.dev/api/interactions`
-3. Save — Discord will verify the endpoint
-4. Register slash commands (replace `YOUR_BOT_TOKEN`):
-
-```bash
-curl -X PUT "https://discord.com/api/v10/applications/YOUR_CLIENT_ID/commands" \
-  -H "Authorization: Bot YOUR_BOT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '[{"name":"ask","description":"Ask a rules question and get a cited ruling","options":[{"name":"question","description":"Your rules question","type":3,"required":true}]},{"name":"roll","description":"Roll dice","options":[{"name":"notation","description":"Dice notation","type":3,"required":true}]},{"name":"session","description":"Manage game sessions","options":[{"name":"action","description":"start, end, or context","type":3,"required":true,"choices":[{"name":"Start a new session","value":"start"},{"name":"End the current session","value":"end"},{"name":"View recent context","value":"context"}]}]},{"name":"search","description":"Search session transcript","options":[{"name":"query","description":"What to search for","type":3,"required":true}]},{"name":"help","description":"Show available commands"}]'
-```
-
-5. Invite the bot to your server:
-
-```
-https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=2147485696&scope=bot%20applications.commands
-```
-
----
-
 ## Verifying the Connection
 
 After configuring your harness and restarting, ask your AI assistant:
@@ -171,8 +98,6 @@ After configuring your harness and restarting, ask your AI assistant:
 If the server is connected, the assistant will call `roll_2d6` and return dice results with an effect margin.
 
 ## Environment Variables
-
-### Self-Hosted
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
@@ -193,10 +118,6 @@ If the server is connected, the assistant will call `roll_2d6` and return dice r
 | `STT_BACKEND` | `mlx` | STT backend: `mlx` or `whispercpp` |
 | `LLM_BACKEND` | `mlx` | LLM backend: `mlx` or `llamacpp` |
 
-### Hosted
-
-Set via `wrangler secret put`. See [README.md](README.md) for the full list.
-
 ## Troubleshooting
 
 **"Tool not found" or no response**: The MCP server may not have started. Check:
@@ -206,10 +127,4 @@ Set via `wrangler secret put`. See [README.md](README.md) for the full list.
 
 **"BYOD Mode is disabled"**: Set `AGREE_BYOD_USE=true` in the harness config's `env` block, or run `npm run setup` in the 2d6mcp directory.
 
-**Interactions Endpoint won't verify**: Ensure all secrets are set via `wrangler secret put` (including `WORKER_API_KEY`) and `wrangler.toml` has no vars section with empty values. Redeploy after setting secrets.
-
-**Worker returns 500**: Check `wrangler tail` for logs. Common causes: missing secrets, D1 not migrated, FTS5 tables not seeded.
-
 **Server starts but sync times out**: This is normal for large reference folders. The `sync_byod` tool returns `complete: false` — tell your assistant to call `sync_byod` again to continue where it left off.
-
-**Slash commands not appearing**: Commands must be registered via the Discord API (see curl command above). They appear after a short delay (up to 1 hour for global commands).

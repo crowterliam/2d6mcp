@@ -28,11 +28,10 @@ packages/
   shared/    @2d6mcp/shared  — dice, keywords, prompts, quality filter (zero Node.js deps except zod)
   ogl/       @2d6mcp/ogl     — OGL rules database (Cepheus Engine SRD, OGL v1.0a)
   dw/        @2d6mcp/dw      — DW rules database (Dungeon World, CC-BY-3.0)
-  server/    @2d6mcp/server  — MCP server (depends on shared, ogl, dw)
-apps/
-  worker/    @2d6mcp/worker  — Cloudflare Worker (depends on shared)
-  bridge/    Discord voice relay (VPS + systemd)
-  # Planned (not in tree): web/ (Phase 3 dashboard), recorder/ (Phase 4 PWA)
+  brp/       @2d6mcp/brp     — BRP rules database (Basic Roleplaying SRD, BRP OGL v1.0)
+  5ecompatible/ @2d6mcp/5ecompatible — 5E-compatible rules database (CC-BY-4.0)
+  orcus/     @2d6mcp/orcus   — Orcus d20-compatible rules database (OGL v1.0a)
+  server/    @2d6mcp/server  — MCP server (depends on shared and rules packages)
 ```
 
 Packages reference each other via `@2d6mcp/` namespace. The root `tsc --build` handles dependency ordering.
@@ -62,20 +61,11 @@ New MCP tools should:
 1. Be registered in `packages/server/src/tools/definitions.ts` and `packages/server/src/tools/index.ts`
 2. Use Zod schemas for input validation
 3. Use generic terminology (no trademarked names)
-4. Pure computation tools go in `packages/shared/` for reuse by the Worker
-
-## Worker Development
-
-For Cloudflare Worker changes:
-
-1. Ensure typecheck: `cd apps/worker && npx tsc --noEmit`
-2. Test locally: `npx wrangler dev`
-3. Set secrets via `wrangler secret put`, never in committed files
-4. Reference `wrangler.toml.example` for config structure
+4. Pure computation tools go in `packages/shared/` for reuse
 
 ## Testing
 
-This project uses vitest (209 tests across 18 files). Write tests for new tools and features. Run `npm test` before submitting.
+This project uses vitest. Write tests for new tools and features. Run `npm test` before submitting.
 
 ## Commit Messages
 

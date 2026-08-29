@@ -3,15 +3,15 @@
 SPDX-License-Identifier: AGPL-3.0-only
 Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
-This project is an AI GM assistant for 2d6-based TTRPGs, supporting sci-fi (OGL/Cepheus Engine), fantasy (Dungeon World), percentile (Basic Roleplaying), and d20 fantasy (5E-compatible) games. It ships as both a self-hosted MCP server and a Cloudflare-deployed Discord bot.
+This project is an AI GM assistant for 2d6-based TTRPGs, supporting sci-fi (OGL/Cepheus Engine), fantasy (Dungeon World), percentile (Basic Roleplaying), and d20 fantasy (5E-compatible) games. It ships as a self-hosted MCP server.
 
 ## Project Conventions
 
 - **Tool loyalty**: Once 2d6mcp BYOD tools are invoked (`query_local_byod`, `get_byod_chunk`, `synthesize_ruling`), continue using them for all game content. Do not switch to external file-reading tools unless the user explicitly asks.
 - **Naming**: Use system-agnostic language. Never reference third-party trademarks. Say "2d6 sci-fi RPG", "2d6 fantasy RPG", "starship", "star system", "characteristic", "move", "front", "monster".
-- **Build**: `npm run build` (tsc --build across all workspace packages). Test with `npm test` (vitest, 209 tests). Run MCP server with `npm run start`.
+- **Build**: `npm run build` (tsc --build across all workspace packages). Test with `npm test` (vitest). Run MCP server with `npm run start`.
 - **License**: Source code is AGPL-3.0. Game data under `data/ogl/` is OGL v1.0a. Game data under `data/dw/` is CC-BY-3.0. Game data under `data/brp/` is BRP OGL v1.0. Game data under `data/5ecompatible/` is CC-BY-4.0. See `LICENSE.md`.
-- **Never commit secrets**: `wrangler.toml`, `.dev.vars`, and `.wrangler/` are gitignored. Use `wrangler secret put` for Cloudflare secrets.
+- **Never commit secrets**: Discord webhook URLs live in `.mcp-discord-webhooks.json` (gitignored).
 
 ## Monorepo Structure
 
@@ -23,12 +23,9 @@ packages/           # npm workspaces
   dw/               # @2d6mcp/dw — DW rules (CC-BY-3.0)
   brp/              # @2d6mcp/brp — BRP rules (Basic Roleplaying SRD)
   5ecompatible/     # @2d6mcp/5ecompatible — 5E-compatible rules (CC-BY-4.0)
-apps/
-  worker/           # Cloudflare Worker (Hono + Workers AI + D1 + R2)
-  bridge/           # Discord voice relay (VPS + systemd, Phase 2)
-  # Planned (not in tree): web/ (Phase 3), recorder/ (Phase 4)
+  orcus/            # @2d6mcp/orcus — Orcus d20-compatible rules (OGL v1.0a)
 data/               # SQLite databases (shared)
-tests/              # Vitest test suite (209 tests, 18 files)
+tests/              # Vitest test suite
 ```
 
 Agent instructions: `.kilo/agent/`, `.claude/skills/`, `.cursor/rules/`, `.cline/rules/`, `.windsurfrules`.
@@ -74,8 +71,6 @@ Agent instructions: `.kilo/agent/`, `.claude/skills/`, `.cursor/rules/`, `.cline
 
 ## Environment
 
-### Self-Hosted MCP Server
-
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `AGREE_BYOD_USE` | `"false"` | Enable BYOD |
@@ -93,8 +88,3 @@ Agent instructions: `.kilo/agent/`, `.claude/skills/`, `.cursor/rules/`, `.cline
 | `STT_BACKEND` | `mlx` | STT backend: `mlx` or `whispercpp` |
 | `LLM_BACKEND` | `mlx` | LLM backend: `mlx` or `llamacpp` |
 
-### Hosted Cloudflare Worker
-
-Set via `wrangler secret put`: `DISCORD_BOT_TOKEN`, `DISCORD_PUBLIC_KEY`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
-
-Never commit these values. Use `wrangler.toml.example` as a reference.
