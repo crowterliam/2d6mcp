@@ -1,6 +1,11 @@
 {
   "name": "2d6mcp",
   "version": "0.7.0",
+  "bin": {
+    "2d6mcp": "./packages/server/dist/index.js",
+    "crowterliam-2d6mcp": "./packages/server/dist/index.js"
+  },
+  "mcpName": "io.github.crowterliam/2d6mcp",
   "private": true,
   "description": "2d6mcp — system-agnostic mechanical engine, dice roller, rules reference, and AI GM assistant for 2d6-based tabletop RPGs",
   "workspaces": [

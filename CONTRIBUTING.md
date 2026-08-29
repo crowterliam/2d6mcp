@@ -59,9 +59,18 @@ Do not contribute content that would violate the Open Game License firewall or C
 New MCP tools should:
 
 1. Be registered in `packages/server/src/tools/definitions.ts` and `packages/server/src/tools/index.ts`
-2. Use Zod schemas for input validation
-3. Use generic terminology (no trademarked names)
-4. Pure computation tools go in `packages/shared/` for reuse
+2. Add a branch in `packages/server/src/tools/annotations.ts` (`CatalogToolName`)
+3. Use Zod schemas for input validation
+4. Use generic terminology (no trademarked names)
+5. Pure computation tools go in `packages/shared/` for reuse
+
+## Adding MCP Prompts or Resources
+
+1. Prompts: `packages/server/src/prompts.ts` (`PROMPT_NAMES` plus `renderPrompt`)
+2. Resources: `packages/server/src/resources.ts` (`RESOURCE_URIS` plus `renderResource`)
+3. Register handlers live in `packages/server/src/server.ts`
+4. Cover list/get/read in `tests/server/`
+5. Update `README.md` and `AGENTS.md` catalogs
 
 ## Testing
 

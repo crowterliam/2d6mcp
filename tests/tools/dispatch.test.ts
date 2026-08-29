@@ -58,6 +58,7 @@ describe("collapsed MCP catalog", () => {
       expect(names).toContain(name);
     }
     expect(names).toHaveLength(NEW_TOOLS.length);
+    expect(getToolDefinitions().every((tool) => tool.annotations !== undefined)).toBe(true);
   });
 
   it("does not advertise removed tool names", () => {
