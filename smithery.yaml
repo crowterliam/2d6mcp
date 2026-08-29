@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Smithery launch config for the 2d6mcp stdio server.
+# https://smithery.ai
+
+runtime: node
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      AGREE_BYOD_USE:
+        type: string
+        title: Enable BYOD
+        description: Set to "true" to enable personal file ingestion (non-commercial use).
+        default: "false"
+      BYOD_PATH:
+        type: string
+        title: BYOD directory
+        description: Absolute path to local RPG source files.
+      SESSION_DB_PATH:
+        type: string
+        title: Session database
+        description: Path to the session SQLite file.
+  commandFunction: |-
+    (config) => ({
+      command: 'node',
+      args: ['packages/server/dist/index.js'],
+      env: {
+        AGREE_BYOD_USE: config.AGREE_BYOD_USE || 'false',
+        ...(config.BYOD_PATH ? { BYOD_PATH: config.BYOD_PATH } : {}),
+        ...(config.SESSION_DB_PATH ? { SESSION_DB_PATH: config.SESSION_DB_PATH } : {}),
+      }
+    })

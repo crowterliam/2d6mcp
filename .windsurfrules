@@ -32,6 +32,8 @@ It shares rules databases, dice engine, prompt templates, and quality filters vi
 | `synthesize_ruling` | Cited rules ruling. Optional `from_context` uses recent transcript. Default `rules_system` from the session when `session_id` is set. |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. `action`: transcribe, list, or clear. Last chunk sets `complete: true`. |
 
+Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create-character`, `start-session`, `ask-ruling`, `index-documents`. Resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://systems`, `2d6mcp://docs/*`, `2d6mcp://license`, `2d6mcp://session/current`, `2d6mcp://rules/{system}`.
+
 
 
 ## Mechanics

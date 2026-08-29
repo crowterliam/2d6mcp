@@ -120,6 +120,16 @@ export function getSession(
     .get(sessionId) as SessionRow) ?? null;
 }
 
+export function getActiveSession(database: Database.Database): SessionRow | null {
+  return (
+    (database
+      .prepare(
+        "SELECT * FROM sessions WHERE ended_at IS NULL ORDER BY started_at DESC LIMIT 1"
+      )
+      .get() as SessionRow | undefined) ?? null
+  );
+}
+
 export function listSessions(
   database: Database.Database,
   limit: number = 20

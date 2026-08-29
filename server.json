@@ -1,0 +1,37 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.crowterliam/2d6mcp",
+  "title": "2D6 MCP",
+  "description": "Dice, rules lookup, sessions, and cited rulings for generic 2d6 tabletop RPGs.",
+  "repository": {
+    "url": "https://github.com/crowterliam/2d6mcp",
+    "source": "github"
+  },
+  "version": "0.7.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "crowterliam-2d6mcp",
+      "version": "0.7.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "AGREE_BYOD_USE",
+          "description": "Set to true to enable personal file ingestion",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "BYOD_PATH",
+          "description": "Directory of local RPG source files",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

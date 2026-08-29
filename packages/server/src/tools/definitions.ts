@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
 import { type Tool } from "@modelcontextprotocol/sdk/types.js";
+import { annotateTool } from "./annotations.js";
 
 const BYOD_TOOL_NAMES = new Set([
   "query_local_byod",
@@ -507,8 +508,9 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
     },
   ];
 
+  const annotated = tools.map(annotateTool);
   if (options.byodConsented === false) {
-    return tools.filter((tool) => !BYOD_TOOL_NAMES.has(tool.name));
+    return annotated.filter((tool) => !BYOD_TOOL_NAMES.has(tool.name));
   }
-  return tools;
+  return annotated;
 }
