@@ -100,24 +100,28 @@ export function indexChunks(
     .prepare("SELECT id, file_hash FROM byod_files WHERE relative_path = ?")
     .get(filePath) as { id: number; file_hash: string } | undefined;
 
-  if (existing) {
-    if (existing.file_hash === fileHash) {
-      return;
+  if (existing && existing.file_hash === fileHash) {
+    return;
+  }
+
+  const run = db.transaction(() => {
+    if (existing) {
+      db.prepare("DELETE FROM byod_chunks WHERE file_id = ?").run(existing.id);
     }
-    db.prepare("DELETE FROM byod_chunks WHERE file_id = ?").run(existing.id);
-  }
 
-  const result = insertFile.run(filePath, fileName, ext, size, fileHash, contentHash);
-  const fileId = Number(result.lastInsertRowid);
+    const result = insertFile.run(filePath, fileName, ext, size, fileHash, contentHash);
+    const fileId = Number(result.lastInsertRowid);
 
-  const insertChunk = db.prepare(`
-    INSERT INTO byod_chunks (file_id, file_path, file_name, title, content, chunk_index)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
+    const insertChunk = db.prepare(`
+      INSERT INTO byod_chunks (file_id, file_path, file_name, title, content, chunk_index)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
 
-  for (const chunk of chunks) {
-    insertChunk.run(fileId, filePath, fileName, chunk.title, chunk.content, chunk.chunkIndex);
-  }
+    for (const chunk of chunks) {
+      insertChunk.run(fileId, filePath, fileName, chunk.title, chunk.content, chunk.chunkIndex);
+    }
+  });
+  run();
 }
 
 export const FAILED_HASH = "__failed__";
@@ -146,6 +150,11 @@ export function markFileFailed(
 
 export function rebuildByodFts(db: Database.Database): void {
   db.exec(`INSERT INTO byod_fts(byod_fts) VALUES ('rebuild');`);
+}
+
+/** Rebuild contentless byod_fts. COUNT(*) cannot detect a stale index. */
+export function ensureByodFts(db: Database.Database): void {
+  rebuildByodFts(db);
 }
 
 export function hasIndexedFiles(db: Database.Database): boolean {
@@ -318,6 +327,7 @@ export interface SearchResult {
   snippet: string;
   fileName: string;
   filePath: string;
+  chunkIndex: number;
 }
 
 function tryFts5Query(
@@ -332,6 +342,7 @@ function tryFts5Query(
       snippet: string;
       file_name: string;
       file_path: string;
+      chunk_index: number;
     }[];
 
     if (rows.length === 0) return [];
@@ -341,6 +352,7 @@ function tryFts5Query(
       snippet: r.snippet,
       fileName: r.file_name,
       filePath: r.file_path,
+      chunkIndex: r.chunk_index,
     }));
   } catch {
     return [];
@@ -357,7 +369,7 @@ export function searchByodIndex(
   if (strategies.length === 0) return [];
 
   const stmt = db.prepare(`
-    SELECT byod_fts.title, snippet(byod_fts, 1, '<mark>', '</mark>', '...', 64) AS snippet, byod_fts.file_name, byod_chunks.file_path
+    SELECT byod_fts.title, snippet(byod_fts, 1, '<mark>', '</mark>', '...', 64) AS snippet, byod_fts.file_name, byod_chunks.file_path, byod_chunks.chunk_index
     FROM byod_fts
     JOIN byod_chunks ON byod_chunks.id = byod_fts.rowid
     WHERE byod_fts MATCH ?

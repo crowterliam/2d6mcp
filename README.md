@@ -3,14 +3,7 @@
 SPDX-License-Identifier: AGPL-3.0-only
 Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
-A system-agnostic Model Context Protocol (MCP) server and hosted Cloudflare Worker providing a mechanical engine, dice roller, rules reference, and AI-powered rulings assistant for tabletop RPGs. Supports sci-fi (OGL/Cepheus Engine SRD), fantasy (Dungeon World, CC-BY-3.0), generic percentile (Basic Roleplaying SRD, BRP OGL v1.0), and d20 fantasy (5E-compatible SRD, CC-BY-4.0) games.
-
-## Deployment Modes
-
-| Mode | Description | Cost |
-|---|---|---|
-| **Self-Hosted MCP Server** | Run locally on your machine. Full BYOD support, MLX-powered audio transcription and ruling synthesis (macOS). Works in any AI harness (Claude, Kilo, Cursor, etc.) | Free (AGPL-3.0) |
-| **Hosted Discord Bot** | Deploy to Cloudflare Workers. Discord slash commands, Workers AI-powered rulings (Qwen3 MoE). Optional future web dashboard (Phase 3). Zero local setup beyond wrangler. | Free (self-deploy, AGPL-3.0) |
+A system-agnostic Model Context Protocol (MCP) server providing a mechanical engine, dice roller, rules reference, and AI-powered rulings assistant for tabletop RPGs. Supports sci-fi (OGL/Cepheus Engine SRD), fantasy (Dungeon World, CC-BY-3.0), generic percentile (Basic Roleplaying SRD, BRP OGL v1.0), and d20 fantasy (5E-compatible SRD, CC-BY-4.0) games.
 
 ## Features
 
@@ -19,13 +12,13 @@ A system-agnostic Model Context Protocol (MCP) server and hosted Cloudflare Work
 - **Dungeon World Database** — Generated on first use from bundled seed data: moves, classes, spells, monsters, GM tools (CC-BY-3.0)
 - **Basic Roleplaying Database** — Generated on first use from bundled seed data: BRP SRD 1.0.2 characteristics, skills, professions, weapons, armor, spot rules (BRP OGL v1.0)
 - **5E-Compatible Database** — Generated on first use from bundled seed data: d20 fantasy SRD classes, spells, monsters, feats, and rules (CC-BY-4.0)
-- **AI Rulings** — Ask rules questions, get cited answers from OGL/DW/BRP/5E-compatible/BYOD sources. Powered by Qwen3 MoE (Cloudflare) or MLX LLM (self-hosted)
-- **Discord Bot** — Slash commands (`/ask`, `/roll`, `/session`) in your TTRPG server. Real-time rulings with source citations
-- **BYOD Indexing** — Ingest your own PDF/text/markdown files for local full-text search (self-hosted only)
+- **AI Rulings** — Ask rules questions, get cited answers from OGL/DW/BRP/5E-compatible/BYOD sources. Powered by local MLX or llama.cpp
+- **Discord webhooks** — Post rulings and table output to Discord channels from the MCP server
+- **BYOD Indexing** — Ingest your own PDF/text/markdown files for local full-text search
 - **Session Management** — Start/end sessions, log transcripts, search what was said at the table
-- **Cross-Platform AI** — Cloudflare Workers AI (Whisper + LLM) works on any device, no GPU needed
+- **Local STT/LLM** — MLX on macOS; whisper.cpp and llama.cpp on Windows/Linux
 
-## Quick Start — Self-Hosted MCP Server
+## Quick Start
 
 ```bash
 git clone https://github.com/crowterliam/2d6mcp.git
@@ -39,23 +32,6 @@ npm run populate-brp   # generate the Basic Roleplaying rules database
 npm run populate-5ecompatible  # generate the 5E-compatible rules database
 npm run start          # run the MCP server (stdio transport)
 ```
-
-## Quick Start — Hosted Discord Bot (Cloudflare)
-
-```bash
-git clone https://github.com/crowterliam/2d6mcp.git
-cd 2d6mcp
-npm install
-npm run setup-cloud
-```
-
-The interactive wizard guides you through:
-- Cloudflare login + account setup
-- Discord bot token + configuration
-- Worker deployment, D1 + R2 creation, rule seeding
-- Slash command registration
-
-5 minutes, one command. Then paste the Interactions Endpoint URL in Discord Developer Portal.
 
 ## MCP Client Configuration
 
@@ -82,101 +58,44 @@ BYOD (Bring Your Own Documents) mode enables local file ingestion for personal, 
 - This tool is provided strictly for personal, non-commercial automation and referencing.
 - The developers of this software do not condone piracy or the unauthorized distribution of copyrighted tabletop roleplaying materials.
 
-BYOD is self-hosted only and is not available in the hosted Cloudflare Worker.
-
 ## Tools
-
-### MCP Server Tools (Self-Hosted)
 
 | Tool | Description |
 |------|-------------|
-| `roll_2d6` | Roll 2d6 with modifier, compare against target, return effect margin |
-| `roll_d20` | Roll d20 with modifier, advantage/disadvantage, AC/DC comparison, critical hits and fumbles |
-| `roll_percentile` | Roll d100 with BRP-style roll-under, critical success, and fumble detection |
-| `roll_damage` | Roll damage dice with optional type (`"2d6+3 fire"`, `"1d8 piercing"`) |
-| `roll_custom` | Roll any dice notation (`3d6`, `1d20`, `4d6+2`) |
-| `roll_table` | Roll on a named table from any rules system (use `system` param) |
-| `query_ogl_rules` | Search the OGL database for rules, skills, careers, equipment, or tables |
-| `query_dw_rules` | Search the Dungeon World database for moves, classes, spells, equipment, monsters, GM tools |
-| `query_brp_rules` | Search the Basic Roleplaying database for characteristics, skills, professions, weapons, armor, spot rules |
-| `query_5ecompatible_rules` | Search the 5E-compatible database for spells, monsters, classes, feats, and rules |
-| `query_orcus_rules` | Search the Orcus 4e-compatible database for classes, monsters, feats, and rules |
-| `query_local_byod` | Search your locally ingested BYOD files (requires consent) |
-| `parse_character` | Parse a character sheet file into structured JSON |
-| `sync_byod` | Index/re-index all files in your BYOD directory |
-| `clear_byod` | Delete the BYOD index to start fresh |
-| `list_byod_files` | List all indexed files with chunk counts and status |
-| `inspect_byod_file` | Show chunk structure for a specific indexed file |
-| `sync_file` | Index a single file by relative path |
-| `get_byod_chunk` | Retrieve full chunk content by file path + chunk index |
-| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM with OGL/DW/BRP/5E-compatible/BYOD citations |
-| `resolve_from_context` | Take recent session transcript, detect rules question, synthesize ruling |
-| `session_start` | Start a new game session for transcript logging and rulings tracking |
-| `session_end` | End the active game session |
-| `session_list` | List all recorded game sessions |
-| `session_summarize` | Generate an AI summary for a session via MLX LLM |
-| `log_transcript` | Log a transcript segment to the current session |
-| `get_session_context` | Get recent transcript segments and rulings |
-| `search_transcript` | Full-text search across session transcripts |
-| `transcribe_audio` | Transcribe an audio file using local MLX Whisper |
-| `list_transcriptions` | List in-progress audio transcriptions |
-| `clear_transcription` | Reset transcription progress |
-| `delete_session` | Permanently delete a session and all its data |
+| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`). Infers mechanic from notation when omitted. |
+| `roll_table` | Roll on a named table. `source`: `ogl` or `byod`. Omit `table_name` with `source=byod` to list tables. |
+| `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
+| `query_local_byod` | Search ingested personal files. Returns `chunkIndex`. Optional `include_full`. |
+| `sync_byod` | Index BYOD files. Optional `relative_path` for a single file. |
+| `clear_byod` | Delete the BYOD index. |
+| `list_byod_files` | List indexed files. Optional `relative_path` inspects one file. |
+| `get_byod_chunk` | Retrieve full chunk content by path + chunk index. |
+| `parse_character` | Parse a character sheet into structured JSON |
 | `discord_post` | Post messages to Discord webhooks with smart routing |
-| `discord_add_webhook` | Add a Discord webhook with name, URL, tags |
-| `discord_remove_webhook` | Remove a stored Discord webhook by name |
-| `discord_list_webhooks` | List all configured webhooks |
-| `discord_test_webhook` | Send a test message to verify webhook connectivity |
-
-### Discord Bot Commands (Hosted)
-
-| Command | Description |
-|---------|-------------|
-| `/ask <question>` | Ask a rules question — Workers AI Qwen3 MoE returns a cited ruling |
-| `/roll <notation>` | Roll dice (`2d6+1`, `3d6`, `d66`) |
-| `/session start <name>` | Start a game session |
-| `/session end` | End the current session |
-| `/session context [minutes]` | View recent transcript and rulings |
-| `/search <query>` | Search session transcript |
-| `/help` | Show available commands |
+| `discord_webhook` | Manage webhooks: `action` add, remove, list, or test |
+| `session` | Manage sessions: `action` start, end, list, delete, or summarize |
+| `log_transcript` | Log a transcript segment to a session |
+| `get_session_context` | Get recent transcript segments and rulings |
+| `search_transcript` | Search session transcripts with SQL LIKE |
+| `synthesize_ruling` | Cited rules ruling. Optional `from_context` uses recent transcript |
+| `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. Last chunk sets `complete: true` |
 
 ## Architecture
 
 ```
 2d6mcp/
-├── apps/
-│   ├── worker/          # Cloudflare Worker — API, Discord bot, Workers AI, D1, R2
-│   └── bridge/          # Discord voice relay (VPS + systemd; raw UDP required)
-│   # Planned (not in tree yet):
-│   # ├── web/           # Vite + React SPA dashboard + landing (Phase 3)
-│   # └── recorder/      # Browser PWA fallback audio capture (Phase 4)
 ├── packages/
 │   ├── server/          # MCP server — stdio transport, local MLX, BYOD, session DB
 │   ├── shared/          # @2d6mcp/shared — dice, keywords, prompts, quality filter
 │   ├── ogl/             # @2d6mcp/ogl — OGL rules database + queries
 │   ├── dw/              # @2d6mcp/dw — DW rules database + queries
 │   ├── brp/             # @2d6mcp/brp — BRP rules database + queries
-│   └── 5ecompatible/    # @2d6mcp/5ecompatible — 5E-compatible rules database + queries
+│   ├── 5ecompatible/    # @2d6mcp/5ecompatible — 5E-compatible rules database + queries
+│   └── orcus/           # @2d6mcp/orcus — Orcus d20-compatible rules database + queries
 ├── data/                # SQLite databases (shared)
-├── tests/               # Vitest test suite (270 tests)
+├── tests/               # Vitest test suite
 ├── tsconfig.base.json
 └── package.json         # npm workspaces root
-```
-
-### Deployment Model
-
-```
-                    CLOUDFLARE                         VPS (Hetzner, DO, etc.)
-┌──────────────────────────────┐  ┌──────────────────────────────────────┐
-│  API Worker (Hono)           │  │  Bridge (Node.js + systemd)           │
-│  /api/interactions (Discord) │  │  Auto-joins voice channels            │
-│  /api/ask (Qwen3 MoE)        │◄─│  Ring buffer → Worker /api/audio-ingest│
-│  /api/roll (shared dice)     │  │  Health /push-to-ask HTTP endpoint     │
-│  /api/auth/* (OAuth2+JWT)    │  └──────────────────────────────────────┘
-│  D1 (rules) + R2 (audio)     │
-└──────────────────────────────┘
-         │
-    Discord (slash commands live)
 ```
 
 ## Agent Modes
@@ -198,14 +117,12 @@ Slash commands are in `.kilo/command/` for quick access to common operations.
 ```bash
 npm install           # install all workspace dependencies
 npm run build         # compile all packages (tsc --build)
-npm test              # run 270 tests across 26 test files
+npm test              # run the Vitest suite
 npm run typecheck     # type-check without emitting
 npm run start         # run the MCP server (packages/server/dist/index.js)
 ```
 
 ## Environment Variables
-
-### Self-Hosted MCP Server
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -228,24 +145,11 @@ npm run start         # run the MCP server (packages/server/dist/index.js)
 | `STT_BACKEND` | `mlx` | STT backend: `mlx` or `whispercpp` |
 | `LLM_BACKEND` | `mlx` | LLM backend: `mlx` or `llamacpp` |
 
-### Hosted Cloudflare Worker
-
-| Variable | Set via | Description |
-|----------|---------|-------------|
-| `DISCORD_BOT_TOKEN` | `wrangler secret put` | Discord bot token |
-| `DISCORD_PUBLIC_KEY` | `wrangler secret put` | Discord interactions public key |
-| `DISCORD_CLIENT_ID` | `wrangler secret put` | Discord application client ID |
-| `DISCORD_CLIENT_SECRET` | `wrangler secret put` | Discord OAuth2 client secret |
-| `JWT_SECRET` | `wrangler secret put` | HMAC secret for user JWT tokens |
-| `API_URL` | `wrangler.toml` | Worker base URL |
-| `WEB_URL` | `wrangler.toml` | Future web dashboard URL (Phase 3; redirects only today) |
-| `WORKER_API_KEY` | `wrangler secret` | Shared secret for bridge ↔ Worker HTTP API |
-
 ## License
 
 This project uses a multi-license architecture:
 
-- **Source code** (`apps/**`, `packages/**`, root config files): [AGPL-3.0-only](https://www.gnu.org/licenses/agpl-3.0.en.html)
+- **Source code** (`packages/**`, root config files): [AGPL-3.0-only](https://www.gnu.org/licenses/agpl-3.0.en.html)
 - **OGL game data** (`data/ogl/**`): [OGL v1.0a](OGL-1.0a.txt)
 - **Dungeon World data** (`data/dw/**`): [CC-BY-3.0](data/dw/CC-BY-3.0.txt)
 - **Basic Roleplaying data** (`data/brp/**`): [BRP Open Game License v1.0](data/brp/BRP-OGL-1.0.txt)

@@ -1,104 +1,95 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
-import { roll2d6, rollCustom, rollD20, rollPercentile, rollDamage } from "@2d6mcp/shared/dice";
+import { roll2d6, rollCustom, rollD20, rollPercentile, rollDamage, parseDiceNotation } from "@2d6mcp/shared/dice";
 import { rollOnTable, normalizeDiceType } from "@2d6mcp/shared/tables";
 import { getDatabase } from "@2d6mcp/ogl/database";
 import { searchOglTables } from "@2d6mcp/ogl";
 import { ensureOglDb } from "../helpers.js";
+import { handleRollByodTable, handleListByodTables } from "./byod-table.js";
 
-export async function handleRoll2d6(args: Record<string, unknown> | undefined): Promise<{
-  content: Array<{ type: "text"; text: string }>;
-  isError?: boolean;
-}> {
-  const modifier = typeof args?.modifier === "number" ? args.modifier : 0;
-  const target =
-    typeof args?.target_number === "number" ? args.target_number : null;
-  const result = roll2d6(modifier, target);
+export type RollMechanic = "2d6" | "d20" | "percentile" | "damage" | "raw";
+
+const DAMAGE_TYPE = /\b(fire|cold|lightning|thunder|acid|poison|necrotic|radiant|psychic|force|piercing|slashing|bludgeoning|heat|laser)\b/i;
+
+export function inferMechanic(notation: string | undefined): RollMechanic {
+  if (!notation || !notation.trim()) return "2d6";
+  const compact = notation.replace(/\s/g, "").toLowerCase();
+  if (DAMAGE_TYPE.test(notation)) return "damage";
+  if (/^(1)?d100([+-]\d+)?$/.test(compact) || /^d%$/.test(compact) || compact.includes("percentile")) {
+    return "percentile";
+  }
+  if (/^(1)?d20([+-]\d+)?$/.test(compact)) return "d20";
+  if (/^2d6([+-]\d+)?$/.test(compact)) return "2d6";
+  return "raw";
+}
+
+function jsonResult(data: unknown, isError = false) {
   return {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify(result, null, 2),
-      },
-    ],
+    content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+    ...(isError ? { isError: true } : {}),
   };
 }
 
-export async function handleRollD20(args: Record<string, unknown> | undefined): Promise<{
+export async function handleRoll(args: Record<string, unknown> | undefined): Promise<{
   content: Array<{ type: "text"; text: string }>;
   isError?: boolean;
 }> {
-  const modifier = typeof args?.modifier === "number" ? args.modifier : 0;
-  const target =
-    typeof args?.target === "number" ? args.target : null;
+  const notation = typeof args?.notation === "string" ? args.notation : undefined;
+  const mechanicArg = typeof args?.mechanic === "string" ? args.mechanic : undefined;
+  const mechanic: RollMechanic =
+    mechanicArg === "2d6" || mechanicArg === "d20" || mechanicArg === "percentile" || mechanicArg === "damage" || mechanicArg === "raw"
+      ? mechanicArg
+      : inferMechanic(notation);
+
+  const modifier = typeof args?.modifier === "number" ? args.modifier : undefined;
+  const target = typeof args?.target === "number"
+    ? args.target
+    : typeof args?.target_number === "number"
+      ? args.target_number
+      : null;
   const advantage = args?.advantage === true;
   const disadvantage = args?.disadvantage === true;
-  const result = rollD20(modifier, target, advantage, disadvantage);
-  return {
-    content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-  };
-}
 
-export async function handleRollPercentile(args: Record<string, unknown> | undefined): Promise<{
-  content: Array<{ type: "text"; text: string }>;
-  isError?: boolean;
-}> {
-  const target =
-    typeof args?.target === "number" ? args.target : null;
-  const result = rollPercentile(target);
-  return {
-    content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-  };
-}
-
-export async function handleRollDamage(args: Record<string, unknown> | undefined): Promise<{
-  content: Array<{ type: "text"; text: string }>;
-  isError?: boolean;
-}> {
-  const notation =
-    typeof args?.notation === "string" ? args.notation : "2d6";
   try {
-    const result = rollDamage(notation);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    if (mechanic === "2d6") {
+      let mod = modifier ?? 0;
+      if (modifier === undefined && notation) {
+        try {
+          mod = parseDiceNotation(notation).modifier;
+        } catch {
+          mod = 0;
+        }
+      }
+      return jsonResult(roll2d6(mod, target));
+    }
+
+    if (mechanic === "d20") {
+      let mod = modifier ?? 0;
+      if (modifier === undefined && notation) {
+        try {
+          mod = parseDiceNotation(notation).modifier;
+        } catch {
+          mod = 0;
+        }
+      }
+      return jsonResult(rollD20(mod, target, advantage, disadvantage));
+    }
+
+    if (mechanic === "percentile") {
+      return jsonResult(rollPercentile(target));
+    }
+
+    if (mechanic === "damage") {
+      const dmg = notation || "2d6";
+      return jsonResult(rollDamage(dmg));
+    }
+
+    const raw = notation || "2d6";
+    return jsonResult(rollCustom(raw));
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    return {
-      content: [{ type: "text", text: `Error: ${message}` }],
-      isError: true,
-    };
-  }
-}
-
-export async function handleRollCustom(args: Record<string, unknown> | undefined): Promise<{
-  content: Array<{ type: "text"; text: string }>;
-  isError?: boolean;
-}> {
-  const notation =
-    typeof args?.notation === "string" ? args.notation : "2d6";
-  try {
-    const result = rollCustom(notation);
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Error: ${message}`,
-        },
-      ],
-      isError: true,
-    };
+    return { content: [{ type: "text", text: `Error: ${message}` }], isError: true };
   }
 }
 
@@ -106,51 +97,32 @@ export async function handleRollTable(args: Record<string, unknown> | undefined)
   content: Array<{ type: "text"; text: string }>;
   isError?: boolean;
 }> {
-  const tableName =
-    typeof args?.table_name === "string" ? args.table_name : "";
+  const source = typeof args?.source === "string" && args.source === "byod" ? "byod" : "ogl";
+  const tableName = typeof args?.table_name === "string" ? args.table_name : "";
   const diceType =
     typeof args?.dice_type === "string"
       ? normalizeDiceType(args.dice_type)
       : "2d6";
-  const system =
-    typeof args?.system === "string" && args.system === "ogl"
-      ? args.system
-      : "ogl";
 
-  if (typeof args?.system === "string" && args.system !== "ogl") {
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(
-            {
-              error: `Table lookup is only implemented for system "ogl" (got "${args.system}").`,
-            },
-            null,
-            2
-          ),
-        },
-      ],
-      isError: true,
-    };
+  if (source === "byod") {
+    if (!tableName) {
+      return handleListByodTables(args);
+    }
+    return handleRollByodTable(args);
   }
 
-  if (system === "ogl") {
-    const { dbPath } = ensureOglDb();
-    const db = getDatabase(dbPath);
-    const table = searchOglTables(db, tableName);
+  const { dbPath } = ensureOglDb();
+  const db = getDatabase(dbPath);
+  const table = tableName ? searchOglTables(db, tableName) : null;
 
-    if (table && table.entries.length > 0) {
-      const result = rollOnTable({
-        name: table.name,
-        description: table.description || undefined,
-        diceType: table.diceType as "1d6" | "2d6" | "d66" | "1d3" | "2d3",
-        entries: table.entries,
-      });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-      };
-    }
+  if (table && table.entries.length > 0) {
+    const result = rollOnTable({
+      name: table.name,
+      description: table.description || undefined,
+      diceType: table.diceType as "1d6" | "2d6" | "d66" | "1d3" | "2d3",
+      entries: table.entries,
+    });
+    return jsonResult(result);
   }
 
   const result = rollOnTable({
@@ -158,22 +130,11 @@ export async function handleRollTable(args: Record<string, unknown> | undefined)
     diceType,
     entries: [],
   });
-  return {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify(
-          {
-            ...result,
-            system,
-            warning: system !== "ogl"
-              ? `Table lookup not yet implemented for system "${system}". Rolled raw ${diceType}: ${result.rollValue}`
-              : `Table "${tableName}" not found in ${system.toUpperCase()} database. Rolled raw ${diceType}: ${result.rollValue}`,
-          },
-          null,
-          2
-        ),
-      },
-    ],
-  };
+  return jsonResult({
+    ...result,
+    source,
+    warning: tableName
+      ? `Table "${tableName}" not found in the OGL database. Rolled raw ${diceType}: ${result.rollValue}`
+      : `No table_name provided. Rolled raw ${diceType}: ${result.rollValue}`,
+  });
 }

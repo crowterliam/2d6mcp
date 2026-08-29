@@ -41,7 +41,7 @@ Each position uses hex (0–F), representing characteristic values 0–15.
 
 To generate a new character's six characteristics:
 ```
-roll_custom("2d6")  — call 6 times, record each result
+roll(notation: "2d6", mechanic: "raw")  — call 6 times, record each result
 ```
 
 Assign results to characteristics in order (Strength, Dexterity, Endurance, Intellect, Education, Social Standing) or allow the player to arrange as desired.
@@ -62,9 +62,9 @@ Assign results to characteristics in order (Strength, Dexterity, Endurance, Inte
 
 To look up a career:
 ```
-query_ogl_rules("navy", category: "careers")
-query_ogl_rules("scout", category: "careers")
-query_ogl_rules("merchant", category: "careers")
+query_rules(system: "ogl", "navy", category: "careers")
+query_rules(system: "ogl", "scout", category: "careers")
+query_rules(system: "ogl", "merchant", category: "careers")
 ```
 
 Each career entry includes:
@@ -77,15 +77,15 @@ Each career entry includes:
 
 ## Character Creation Workflow
 
-1. **Roll characteristics**: Six `roll_custom("2d6")` calls
-2. **Choose a career**: Query career options with `query_ogl_rules(..., category: "careers")`
-3. **Qualify**: `roll_2d6(characteristic_modifier, qualification_target)`
-4. **Survive each term**: `roll_2d6(survival_modifier, survival_target)`
-5. **Advance**: `roll_2d6(advancement_modifier, advancement_target)` (optional)
+1. **Roll characteristics**: Six `roll(notation: "2d6", mechanic: "raw")` calls
+2. **Choose a career**: Query career options with `query_rules(system: "ogl", ..., category: "careers")`
+3. **Qualify**: `roll(mechanic: "2d6", modifier: characteristic_modifier, target: qualification_target)`
+4. **Survive each term**: `roll(mechanic: "2d6", modifier: survival_modifier, target: survival_target)`
+5. **Advance**: `roll(mechanic: "2d6", modifier: advancement_modifier, target: advancement_target)` (optional)
 6. **Roll on skill tables**: Use `roll_table("Skill Table Name", "1d6")` for each skill earned
 7. **Muster out**: Roll on mustering-out benefits table
 8. **Age**: Apply aging effects if applicable
-9. **Buy equipment**: Look up available gear with `query_ogl_rules(..., category: "equipment")`
+9. **Buy equipment**: Look up available gear with `query_rules(system: "ogl", ..., category: "equipment")`
 
 ## Skills
 
@@ -97,12 +97,12 @@ Common skills include: Admin, Advocate, Animals, Astrogation, Athletics, Battle 
 
 DW character creation uses classes and moves rather than UPP:
 
-1. **Choose a class**: `query_dw_rules("wizard", category: "classes")` for class description, starting moves, gear, base HP, and damage
+1. **Choose a class**: `query_rules(system: "dw", "wizard", category: "classes")` for class description, starting moves, gear, base HP, and damage
 2. **Roll stats**: Assign array of scores (16, 15, 13, 12, 9, 8) to STR, DEX, CON, INT, WIS, CHA
 3. **Choose race**: Each class lists race options with additional moves
 4. **Assign alignment**: Each class provides alignment options that grant XP triggers
 5. **Choose bonds**: Write connections to other party members
-6. **Select gear**: From class-provided loadout and dungeon gear options — `query_dw_rules("dungeon rations", category: "equipment")` for details
+6. **Select gear**: From class-provided loadout and dungeon gear options — `query_rules(system: "dw", "dungeon rations", category: "equipment")` for details
 
 ### Key Differences from 2d6 Sci-Fi
 - No UPP — characteristics use standard 3-18 range with modifiers
@@ -115,34 +115,34 @@ DW character creation uses classes and moves rather than UPP:
 
 BRP character creation uses percentile characteristics and skills:
 
-1. **Roll characteristics**: `query_brp_rules("characteristics", category: "characteristics")` for stat definitions — typically 3d6 or 2d6+6 per stat
-2. **Calculate derived stats**: Hit points, damage bonus, idea/luck/know rolls — use `query_brp_rules("derived", category: "characteristics")`
-3. **Choose profession**: `query_brp_rules("soldier", category: "professions")` for skill packages
+1. **Roll characteristics**: `query_rules(system: "brp", "characteristics", category: "characteristics")` for stat definitions — typically 3d6 or 2d6+6 per stat
+2. **Calculate derived stats**: Hit points, damage bonus, idea/luck/know rolls — use `query_rules(system: "brp", "derived", category: "characteristics")`
+3. **Choose profession**: `query_rules(system: "brp", "soldier", category: "professions")` for skill packages
 4. **Allocate skill points**: Base chances from profession + personal interest points
-5. **Select equipment**: `query_brp_rules("sword", category: "weapons")` or `query_brp_rules("armor", category: "armor")`
+5. **Select equipment**: `query_rules(system: "brp", "sword", category: "weapons")` or `query_rules(system: "brp", "armor", category: "armor")`
 
-### Resolution: `roll_percentile(target)` where target = skill percentage
+### Resolution: `roll(mechanic: "percentile", target)` where target = skill percentage
 
 ## d20 Fantasy RPG (5E-Compatible)
 
 5E character creation uses the d20 system:
 
-1. **Generate ability scores**: `roll_custom("4d6")` (drop lowest) six times, or use point buy/standard array
-2. **Choose species**: `query_5ecompatible_rules("elf", category: "rules")` for traits (species data is in rules)
-3. **Choose class**: `query_5ecompatible_rules("fighter", category: "classes")` for features, proficiencies, hit dice
-4. **Choose feats** (if allowed): `query_5ecompatible_rules("tough", category: "feats")`
-5. **Select spells** (if caster): `query_5ecompatible_rules("fireball", category: "spells")`
+1. **Generate ability scores**: `roll(notation: "4d6", mechanic: "raw")` (drop lowest) six times, or use point buy/standard array
+2. **Choose species**: `query_rules(system: "5ecompatible", "elf", category: "rules")` for traits (species data is in rules)
+3. **Choose class**: `query_rules(system: "5ecompatible", "fighter", category: "classes")` for features, proficiencies, hit dice
+4. **Choose feats** (if allowed): `query_rules(system: "5ecompatible", "tough", category: "feats")`
+5. **Select spells** (if caster): `query_rules(system: "5ecompatible", "fireball", category: "spells")`
 
-### Resolution: `roll_d20(modifier, target, advantage?, disadvantage?)`
+### Resolution: `roll(mechanic: "d20", modifier, target, advantage, disadvantage)`
 
 ## 4E-Compatible RPG (Orcus)
 
 Orcus character creation uses the d20 system with class traditions:
 
-1. **Choose class and tradition**: `query_orcus_rules("Commander", category: "classes")` — each class has a tradition (role within the class)
+1. **Choose class and tradition**: `query_rules(system: "orcus", "Commander", category: "classes")` — each class has a tradition (role within the class)
 2. **Assign key abilities**: Each class lists a primary key ability
 3. **Select trained skills**: From class-provided list
 4. **Calculate defenses**: AC, Fortitude, Reflex, Will — provided in class data
-5. **Choose feats**: `query_orcus_rules("Athame", category: "feats")`
+5. **Choose feats**: `query_rules(system: "orcus", "Athame", category: "feats")`
 
-### Resolution: `roll_d20(modifier, target, advantage?, disadvantage?)` — target is the relevant defense score
+### Resolution: `roll(mechanic: "d20", modifier, target, advantage, disadvantage)` — target is the relevant defense score

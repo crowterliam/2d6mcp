@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS transcription_progress (
   chunk_size_seconds INTEGER NOT NULL DEFAULT 120,
   total_chunks INTEGER NOT NULL,
   processed_chunks TEXT NOT NULL DEFAULT '[]',
+  chunk_texts TEXT NOT NULL DEFAULT '{}',
   source_duration_seconds REAL,
   model_used TEXT,
   session_id TEXT,
@@ -55,4 +56,5 @@ CREATE TABLE IF NOT EXISTS transcription_progress (
 
 -- Migration: add byod_system column to existing sessions table
 ALTER TABLE sessions ADD COLUMN byod_system TEXT;
+ALTER TABLE transcription_progress ADD COLUMN chunk_texts TEXT;
 `;

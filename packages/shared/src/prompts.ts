@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 //
 // Shared prompt templates and ruling quality filter.
-// Used by both the local MLX pipeline and the Cloudflare Worker.
+// Used by local ruling synthesis.
 
 export interface RulingResult {
   response: string;

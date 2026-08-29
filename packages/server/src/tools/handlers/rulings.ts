@@ -3,325 +3,81 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import { loadConfig } from "../../config.js";
-import { getDatabase } from "@2d6mcp/ogl/database";
-import { ensureDwSchema } from "@2d6mcp/dw/database";
-import { ensureBrpSchema } from "@2d6mcp/brp/database";
-import { ensure5ecompatibleSchema } from "@2d6mcp/5ecompatible/database";
-import { ensureOrcusSchema } from "@2d6mcp/orcus/database";
 import {
-  searchOglRules,
-  searchOglSkills,
-  searchOglEquipment,
-  searchCombat,
-  searchShipOps,
-} from "@2d6mcp/ogl";
-import {
-  searchDwRules,
-  searchDwMoves,
-  searchDwClasses,
-  searchDwEquipment,
-  searchDwGmTools,
-} from "@2d6mcp/dw";
-import {
-  searchBrpRules,
-  searchBrpCharacteristics,
-  searchBrpSkills,
-  searchBrpWeaponsMelee,
-  searchBrpWeaponsMissile,
-  searchBrpArmor,
-  searchBrpSpotRules,
-} from "@2d6mcp/brp";
-import {
-  search5ecompatibleRules,
-  search5ecompatibleSpells,
-  search5ecompatibleMonsters,
-  search5ecompatibleClasses,
-  search5ecompatibleFeats,
-} from "@2d6mcp/5ecompatible";
-import {
-  searchOrcusRules,
-  searchOrcusClasses,
-  searchOrcusMonsters,
-  searchOrcusFeats,
-} from "@2d6mcp/orcus";
-import { openSessionDb, getRecentRulings, getRecentContext, storeRuling, logTranscript, getTranscript, getSession, getOrCreateProgress, updateProgress, markChunkProcessed, getNextUnprocessedChunk, deleteProgress } from "../../session/database.js";
-import { transcribeAudioBuffer, isMLXWhisperAvailable } from "../../audio/mlx-transcribe.js";
-import { synthesizeRuling as mlxSynthesizeRuling, isMLXLLMAvailable } from "../../rulings/mlx-synthesize.js";
-import { checkByodConsent, getByodPath } from "../../byod/gate.js";
-import { getByodDatabase, searchByodIndex } from "../../byod/search.js";
-import { ensureOglDb, ensureDwDb, ensureBrpDb, ensure5ecompatibleDb, ensureOrcusDb, resolveSafePath, extractKeywords, extractKeywordList, fuzzyKeywordList } from "../helpers.js";
+  openSessionDb,
+  getRecentRulings,
+  getRecentContext,
+  storeRuling,
+  logTranscript,
+  getOrCreateProgress,
+  updateProgress,
+  markChunkProcessed,
+  getNextUnprocessedChunk,
+  deleteProgress,
+  assembleChunkTranscript,
+} from "../../session/database.js";
+import { transcribeAudioBuffer } from "../../audio/mlx-transcribe.js";
+import { synthesizeRuling as mlxSynthesizeRuling } from "../../rulings/mlx-synthesize.js";
+import { questionFromTranscript, retrieveRulesContext } from "../../rulings/retrieve.js";
+import { resolveSafePath } from "../helpers.js";
 import { isAudioLong, chunkAudio, transcribeChunk, cleanupChunks, getChunkFiles } from "../../audio/chunker.js";
+import { handleListTranscriptions, handleClearTranscription } from "./session.js";
 
-function scoreAndTakeTop(chunks: string[], originalKeywords: string[], fuzzyKeywords: string[], maxChunks: number = 3): string[] {
-  const scored = chunks.map((text) => {
-    const lower = text.toLowerCase();
-    const origHits = originalKeywords.filter((kw) => lower.includes(kw.toLowerCase())).length;
-    const fuzzyHits = fuzzyKeywords.filter((kw) => lower.includes(kw.toLowerCase())).length;
-    // Original keywords weighted 3x, fuzzy expansions 1x
-    return { text, score: origHits * 3 + fuzzyHits + (origHits === originalKeywords.length ? 10 : 0) };
-  });
-
-  const seen = new Set<string>();
-  const deduped = scored.filter((c) => {
-    const key = c.text.substring(0, 100);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-
-  deduped.sort((a, b) => b.score - a.score);
-  return deduped.slice(0, maxChunks).map((c) => c.text);
-}
+const LONG_AUDIO_SECONDS = 180;
 
 export async function handleSynthesizeRuling(args: Record<string, unknown> | undefined): Promise<{
   content: Array<{ type: "text"; text: string }>;
   isError?: boolean;
 }> {
-  const question = typeof args?.question === "string" ? args.question : "";
+  const fromContext = args?.from_context === true;
+  const sessionId = typeof args?.session_id === "string" ? args.session_id : undefined;
+  const minutes = typeof args?.minutes === "number"
+    ? args.minutes
+    : typeof args?.context_minutes === "number"
+      ? args.context_minutes
+      : 2;
+
+  let question = typeof args?.question === "string" ? args.question : "";
+
+  if (fromContext) {
+    if (!sessionId) {
+      return { content: [{ type: "text", text: "Error: session_id is required when from_context is true" }], isError: true };
+    }
+    const config = loadConfig();
+    const db = openSessionDb(config.sessionDbPath);
+    const { transcripts } = getRecentContext(db, sessionId, minutes);
+    if (transcripts.length === 0) {
+      return {
+        content: [{ type: "text", text: JSON.stringify({
+          session_id: sessionId,
+          ruling: null,
+          note: "No recent transcript available. Log some transcript segments first via log_transcript.",
+        }, null, 2) }],
+      };
+    }
+    const transcriptText = transcripts
+      .map((t) => {
+        const speakerPrefix = t.speaker ? `${t.speaker}: ` : "";
+        return `${speakerPrefix}${t.text}`;
+      })
+      .join("\n");
+    question = questionFromTranscript(transcriptText);
+  }
+
   if (!question) {
     return { content: [{ type: "text", text: "Error: question is required" }], isError: true };
   }
 
-  const rulesSystem = typeof args?.rules_system === "string" ? args.rules_system : "auto";
-  const sessionId = typeof args?.session_id === "string" ? args.session_id : undefined;
+  const rulesSystem = typeof args?.rules_system === "string" ? args.rules_system : undefined;
   let rulesContext = typeof args?.rules_context === "string" ? args.rules_context : undefined;
 
   if (!rulesContext) {
-    const { dbPath: oglPath } = ensureOglDb();
-    const oglDb = getDatabase(oglPath);
-    const dwDbPath = ensureDwDb().dbPath;
-    const dwDb = ensureDwSchema(dwDbPath);
-
-    const chunks: string[] = [];
-    const keywords = extractKeywords(question);
-
-    if (rulesSystem === "ogl" || rulesSystem === "auto") {
-      const oglRules = searchOglRules(oglDb, question);
-      if (Array.isArray(oglRules)) {
-        for (const r of oglRules) {
-          if (typeof r === "object" && r !== null && "title" in r && "snippet" in r) {
-            const rule = r as { title: string; snippet: string; section: string };
-            chunks.push(`[OGL: ${rule.section} > ${rule.title}]\n${rule.snippet.replace(/<mark>/g, "**").replace(/<\/mark>/g, "**")}`);
-          }
-        }
-      }
-
-      if (keywords) {
-        const kwList = fuzzyKeywordList(extractKeywordList(question));
-        for (const kw of kwList) {
-          const combatRows = searchCombat(oglDb, kw);
-          for (const r of combatRows) {
-            if (typeof r === "object" && r !== null && "topic" in r && "content" in r) {
-              const c = r as { topic: string; content: string; category: string };
-              chunks.push(`[OGL Combat: ${c.category} > ${c.topic}]\n${c.content}`);
-            }
-          }
-          const shipRows = searchShipOps(oglDb, kw);
-          for (const r of shipRows) {
-            if (typeof r === "object" && r !== null && "topic" in r && "content" in r) {
-              const s = r as { topic: string; content: string; category: string };
-              chunks.push(`[OGL Starships: ${s.category} > ${s.topic}]\n${s.content}`);
-            }
-          }
-          const skillRows = searchOglSkills(oglDb, kw);
-          for (const r of skillRows) {
-            if (typeof r === "object" && r !== null && "name" in r) {
-              const sk = r as { name: string; description: string; characteristic: string };
-              chunks.push(`[OGL Skill: ${sk.name} (${sk.characteristic})]\n${sk.description}`);
-            }
-          }
-          const equipRows = searchOglEquipment(oglDb, kw);
-          for (const r of equipRows) {
-            if (typeof r === "object" && r !== null && "name" in r) {
-              const eq = r as { name: string; category: string; techLevel: number; cost: string; description: string };
-              chunks.push(`[OGL Equipment: ${eq.name} (TL${eq.techLevel}, ${eq.cost})]\n${eq.description}`);
-            }
-          }
-        }
-
-      }
-    }
-
-    if (rulesSystem === "dw" || rulesSystem === "auto") {
-      const dwRules = searchDwRules(dwDb, question);
-      for (const r of dwRules) {
-        if (typeof r === "object" && r !== null && "title" in r && "snippet" in r) {
-          const d = r as { title: string; snippet: string; section: string };
-          chunks.push(`[DW: ${d.section} > ${d.title}]\n${d.snippet.replace(/<mark>/g, "**").replace(/<\/mark>/g, "**")}`);
-        }
-      }
-
-      if (keywords) {
-        const dwKwList = fuzzyKeywordList(extractKeywordList(question));
-        for (const kw of dwKwList) {
-          const dwMoves = searchDwMoves(dwDb, kw);
-          for (const m of dwMoves) {
-            chunks.push(`[DW Move: ${m.name} (${m.category})]\n${m.description}`);
-          }
-          const dwClasses = searchDwClasses(dwDb, kw);
-          for (const c of dwClasses) {
-            chunks.push(`[DW Class: ${c.name}]\n${c.description ?? c.starting_moves ?? ""}`);
-          }
-          const dwEquip = searchDwEquipment(dwDb, kw);
-          for (const e of dwEquip) {
-            chunks.push(`[DW Equipment: ${e.name} (${e.category})]\n${e.description ?? `${e.cost ?? "?"}, ${e.weight ?? "?"} wt, damage: ${e.damage ?? "none"}`}`);
-          }
-          const dwGm = searchDwGmTools(dwDb, kw);
-          for (const g of dwGm) {
-            chunks.push(`[DW GM: ${g.category ?? "rules"} > ${g.topic}]\n${g.content}`);
-          }
-        }
-      }
-
-      // BYOD search (if enabled)
-      const byodConsent = checkByodConsent();
-      if (byodConsent.allowed && typeof keywords === "string" && keywords) {
-        try {
-          const byodPath = getByodPath();
-          const byodDb = getByodDatabase(byodPath);
-          const byodKwList = fuzzyKeywordList(extractKeywordList(question));
-
-          // Read session's BYOD system filter
-          let byodSystemFilter = "";
-          if (sessionId) {
-            const config = loadConfig();
-            const db = openSessionDb(config.sessionDbPath);
-            const session = getSession(db, sessionId);
-            byodSystemFilter = session?.byod_system || "";
-          }
-
-          for (const kw of byodKwList) {
-            const byodResults = searchByodIndex(byodDb, kw, 5);
-            for (const b of byodResults) {
-              // Filter by system name if specified
-              if (byodSystemFilter) {
-                const fileLower = b.fileName.toLowerCase();
-                const systemLower = byodSystemFilter.toLowerCase();
-                const matches = systemLower.split(/\s+/).every(term => fileLower.includes(term));
-                if (!matches) continue;
-              }
-              chunks.push(`[BYOD: ${b.fileName} > ${b.title}]\n${b.snippet.replace(/<mark>/g, "**").replace(/<\/mark>/g, "**")}`);
-            }
-          }
-        } catch {
-          // BYOD DB may not exist or be initialised — skip silently
-        }
-      }
-    }
-
-    if (rulesSystem === "brp" || rulesSystem === "auto") {
-      const { dbPath: brpPath } = ensureBrpDb();
-      const brpDb = ensureBrpSchema(brpPath);
-
-      const brpRules = searchBrpRules(brpDb, question);
-      for (const r of brpRules) {
-        if (typeof r === "object" && r !== null && "title" in r && "snippet" in r) {
-          const rule = r as { title: string; snippet: string; section: string };
-          chunks.push(`[BRP: ${rule.section} > ${rule.title}]\n${rule.snippet.replace(/<mark>/g, "**").replace(/<\/mark>/g, "**")}`);
-        }
-      }
-
-      if (keywords) {
-        const brpKwList = fuzzyKeywordList(extractKeywordList(question));
-        for (const kw of brpKwList) {
-          const brpSkills = searchBrpSkills(brpDb, kw);
-          for (const s of brpSkills) {
-            chunks.push(`[BRP Skill: ${s.name} (${s.baseChance})]\n${s.description}`);
-          }
-          const brpChars = searchBrpCharacteristics(brpDb, kw);
-          for (const c of brpChars) {
-            chunks.push(`[BRP Characteristic: ${c.name} (${c.abbreviation}, ${c.dice})]\n${c.description}`);
-          }
-          const brpArmor = searchBrpArmor(brpDb, kw);
-          for (const a of brpArmor) {
-            chunks.push(`[BRP Armor: ${a.name} (${a.armorPoints} points, ${a.skillModifier})]\n`);
-          }
-          const brpMelee = searchBrpWeaponsMelee(brpDb, kw);
-          for (const w of brpMelee) {
-            chunks.push(`[BRP Weapon: ${w.name} (${w.skill}, ${w.damage})]\n`);
-          }
-          const brpMissile = searchBrpWeaponsMissile(brpDb, kw);
-          for (const w of brpMissile) {
-            chunks.push(`[BRP Missile Weapon: ${w.name} (${w.skill}, ${w.damage}, ${w.range})]\n`);
-          }
-          const brpSpot = searchBrpSpotRules(brpDb, kw);
-          for (const r of brpSpot) {
-            chunks.push(`[BRP Spot Rule: ${r.category} > ${r.topic}]\n${r.content}`);
-          }
-        }
-      }
-    }
-
-    if (rulesSystem === "5ecompatible" || rulesSystem === "auto") {
-      const { dbPath: sr5ePath } = ensure5ecompatibleDb();
-      const sr5eDb = ensure5ecompatibleSchema(sr5ePath);
-
-      const sr5eRules = search5ecompatibleRules(sr5eDb, question);
-      for (const r of sr5eRules) {
-        if (typeof r === "object" && r !== null && "title" in r && "snippet" in r) {
-          const rule = r as { title: string; snippet: string; section: string };
-          chunks.push(`[5E: ${rule.section} > ${rule.title}]\n${rule.snippet.replace(/<mark>/g, "**").replace(/<\/mark>/g, "**")}`);
-        }
-      }
-
-      if (keywords) {
-        const sr5eKwList = fuzzyKeywordList(extractKeywordList(question));
-        for (const kw of sr5eKwList) {
-          const sr5eSpells = search5ecompatibleSpells(sr5eDb, kw);
-          for (const s of sr5eSpells) {
-            chunks.push(`[5E Spell: ${s.name} (Level ${s.level} ${s.school})]\n${s.description}`);
-          }
-          const sr5eMonsters = search5ecompatibleMonsters(sr5eDb, kw);
-          for (const m of sr5eMonsters) {
-            chunks.push(`[5E Monster: ${m.name} (${m.type}, CR ${m.challengeRating})]\n${m.description}`);
-          }
-          const sr5eClasses = search5ecompatibleClasses(sr5eDb, kw);
-          for (const c of sr5eClasses) {
-            chunks.push(`[5E Class: ${c.name} (${c.hitDie}, ${c.primaryAbility})]\n${c.description}`);
-          }
-          const sr5eFeats = search5ecompatibleFeats(sr5eDb, kw);
-          for (const f of sr5eFeats) {
-            chunks.push(`[5E Feat: ${f.name} (${f.prerequisite})]\n${f.description}`);
-          }
-        }
-      }
-    }
-
-    if (rulesSystem === "orcus" || rulesSystem === "auto") {
-      const { dbPath: orcusPath } = ensureOrcusDb();
-      const orcusDb = ensureOrcusSchema(orcusPath);
-
-      const orcusRules = searchOrcusRules(orcusDb, question);
-      for (const r of orcusRules) {
-        if (typeof r === "object" && r !== null && "title" in r && "snippet" in r) {
-          const rule = r as { title: string; snippet: string; section: string };
-          chunks.push(`[Orcus: ${rule.section} > ${rule.title}]\n${rule.snippet.replace(/<mark>/g, "**").replace(/<\/mark>/g, "**")}`);
-        }
-      }
-
-      if (keywords) {
-        const orcusKwList = fuzzyKeywordList(extractKeywordList(question));
-        for (const kw of orcusKwList) {
-          const orcusClasses = searchOrcusClasses(orcusDb, kw);
-          for (const c of orcusClasses) {
-            chunks.push(`[Orcus Class: ${c.name} (${c.tradition} ${c.role})]\n${c.description}`);
-          }
-          const orcusMonsters = searchOrcusMonsters(orcusDb, kw);
-          for (const m of orcusMonsters) {
-            chunks.push(`[Orcus Monster: ${m.name} (${m.levelInfo})]\n${m.description}`);
-          }
-          const orcusFeats = searchOrcusFeats(orcusDb, kw);
-          for (const f of orcusFeats) {
-            chunks.push(`[Orcus Feat: ${f.name} (${f.category})]\n${f.description}`);
-          }
-        }
-      }
-    }
-
-    rulesContext = scoreAndTakeTop(chunks, extractKeywordList(question), fuzzyKeywordList(extractKeywordList(question))).join("\n\n");
-    if (!rulesContext) {
-      rulesContext = "No matching rules found in OGL, Dungeon World, Basic Roleplaying, 5E-compatible SRD, Orcus, or BYOD databases.";
-    }
+    const retrieved = retrieveRulesContext({
+      question,
+      rulesSystem,
+      sessionId,
+    });
+    rulesContext = retrieved.context;
   }
 
   let sessionHistory = "";
@@ -358,6 +114,7 @@ export async function handleSynthesizeRuling(args: Record<string, unknown> | und
         model: result.model,
         latency_ms: latency,
         rules_context: rulesContext.substring(0, 500),
+        from_context: fromContext || undefined,
       }, null, 2) }],
     };
   } catch (err: unknown) {
@@ -373,174 +130,25 @@ export async function handleResolveFromContext(args: Record<string, unknown> | u
   content: Array<{ type: "text"; text: string }>;
   isError?: boolean;
 }> {
-  const sessionId = typeof args?.session_id === "string" ? args.session_id : "";
-  const contextMinutes = typeof args?.context_minutes === "number" ? args.context_minutes : 2;
-
-  if (!sessionId) {
-    return { content: [{ type: "text", text: "Error: session_id is required" }], isError: true };
-  }
-
-  const config = loadConfig();
-  const db = openSessionDb(config.sessionDbPath);
-  const { transcripts } = getRecentContext(db, sessionId, contextMinutes);
-
-  if (transcripts.length === 0) {
-    return {
-      content: [{ type: "text", text: JSON.stringify({
-        session_id: sessionId,
-        ruling: null,
-        note: "No recent transcript available. Log some transcript segments first via log_transcript.",
-      }, null, 2) }],
-    };
-  }
-
-  const transcriptText = transcripts
-    .map((t) => {
-      const speakerPrefix = t.speaker ? `${t.speaker}: ` : "";
-      return `${speakerPrefix}${t.text}`;
-    })
-    .join("\n");
-
-  const { dbPath: oglPath } = ensureOglDb();
-  const oglDb = getDatabase(oglPath);
-  const dwDbPath = ensureDwDb().dbPath;
-  const dwDb = ensureDwSchema(dwDbPath);
-
-  const chunks: string[] = [];
-  const keywords = extractKeywords(transcriptText);
-
-  const oglRules = searchOglRules(oglDb, transcriptText);
-  if (Array.isArray(oglRules)) {
-    for (const r of oglRules) {
-      if (typeof r === "object" && r !== null && "title" in r && "snippet" in r) {
-        const rule = r as { title: string; snippet: string; section: string };
-        chunks.push(`[OGL: ${rule.section} > ${rule.title}]\n${rule.snippet.replace(/<mark>/g, "**").replace(/<\/mark>/g, "**")}`);
-      }
-    }
-  }
-
-  if (keywords) {
-    const kwList = fuzzyKeywordList(extractKeywordList(transcriptText));
-    for (const kw of kwList) {
-      const combatRows = searchCombat(oglDb, kw);
-      for (const r of combatRows) {
-        if (typeof r === "object" && r !== null && "topic" in r && "content" in r) {
-          const c = r as { topic: string; content: string; category: string };
-          chunks.push(`[OGL Combat: ${c.category} > ${c.topic}]\n${c.content}`);
-        }
-      }
-      const shipRows = searchShipOps(oglDb, kw);
-      for (const r of shipRows) {
-        if (typeof r === "object" && r !== null && "topic" in r && "content" in r) {
-          const s = r as { topic: string; content: string; category: string };
-          chunks.push(`[OGL Starships: ${s.category} > ${s.topic}]\n${s.content}`);
-        }
-      }
-    }
-  }
-
-  const dwRules = searchDwRules(dwDb, transcriptText);
-  for (const r of dwRules) {
-    if (typeof r === "object" && r !== null && "title" in r && "snippet" in r) {
-      const d = r as { title: string; snippet: string; section: string };
-      chunks.push(`[DW: ${d.section} > ${d.title}]\n${d.snippet.replace(/<mark>/g, "**").replace(/<\/mark>/g, "**")}`);
-    }
-  }
-
-  if (keywords) {
-    const dwKwList = fuzzyKeywordList(extractKeywordList(transcriptText));
-    for (const kw of dwKwList) {
-      const dwMoves = searchDwMoves(dwDb, kw);
-      for (const m of dwMoves) {
-        chunks.push(`[DW Move: ${m.name} (${m.category})]\n${m.description}`);
-      }
-      const dwEquip = searchDwEquipment(dwDb, kw);
-      for (const e of dwEquip) {
-        chunks.push(`[DW Equipment: ${e.name} (${e.category})]\n${e.description ?? `${e.cost ?? "?"} wt`}`);
-      }
-      const dwGm = searchDwGmTools(dwDb, kw);
-      for (const g of dwGm) {
-        chunks.push(`[DW GM: ${g.category ?? "rules"} > ${g.topic}]\n${g.content}`);
-      }
-    }
-  }
-
-  // BYOD search (if enabled)
-  const byodConsent = checkByodConsent();
-  if (byodConsent.allowed && typeof keywords === "string" && keywords) {
-    try {
-      const byodPath = getByodPath();
-      const byodDb = getByodDatabase(byodPath);
-      const byodKwList = fuzzyKeywordList(extractKeywordList(transcriptText));
-
-      // Read session's BYOD system filter
-      let byodSystemFilter = "";
-      if (sessionId) {
-        const config = loadConfig();
-        const db = openSessionDb(config.sessionDbPath);
-        const session = getSession(db, sessionId);
-        byodSystemFilter = session?.byod_system || "";
-      }
-
-      for (const kw of byodKwList) {
-        const byodResults = searchByodIndex(byodDb, kw, 5);
-        for (const b of byodResults) {
-          if (byodSystemFilter) {
-            const fileLower = b.fileName.toLowerCase();
-            const systemLower = byodSystemFilter.toLowerCase();
-            const matches = systemLower.split(/\s+/).every(term => fileLower.includes(term));
-            if (!matches) continue;
-          }
-          chunks.push(`[BYOD: ${b.fileName} > ${b.title}]\n${b.snippet.replace(/<mark>/g, "**").replace(/<\/mark>/g, "**")}`);
-        }
-      }
-    } catch {
-      // BYOD DB may not exist or be initialised — skip silently
-    }
-  }
-
-  const rulesContext = scoreAndTakeTop(chunks, extractKeywordList(transcriptText), fuzzyKeywordList(extractKeywordList(transcriptText))).join("\n\n") || "No matching rules found.";
-
-  const recentRulings = getRecentRulings(db, sessionId, 3);
-  const history = recentRulings.length > 0
-    ? `Previous rulings:\n${recentRulings.map((r: { question: string; ruling_text: string }) => `Q: ${r.question}\nA: ${r.ruling_text}`).join("\n\n")}\n\n`
-    : "";
-
-  const fullContext = `${history}Rules:\n${rulesContext}`;
-
-  try {
-    const startTime = Date.now();
-    const result = await mlxSynthesizeRuling(
-      `Based on this game transcript, provide a rules ruling:\n\n${transcriptText.substring(0, 2000)}`,
-      fullContext
-    );
-    const latency = Date.now() - startTime;
-
-    storeRuling(db, sessionId, transcriptText.substring(0, 200), result.response, undefined, result.model, latency);
-
-    return {
-      content: [{ type: "text", text: JSON.stringify({
-        session_id: sessionId,
-        ruling: result.response,
-        model: result.model,
-        latency_ms: latency,
-        context_used: transcriptText.substring(0, 300),
-        rules_sources: rulesContext.substring(0, 500),
-      }, null, 2) }],
-    };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return {
-      content: [{ type: "text", text: `MLX resolution failed: ${message}` }],
-      isError: true,
-    };
-  }
+  return handleSynthesizeRuling({
+    ...args,
+    from_context: true,
+    minutes: typeof args?.context_minutes === "number" ? args.context_minutes : args?.minutes,
+  });
 }
 
 export async function handleTranscribeAudio(args: Record<string, unknown> | undefined): Promise<{
   content: Array<{ type: "text"; text: string }>;
   isError?: boolean;
 }> {
+  const action = typeof args?.action === "string" ? args.action : "transcribe";
+  if (action === "list") {
+    return handleListTranscriptions(args);
+  }
+  if (action === "clear") {
+    return handleClearTranscription(args);
+  }
+
   const filePath = typeof args?.file_path === "string" ? args.file_path : "";
   if (!filePath) {
     return { content: [{ type: "text", text: "Error: file_path is required" }], isError: true };
@@ -561,39 +169,33 @@ export async function handleTranscribeAudio(args: Record<string, unknown> | unde
   const sessionId = typeof args?.session_id === "string" ? args.session_id : undefined;
   const chunkSizeSeconds = typeof args?.chunk_size_seconds === "number" ? args.chunk_size_seconds : 120;
   const config = loadConfig();
-  const sessionDb = openSessionDb(config.sessionDbPath);  // always open for progress tracking
+  const sessionDb = openSessionDb(config.sessionDbPath);
 
-  // ---- Chunked mode for long files ----
-  if (isAudioLong(resolvedPath, 180)) {
+  if (isAudioLong(resolvedPath, LONG_AUDIO_SECONDS)) {
     try {
       let progress = getOrCreateProgress(sessionDb, resolvedPath);
 
-      // Detect stale progress: temp_dir was cleaned up but progress still shows incomplete
       if (progress.temp_dir && progress.total_chunks > 0 && !existsSync(progress.temp_dir)) {
         deleteProgress(sessionDb, resolvedPath);
         progress = getOrCreateProgress(sessionDb, resolvedPath);
       }
 
-      // First call — chunk the file
       if (!progress || progress.total_chunks === 0) {
         const manifest = await chunkAudio(resolvedPath, chunkSizeSeconds);
 
-        if (sessionDb) {
-          updateProgress(sessionDb, resolvedPath, {
-            temp_dir: manifest.tempDir,
-            total_chunks: manifest.totalChunks,
-            chunk_size_seconds: manifest.chunkSizeSeconds,
-            source_duration_seconds: manifest.sourceDurationSeconds,
-            model_used: config.mlxWhisperModel,
-            session_id: sessionId,
-          });
-        }
+        updateProgress(sessionDb, resolvedPath, {
+          temp_dir: manifest.tempDir,
+          total_chunks: manifest.totalChunks,
+          chunk_size_seconds: manifest.chunkSizeSeconds,
+          source_duration_seconds: manifest.sourceDurationSeconds,
+          model_used: config.mlxWhisperModel,
+          session_id: sessionId,
+        });
 
-        // Transcribe first chunk
         const chunkFile = manifest.chunkFiles[0];
         const diarized = await transcribeChunk(chunkFile, config.mlxWhisperModel);
 
-        markChunkProcessed(sessionDb, resolvedPath, 0);
+        markChunkProcessed(sessionDb, resolvedPath, 0, diarized.text);
         if (sessionId) {
           try {
             for (const seg of diarized.segments) {
@@ -602,103 +204,95 @@ export async function handleTranscribeAudio(args: Record<string, unknown> | unde
           } catch { /* log failure is non-fatal */ }
         }
 
+        if (manifest.totalChunks <= 1) {
+          if (manifest.tempDir) cleanupChunks(manifest.tempDir);
+          const fullText = diarized.text;
+          deleteProgress(sessionDb, resolvedPath);
+          return {
+            content: [{ type: "text", text: JSON.stringify({
+              complete: true,
+              chunk: 1,
+              total_chunks: 1,
+              segment_logged: !!sessionId,
+              text: diarized.text,
+              full_text: fullText,
+              segments: diarized.segments,
+              speakers_detected: diarized.speakerCount,
+            }, null, 2) }],
+          };
+        }
+
         return {
           content: [{ type: "text", text: JSON.stringify({
-            complete: manifest.totalChunks <= 1,
+            complete: false,
             chunk: 1,
             total_chunks: manifest.totalChunks,
             segment_logged: !!sessionId,
             text: diarized.text,
             segments: diarized.segments,
             speakers_detected: diarized.speakerCount,
-            note: manifest.totalChunks > 1
-              ? `Call transcribe_audio again with the same file_path and session_id to continue. ${manifest.totalChunks - 1} chunks remaining.`
-              : undefined,
+            note: `Call transcribe_audio again with the same file_path and session_id to continue. ${manifest.totalChunks - 1} chunks remaining.`,
           }, null, 2) }],
         };
       }
 
-      // Continuation call — process next chunk
       const nextChunk = getNextUnprocessedChunk(sessionDb, resolvedPath);
 
       if (nextChunk === null) {
-        // All done — clean up
-        if (progress?.temp_dir) {
-          const fullText = await getFullTranscript(sessionDb, resolvedPath, progress.temp_dir, sessionId);
-          cleanupChunks(progress.temp_dir);
-          deleteProgress(sessionDb, resolvedPath);
-
-          return {
-            content: [{ type: "text", text: JSON.stringify({
-              complete: true,
-              total_chunks: progress.total_chunks,
-              full_text: fullText,
-              segment_count: progress.total_chunks,
-              duration_seconds: progress.source_duration_seconds,
-            }, null, 2) }],
-          };
-        }
-
-        // No temp_dir — stale or corrupted progress. Reset and try again.
+        const fullText = assembleChunkTranscript(progress);
+        if (progress?.temp_dir) cleanupChunks(progress.temp_dir);
         deleteProgress(sessionDb, resolvedPath);
+
         return {
           content: [{ type: "text", text: JSON.stringify({
-            complete: false,
-            error: "Transcription progress was lost (temp files cleaned up). Progress has been reset — call transcribe_audio again to restart from chunk 1.",
+            complete: true,
+            total_chunks: progress.total_chunks,
+            full_text: fullText,
+            segment_count: progress.total_chunks,
+            duration_seconds: progress.source_duration_seconds,
           }, null, 2) }],
         };
       }
 
-      // Process the next chunk
-      const chunkFiles = progress?.temp_dir
-        ? getChunkFiles(progress.temp_dir)
-        : [];
-
-      const chunkFile = chunkFiles[nextChunk];
+      const chunkFiles = progress?.temp_dir ? getChunkFiles(progress.temp_dir) : [];
+      let chunkFile = chunkFiles[nextChunk];
       if (!chunkFile && progress?.temp_dir) {
-        // Chunks may have been cleaned — re-chunk
         const manifest = await chunkAudio(resolvedPath, progress.chunk_size_seconds);
-        const retryFile = manifest.chunkFiles[nextChunk];
-        const diarizedRetry = await transcribeChunk(retryFile, config.mlxWhisperModel);
-
-        markChunkProcessed(sessionDb, resolvedPath, nextChunk);
-        if (sessionId && progress) {
-          try {
-            for (const seg of diarizedRetry.segments) {
-              logTranscript(sessionDb, sessionId, seg.text, seg.speaker, "voice", "narration");
-            }
-          } catch {}
-        }
-
-        const remainingRetry = progress.total_chunks - nextChunk - 1;
-        return {
-          content: [{ type: "text", text: JSON.stringify({
-            complete: false,
-            chunk: nextChunk + 1,
-            total_chunks: progress.total_chunks,
-            segment_logged: !!sessionId,
-            text: diarizedRetry.text,
-            segments: diarizedRetry.segments,
-            speakers_detected: diarizedRetry.speakerCount,
-            note: remainingRetry > 0
-              ? `Call transcribe_audio again with the same file_path and session_id to continue. ${remainingRetry} chunks remaining.`
-              : undefined,
-          }, null, 2) }],
-        };
+        chunkFile = manifest.chunkFiles[nextChunk];
       }
 
       const diarized = await transcribeChunk(chunkFile!, config.mlxWhisperModel);
 
-      markChunkProcessed(sessionDb, resolvedPath, nextChunk);
+      markChunkProcessed(sessionDb, resolvedPath, nextChunk, diarized.text);
       if (sessionId) {
         try {
           for (const seg of diarized.segments) {
             logTranscript(sessionDb, sessionId, seg.text, seg.speaker, "voice", "narration");
           }
-        } catch {}
+        } catch { /* log failure is non-fatal */ }
       }
 
       const remaining = (progress?.total_chunks ?? 0) - nextChunk - 1;
+      if (remaining <= 0) {
+        const completed = getOrCreateProgress(sessionDb, resolvedPath);
+        const fullText = assembleChunkTranscript(completed);
+        if (progress?.temp_dir) cleanupChunks(progress.temp_dir);
+        deleteProgress(sessionDb, resolvedPath);
+        return {
+          content: [{ type: "text", text: JSON.stringify({
+            complete: true,
+            chunk: nextChunk + 1,
+            total_chunks: progress?.total_chunks ?? 0,
+            segment_logged: !!sessionId,
+            text: diarized.text,
+            full_text: fullText,
+            segments: diarized.segments,
+            speakers_detected: diarized.speakerCount,
+            duration_seconds: progress?.source_duration_seconds,
+          }, null, 2) }],
+        };
+      }
+
       return {
         content: [{ type: "text", text: JSON.stringify({
           complete: false,
@@ -708,9 +302,7 @@ export async function handleTranscribeAudio(args: Record<string, unknown> | unde
           text: diarized.text,
           segments: diarized.segments,
           speakers_detected: diarized.speakerCount,
-          note: remaining > 0
-            ? `Call transcribe_audio again with the same file_path and session_id to continue. ${remaining} chunks remaining.`
-            : undefined,
+          note: `Call transcribe_audio again with the same file_path and session_id to continue. ${remaining} chunks remaining.`,
         }, null, 2) }],
       };
     } catch (err: unknown) {
@@ -722,7 +314,6 @@ export async function handleTranscribeAudio(args: Record<string, unknown> | unde
     }
   }
 
-  // ---- Single-pass mode for short files ----
   try {
     const buf = readFileSync(resolvedPath);
     const result = await transcribeAudioBuffer(
@@ -743,7 +334,7 @@ export async function handleTranscribeAudio(args: Record<string, unknown> | unde
         model: result.model,
         language: result.language,
         duration_seconds: result.durationSeconds,
-        segment_logged: !!(sessionId),
+        segment_logged: !!sessionId,
       }, null, 2) }],
     };
   } catch (err: unknown) {
@@ -753,30 +344,4 @@ export async function handleTranscribeAudio(args: Record<string, unknown> | unde
       isError: true,
     };
   }
-}
-
-async function getFullTranscript(
-  sessionDb: ReturnType<typeof openSessionDb>,
-  _filePath: string,
-  tempDir: string,
-  sessionId?: string
-): Promise<string> {
-  if (sessionId) {
-    const segments = getTranscript(sessionDb, sessionId, 100);
-    if (segments.length > 0) {
-      return segments
-        .reverse()
-        .map((s) => s.text)
-        .join(" ");
-    }
-  }
-  // Fallback if no DB segments
-  const config = loadConfig();
-  const chunkFiles = getChunkFiles(tempDir);
-  const texts: string[] = [];
-  for (const chunkFile of chunkFiles) {
-    const d = await transcribeChunk(chunkFile, config.mlxWhisperModel);
-    texts.push(d.text);
-  }
-  return texts.join(" ");
 }

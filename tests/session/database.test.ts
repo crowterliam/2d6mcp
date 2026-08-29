@@ -21,6 +21,10 @@ import {
   storeRuling,
   getRecentRulings,
   closeSessionDb,
+  getOrCreateProgress,
+  updateProgress,
+  markChunkProcessed,
+  assembleChunkTranscript,
 } from "../../packages/server/src/session/database.js";
 
 const TMP = join(tmpdir(), `2d6mcp-test-session-${Date.now()}`);
@@ -162,5 +166,21 @@ describe("session database", () => {
     const s1 = createSession(db);
     const s2 = createSession(db);
     expect(s1.id).not.toBe(s2.id);
+  });
+
+  it("assembles audio transcript from stored chunk texts, not session logs", () => {
+    const db = openSessionDb(DB_PATH);
+    const session = createSession(db);
+    logTranscript(db, session.id, "table talk that must not appear", "GM");
+
+    const filePath = "/tmp/session.wav";
+    getOrCreateProgress(db, filePath);
+    updateProgress(db, filePath, { total_chunks: 2, session_id: session.id });
+    markChunkProcessed(db, filePath, 0, "first audio chunk");
+    markChunkProcessed(db, filePath, 1, "second audio chunk");
+
+    const progress = getOrCreateProgress(db, filePath);
+    expect(assembleChunkTranscript(progress)).toBe("first audio chunk second audio chunk");
+    expect(assembleChunkTranscript(progress)).not.toContain("table talk");
   });
 });
