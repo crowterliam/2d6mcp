@@ -5,7 +5,15 @@
 // CLI: llama-cli -m model.gguf -f prompt.txt -n 512
 
 import { execFile, execSync } from "node:child_process";
-import { writeFileSync, unlinkSync, existsSync } from "node:fs";
+import {
+  chmodSync,
+  closeSync,
+  fchmodSync,
+  mkdtempSync,
+  openSync,
+  rmSync,
+  writeSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -48,6 +56,34 @@ function execFileAsync(
 const DEFAULT_MODEL = "Llama-3.2-3B-Instruct.Q4_K_M.gguf";
 const DEFAULT_MODEL_PATH = process.env.LLAMACPP_MODEL || DEFAULT_MODEL;
 
+/** 0700 directory + exclusive 0600 file so ruling prompts are not world-readable in /tmp. */
+export function createPrivatePromptFile(contents: string): { path: string; cleanup: () => void } {
+  const dir = mkdtempSync(join(tmpdir(), "2d6mcp-llama-"));
+  try {
+    chmodSync(dir, 0o700);
+  } catch {
+    // Windows ignores POSIX modes.
+  }
+  const path = join(dir, "prompt.txt");
+  const fd = openSync(path, "wx", 0o600);
+  try {
+    writeSync(fd, contents, null, "utf-8");
+    try {
+      fchmodSync(fd, 0o600);
+    } catch {
+      // Windows ignores POSIX modes.
+    }
+  } finally {
+    closeSync(fd);
+  }
+  return {
+    path,
+    cleanup: () => {
+      rmSync(dir, { recursive: true, force: true });
+    },
+  };
+}
+
 export async function synthesizeWithLlamaCpp(
   prompt: string,
   options: SynthesizeOptions = {}
@@ -58,13 +94,12 @@ export async function synthesizeWithLlamaCpp(
   const topP = options.topP ?? 0.9;
   const topK = options.topK ?? 40;
 
-  const tmpPath = join(tmpdir(), `2d6mcp-llama-prompt-${Date.now()}.txt`);
-  writeFileSync(tmpPath, prompt, "utf-8");
+  const promptFile = createPrivatePromptFile(prompt);
 
   try {
     const args = [
       "-m", model,
-      "-f", tmpPath,
+      "-f", promptFile.path,
       "-n", String(maxTokens),
       "--temp", String(temperature),
       "--top-p", String(topP),
@@ -91,9 +126,7 @@ export async function synthesizeWithLlamaCpp(
       durationSeconds: Math.round(duration * 100) / 100,
     };
   } finally {
-    if (existsSync(tmpPath)) {
-      unlinkSync(tmpPath);
-    }
+    promptFile.cleanup();
   }
 }
 
