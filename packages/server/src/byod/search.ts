@@ -152,6 +152,11 @@ export function rebuildByodFts(db: Database.Database): void {
   db.exec(`INSERT INTO byod_fts(byod_fts) VALUES ('rebuild');`);
 }
 
+/** Rebuild contentless byod_fts. COUNT(*) cannot detect a stale index. */
+export function ensureByodFts(db: Database.Database): void {
+  rebuildByodFts(db);
+}
+
 export function hasIndexedFiles(db: Database.Database): boolean {
   const row = db.prepare("SELECT COUNT(*) AS cnt FROM byod_files").get() as { cnt: number };
   return row.cnt > 0;

@@ -11,7 +11,7 @@ import { populate5ecompatibleDatabase } from "@2d6mcp/5ecompatible/populate";
 import { populateOrcusDatabase } from "@2d6mcp/orcus/populate";
 import { checkByodConsent, getByodPath } from "../byod/gate.js";
 import { discoverFiles, ingestFile, type IngestedChunk, type IngestedFile } from "../byod/ingest.js";
-import { getByodDatabase, indexChunks, rebuildByodFts, getStoredFileHash, markFileFailed, FAILED_HASH } from "../byod/search.js";
+import { getByodDatabase, indexChunks, rebuildByodFts, ensureByodFts, getStoredFileHash, markFileFailed, FAILED_HASH } from "../byod/search.js";
 import { getContentCache, hasCachedChunks, getCachedChunks, storeCachedChunks, computeContentHash } from "../byod/content-cache.js";
 
 // Keyword extraction and fuzzy matching — re-export from @2d6mcp/shared.
@@ -326,9 +326,7 @@ export async function syncByodIndex(config: Config): Promise<SyncResult> {
   while (i < files.length) {
     const elapsed = Date.now() - startTime;
     if (elapsed >= config.byodSyncTimeoutMs) {
-      if (indexedFiles > 0) {
-        rebuildByodFts(db);
-      }
+      ensureByodFts(db);
       const remaining = files.length - i;
       if (indexedFiles === 0) {
         return {
@@ -454,9 +452,7 @@ export async function syncByodIndex(config: Config): Promise<SyncResult> {
     await yieldToEventLoop();
   }
 
-  if (indexedFiles > 0) {
-    rebuildByodFts(db);
-  }
+  ensureByodFts(db);
 
   const elapsed = Date.now() - startTime;
   const parts: string[] = [];
