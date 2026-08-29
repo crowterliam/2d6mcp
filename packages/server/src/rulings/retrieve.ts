@@ -273,15 +273,9 @@ export async function retrieveRulesContext(options: RetrieveOptions): Promise<Re
       const byodDb = getByodDatabase(byodPath);
       searchCalls += 1;
       byodSearched = true;
-      const prefixes = ensured.matchedRoots.length > 0 ? ensured.matchedRoots : undefined;
+      const prefixes = ensured.matchedRoots.length > 0 ? ensured.matchedRoots : [];
       const byodResults = searchByodIndex(byodDb, searchTerm, 8, prefixes);
       for (const b of byodResults) {
-        if (byodSystemFilter) {
-          const fileLower = b.fileName.toLowerCase();
-          const systemLower = byodSystemFilter.toLowerCase();
-          const matches = systemLower.split(/\s+/).every((term) => fileLower.includes(term));
-          if (!matches) continue;
-        }
         chunks.push(`[BYOD: ${b.fileName} > ${b.title}]\n${stripMarks(b.snippet)}`);
       }
     } catch {

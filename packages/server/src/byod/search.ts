@@ -7,7 +7,6 @@ import { resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { fts5QueryStrategy } from "@2d6mcp/shared";
 import { PROJECT_ROOT } from "../config.js";
-import { pathMatchesAnyPrefix } from "./paths.js";
 
 const BYOD_DB_PREFIX = "byod_ws_";
 const BYOD_DB_SUFFIX = ".db";
@@ -484,14 +483,9 @@ export interface SearchResult {
   chunkIndex: number;
 }
 
-function tryFts5Query(
-  db: Database.Database,
-  stmt: Database.Statement,
-  query: string,
-  limit: number
-): SearchResult[] {
+function tryFts5Query(stmt: Database.Statement, params: unknown[]): SearchResult[] {
   try {
-    const rows = stmt.all(query, limit) as {
+    const rows = stmt.all(...params) as {
       title: string;
       snippet: string;
       file_name: string;
@@ -513,34 +507,49 @@ function tryFts5Query(
   }
 }
 
+function escapeLike(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+}
+
+function bindPrefixParams(prefixes: string[]): unknown[] {
+  const params: unknown[] = [];
+  for (const prefix of prefixes) {
+    const normalized = prefix.replace(/\\/g, "/");
+    params.push(normalized, `${escapeLike(normalized)}/%`);
+  }
+  return params;
+}
+
 export function searchByodIndex(
   db: Database.Database,
   searchTerm: string,
   limit = 20,
   pathPrefixes?: string[]
 ): SearchResult[] {
-  // Try exact → prefix-wildcard → fuzzy OR, stopping at the first match
   const strategies = fts5QueryStrategy(searchTerm);
   if (strategies.length === 0) return [];
+  if (pathPrefixes && pathPrefixes.length === 0) return [];
 
-  const fetchLimit = pathPrefixes && pathPrefixes.length > 0 ? Math.max(limit * 4, 40) : limit;
+  const scoped = (pathPrefixes ?? []).filter((prefix) => prefix !== "");
+  const pathExpr = "replace(byod_chunks.file_path, char(92), '/')";
+  const prefixClause =
+    scoped.length > 0
+      ? ` AND (${scoped.map(() => `(${pathExpr} = ? OR ${pathExpr} LIKE ? ESCAPE char(92))`).join(" OR ")})`
+      : "";
 
   const stmt = db.prepare(`
     SELECT byod_fts.title, snippet(byod_fts, 1, '<mark>', '</mark>', '...', 64) AS snippet, byod_fts.file_name, byod_chunks.file_path, byod_chunks.chunk_index
     FROM byod_fts
     JOIN byod_chunks ON byod_chunks.id = byod_fts.rowid
-    WHERE byod_fts MATCH ?
+    WHERE byod_fts MATCH ?${prefixClause}
     ORDER BY rank
     LIMIT ?
   `);
 
+  const prefixParams = bindPrefixParams(scoped);
   for (const ftsMatch of strategies) {
-    const results = tryFts5Query(db, stmt, ftsMatch, fetchLimit);
-    const scoped =
-      pathPrefixes && pathPrefixes.length > 0
-        ? results.filter((r) => pathMatchesAnyPrefix(r.filePath, pathPrefixes))
-        : results;
-    if (scoped.length > 0) return scoped.slice(0, limit);
+    const results = tryFts5Query(stmt, [ftsMatch, ...prefixParams, limit]);
+    if (results.length > 0) return results;
   }
 
   return [];

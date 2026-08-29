@@ -61,23 +61,58 @@ describe("retrieveRulesContext", () => {
 
   it("runs BYOD for ogl when consent is on", async () => {
     const byodPath = join(tmpdir(), `2d6mcp-retrieve-byod-${Date.now()}`);
-    mkdirSync(byodPath, { recursive: true });
-    writeFileSync(join(byodPath, "house.md"), "House rule: cover always grants a -2 DM.");
+    mkdirSync(join(byodPath, "House Rules"), { recursive: true });
+    writeFileSync(join(byodPath, "House Rules", "house.md"), "House rule: cover always grants a -2 DM.");
     process.env.AGREE_BYOD_USE = "true";
     process.env.BYOD_PATH = byodPath;
 
     const db = getByodDatabase(byodPath);
-    indexChunks(db, "house.md", "house.md", ".md", 40, "h1", null, [
+    indexChunks(db, "House Rules/house.md", "house.md", ".md", 40, "h1", null, [
       { title: "Cover", content: "House rule: cover always grants a -2 DM in combat.", chunkIndex: 0 },
     ]);
     rebuildByodFts(db);
 
     const result = await retrieveRulesContext({
-      question: "cover combat modifier",
+      question: "house rules cover combat modifier",
       rulesSystem: "ogl",
     });
     expect(result.byodSearched).toBe(true);
     expect(result.systemsSearched).toEqual(["ogl"]);
+    expect(result.context).toMatch(/always grants a -2 DM/i);
+
+    closeByodDatabase(byodPath);
+    rmSync(byodPath, { recursive: true, force: true });
+  });
+
+  it("uses session byod_system folder without requiring it in the filename", async () => {
+    const byodPath = join(tmpdir(), `2d6mcp-retrieve-byod-sys-${Date.now()}`);
+    mkdirSync(join(byodPath, "Traveller"), { recursive: true });
+    mkdirSync(join(byodPath, "Call of Cthulhu"), { recursive: true });
+    process.env.AGREE_BYOD_USE = "true";
+    process.env.BYOD_PATH = byodPath;
+
+    const byodDb = getByodDatabase(byodPath);
+    indexChunks(byodDb, "Traveller/core.md", "core.md", ".md", 80, "h1", null, [
+      { title: "Jump", content: "Xyzzyplugh: jump drives take one week in this sci-fi collection.", chunkIndex: 0 },
+    ]);
+    indexChunks(byodDb, "Call of Cthulhu/sanity.md", "sanity.md", ".md", 80, "h2", null, [
+      { title: "Sanity", content: "Xyzzyplugh: jumping at shadows costs sanity in this horror collection.", chunkIndex: 0 },
+    ]);
+    rebuildByodFts(byodDb);
+
+    const sessionPath = join(tmpdir(), `2d6mcp-retrieve-byod-session-${Date.now()}.db`);
+    process.env.SESSION_DB_PATH = sessionPath;
+    closeSessionDb();
+    const sessionDb = openSessionDb(sessionPath);
+    const session = createSession(sessionDb, "ogl", "byod-folder-scope", "traveller");
+
+    const result = await retrieveRulesContext({
+      question: "xyzzyplugh",
+      rulesSystem: "ogl",
+      sessionId: session.id,
+    });
+    expect(result.context).toMatch(/jump drives take one week/i);
+    expect(result.context).not.toMatch(/jumping at shadows/i);
 
     closeByodDatabase(byodPath);
     rmSync(byodPath, { recursive: true, force: true });

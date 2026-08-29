@@ -25,7 +25,7 @@ export async function handleRollByodTable(args: Record<string, unknown> | undefi
   const config = loadConfig();
   const ensured = await ensureByodForQuery(config, tableName);
   const db = getByodDatabase(byodPath);
-  const prefixes = ensured.matchedRoots.length > 0 ? ensured.matchedRoots : undefined;
+  const prefixes = ensured.matchedRoots.length > 0 ? ensured.matchedRoots : [];
   const results = searchByodIndex(db, tableName, 10, prefixes);
 
   if (results.length === 0) {
@@ -132,7 +132,11 @@ export async function handleListByodTables(args: Record<string, unknown> | undef
     ? await ensureByodForQuery(config, searchTerm)
     : { matchedRoots: [] as string[] };
   const db = getByodDatabase(byodPath);
-  const prefixes = ensured.matchedRoots.length > 0 ? ensured.matchedRoots : undefined;
+  const prefixes = searchTerm
+    ? ensured.matchedRoots.length > 0
+      ? ensured.matchedRoots
+      : []
+    : undefined;
 
   const results = searchByodIndex(db, searchQuery, Math.min(maxResults * 2, 40), prefixes);
 

@@ -140,6 +140,16 @@ describe("searchByodIndex", () => {
 
     const scoped = searchByodIndex(db, "jump", 20, ["Traveller"]);
     expect(scoped.map((r) => r.filePath)).toEqual(["Traveller/core.md"]);
+
+    const filler: { title: string; content: string; chunkIndex: number }[] = [];
+    for (let i = 0; i < 50; i++) {
+      filler.push({ title: `Noise ${i}`, content: `Jump noise filler ${i}`, chunkIndex: i });
+    }
+    indexChunks(db, "Traveller/noise.md", "noise.md", ".md", 80, "h3", null, filler);
+    rebuildByodFts(db);
+    const stillScoped = searchByodIndex(db, "jump", 5, ["Call of Cthulhu"]);
+    expect(stillScoped.map((r) => r.filePath)).toEqual(["Call of Cthulhu/sanity.md"]);
+    expect(searchByodIndex(db, "jump", 5, [])).toEqual([]);
     closeByodDatabase(byodPath);
   });
 

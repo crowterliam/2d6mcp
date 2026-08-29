@@ -26,7 +26,7 @@ export async function handleQueryLocalByod(args: Record<string, unknown> | undef
   const ensured = await ensureByodForQuery(config, searchTerm, systemHint);
   const byodPath = getByodPath();
   const db = getByodDatabase(byodPath);
-  const prefixes = ensured.matchedRoots.length > 0 ? ensured.matchedRoots : undefined;
+  const prefixes = ensured.matchedRoots.length > 0 ? ensured.matchedRoots : [];
   const results = searchByodIndex(db, searchTerm, 20, prefixes);
   const includeFull = args?.include_full === true;
 
