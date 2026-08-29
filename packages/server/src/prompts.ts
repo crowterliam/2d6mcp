@@ -107,8 +107,9 @@ export function getPromptDefinitions(): Prompt[] {
     {
       name: "index-documents",
       title: "Index personal documents",
-      description: "Index local RPG files for search. Requires BYOD consent.",
+      description: "Index matching top-level BYOD collections on demand. Requires BYOD consent.",
       arguments: [
+        { name: "query", description: "Game or collection to index, for example traveller", required: false },
         { name: "relative_path", description: "Optional single file relative to BYOD_PATH", required: false },
       ],
     },
@@ -224,15 +225,18 @@ function renderPrompt(name: PromptName, args?: Record<string, string>): GetPromp
     }
     case "index-documents": {
       const relativePath = arg(args, "relative_path");
+      const query = arg(args, "query");
       return userPrompt(
         "Index personal documents",
         [
-          "Index local RPG source files for search.",
+          "Index local RPG source files for search. Do not crawl the whole library.",
           "BYOD requires consent (AGREE_BYOD_USE=true or npm run setup) and BYOD_PATH.",
           relativePath
             ? `Call sync_byod with relative_path "${relativePath}".`
-            : "Call sync_byod. If complete is false, call it again until complete is true.",
-          "Then call list_byod_files to confirm what was indexed. Do not read those files with non-2d6mcp file tools.",
+            : query
+              ? `Call sync_byod with query "${query}". If complete is false, call it again until complete is true.`
+              : "Call sync_byod with no arguments to list top-level collections, then sync_byod with query set to the matching game folder. If complete is false, call it again until complete is true.",
+          "query_local_byod also indexes matching folders from the search term. Then call list_byod_files to confirm what was indexed. Do not read those files with non-2d6mcp file tools.",
         ].join("\n")
       );
     }

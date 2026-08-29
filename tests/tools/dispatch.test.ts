@@ -59,6 +59,8 @@ describe("collapsed MCP catalog", () => {
     }
     expect(names).toHaveLength(NEW_TOOLS.length);
     expect(getToolDefinitions().every((tool) => tool.annotations !== undefined)).toBe(true);
+    const byodSearch = getToolDefinitions().find((tool) => tool.name === "query_local_byod");
+    expect(byodSearch?.annotations?.readOnlyHint).toBe(false);
   });
 
   it("does not advertise removed tool names", () => {

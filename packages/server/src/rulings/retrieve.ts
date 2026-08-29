@@ -53,6 +53,7 @@ import {
   ensureBrpDb,
   ensure5ecompatibleDb,
   ensureOrcusDb,
+  ensureByodForQuery,
 } from "../tools/helpers.js";
 
 export const RULES_SYSTEMS = ["ogl", "dw", "brp", "5ecompatible", "orcus"] as const;
@@ -132,7 +133,7 @@ export function questionFromTranscript(transcriptText: string): string {
   return picked.slice(0, 400);
 }
 
-export function retrieveRulesContext(options: RetrieveOptions): RetrieveResult {
+export async function retrieveRulesContext(options: RetrieveOptions): Promise<RetrieveResult> {
   const question = options.question.trim();
   const resolvedSystem = resolveRulesSystem(options.rulesSystem, options.sessionId);
   const maxChunks = options.maxChunks ?? 3;
@@ -261,24 +262,20 @@ export function retrieveRulesContext(options: RetrieveOptions): RetrieveResult {
   if (byodConsent.allowed) {
     try {
       const byodPath = getByodPath();
-      const byodDb = getByodDatabase(byodPath);
+      const config = loadConfig();
       let byodSystemFilter = "";
       if (options.sessionId) {
-        const config = loadConfig();
         const db = openSessionDb(config.sessionDbPath);
         const session = getSession(db, options.sessionId);
         byodSystemFilter = session?.byod_system || "";
       }
+      const ensured = await ensureByodForQuery(config, question, byodSystemFilter || undefined);
+      const byodDb = getByodDatabase(byodPath);
       searchCalls += 1;
       byodSearched = true;
-      const byodResults = searchByodIndex(byodDb, searchTerm, 8);
+      const prefixes = ensured.matchedRoots.length > 0 ? ensured.matchedRoots : [];
+      const byodResults = searchByodIndex(byodDb, searchTerm, 8, prefixes);
       for (const b of byodResults) {
-        if (byodSystemFilter) {
-          const fileLower = b.fileName.toLowerCase();
-          const systemLower = byodSystemFilter.toLowerCase();
-          const matches = systemLower.split(/\s+/).every((term) => fileLower.includes(term));
-          if (!matches) continue;
-        }
         chunks.push(`[BYOD: ${b.fileName} > ${b.title}]\n${stripMarks(b.snippet)}`);
       }
     } catch {

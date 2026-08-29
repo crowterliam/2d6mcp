@@ -4,7 +4,7 @@
 import { checkByodConsent, getByodPath } from "../../byod/gate.js";
 import { loadConfig } from "../../config.js";
 import { getByodDatabase, searchByodIndex, clearByodDatabase, listByodFiles, getFileChunks, getChunkContent } from "../../byod/search.js";
-import { syncByodIndex, syncFile } from "../helpers.js";
+import { syncByodIndex, syncFile, ensureByodForQuery } from "../helpers.js";
 
 export async function handleQueryLocalByod(args: Record<string, unknown> | undefined): Promise<{
   content: Array<{ type: "text"; text: string }>;
@@ -12,6 +12,7 @@ export async function handleQueryLocalByod(args: Record<string, unknown> | undef
 }> {
   const searchTerm =
     typeof args?.search_term === "string" ? args.search_term : "";
+  const systemHint = typeof args?.system === "string" ? args.system : undefined;
 
   const consent = checkByodConsent();
   if (!consent.allowed) {
@@ -21,9 +22,12 @@ export async function handleQueryLocalByod(args: Record<string, unknown> | undef
     };
   }
 
+  const config = loadConfig();
+  const ensured = await ensureByodForQuery(config, searchTerm, systemHint);
   const byodPath = getByodPath();
   const db = getByodDatabase(byodPath);
-  const results = searchByodIndex(db, searchTerm);
+  const prefixes = ensured.matchedRoots.length > 0 ? ensured.matchedRoots : [];
+  const results = searchByodIndex(db, searchTerm, 20, prefixes);
   const includeFull = args?.include_full === true;
 
   const payload = includeFull
@@ -40,6 +44,14 @@ export async function handleQueryLocalByod(args: Record<string, unknown> | undef
         text: JSON.stringify(
           {
             query: searchTerm,
+            matched_roots: ensured.matchedRoots,
+            index_complete: ensured.sync.complete,
+            index: {
+              filesIndexed: ensured.sync.filesIndexed,
+              remaining: ensured.sync.remaining,
+              dirsRemaining: ensured.sync.dirsRemaining,
+              message: ensured.sync.message,
+            },
             results: payload,
             count: payload.length,
           },
@@ -65,6 +77,12 @@ export async function handleSyncByod(args: Record<string, unknown> | undefined):
 
   const relativePath =
     typeof args?.relative_path === "string" ? args.relative_path : "";
+  const query =
+    typeof args?.query === "string"
+      ? args.query
+      : typeof args?.system === "string"
+        ? args.system
+        : "";
 
   if (relativePath) {
     const config = loadConfig();
@@ -75,7 +93,7 @@ export async function handleSyncByod(args: Record<string, unknown> | undefined):
   }
 
   const config = loadConfig();
-  const result = await syncByodIndex(config);
+  const result = await syncByodIndex(config, query ? { query } : {});
   return {
     content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
   };
