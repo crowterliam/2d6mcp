@@ -1,0 +1,4 @@
+{
+  "name": "2d6mcp",
+  "install": "npm install && npm run build"
+}
