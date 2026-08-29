@@ -152,11 +152,19 @@ export function rebuildByodFts(db: Database.Database): void {
   db.exec(`INSERT INTO byod_fts(byod_fts) VALUES ('rebuild');`);
 }
 
-/** True when byod_chunks and external-content byod_fts row counts diverge (e.g. crash before rebuild). */
+/**
+ * True when the external-content FTS index is out of sync with byod_chunks
+ * (e.g. crash before rebuild). COUNT(*) on byod_fts cannot detect this —
+ * for content='...' tables it is answered from the content table itself.
+ * FTS5 integrity-check with rank=1 verifies index rows against content.
+ */
 export function isByodFtsStale(db: Database.Database): boolean {
-  const chunks = (db.prepare("SELECT COUNT(*) AS c FROM byod_chunks").get() as { c: number }).c;
-  const fts = (db.prepare("SELECT COUNT(*) AS c FROM byod_fts").get() as { c: number }).c;
-  return chunks !== fts;
+  try {
+    db.exec(`INSERT INTO byod_fts(byod_fts, rank) VALUES('integrity-check', 1);`);
+    return false;
+  } catch {
+    return true;
+  }
 }
 
 export function hasIndexedFiles(db: Database.Database): boolean {
