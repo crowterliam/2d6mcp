@@ -24,6 +24,14 @@ export async function handleQueryLocalByod(args: Record<string, unknown> | undef
   const byodPath = getByodPath();
   const db = getByodDatabase(byodPath);
   const results = searchByodIndex(db, searchTerm);
+  const includeFull = args?.include_full === true;
+
+  const payload = includeFull
+    ? results.map((r) => {
+        const full = getChunkContent(db, r.filePath, r.chunkIndex);
+        return { ...r, content: full?.chunk.content ?? null };
+      })
+    : results;
 
   return {
     content: [
@@ -32,8 +40,8 @@ export async function handleQueryLocalByod(args: Record<string, unknown> | undef
         text: JSON.stringify(
           {
             query: searchTerm,
-            results,
-            count: results.length,
+            results: payload,
+            count: payload.length,
           },
           null,
           2
@@ -52,6 +60,17 @@ export async function handleSyncByod(args: Record<string, unknown> | undefined):
     return {
       content: [{ type: "text", text: consent.message }],
       isError: true,
+    };
+  }
+
+  const relativePath =
+    typeof args?.relative_path === "string" ? args.relative_path : "";
+
+  if (relativePath) {
+    const config = loadConfig();
+    const result = await syncFile(config, relativePath);
+    return {
+      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
     };
   }
 
@@ -120,6 +139,13 @@ export async function handleListByodFiles(args: Record<string, unknown> | undefi
       content: [{ type: "text", text: consent.message }],
       isError: true,
     };
+  }
+
+  const relativePath =
+    typeof args?.relative_path === "string" ? args.relative_path : "";
+
+  if (relativePath) {
+    return handleInspectByodFile(args);
   }
 
   const byodPath = getByodPath();

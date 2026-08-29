@@ -3,144 +3,273 @@
 
 import { type Tool } from "@modelcontextprotocol/sdk/types.js";
 
-export function getToolDefinitions(): Tool[] {
-  return [
-    {
-      name: "roll_2d6",
-      description:
-        "Roll 2d6 with optional modifiers and compare against a target number. Returns individual dice, total, and effect margin.",
-      inputSchema: {
+const BYOD_TOOL_NAMES = new Set([
+  "query_local_byod",
+  "sync_byod",
+  "clear_byod",
+  "list_byod_files",
+  "get_byod_chunk",
+]);
+
+export interface ToolDefinitionOptions {
+  byodConsented?: boolean;
+}
+
+const DISCORD_POST_SCHEMA: Tool["inputSchema"] = {
+  type: "object",
+  properties: {
+    content: {
+      type: "string",
+      description: "Plain text message content (max 2000 chars)",
+    },
+    webhook_names: {
+      type: "array",
+      items: { type: "string" },
+      description: "Explicit webhook names to post to. If provided, overrides smart routing.",
+    },
+    context: {
+      type: "object",
+      description: "Context for smart webhook routing. The system matches tags to find the best webhook(s).",
+      properties: {
+        channel_type: {
+          type: "string",
+          description: "Comma-separated channel types: 'gm', 'player', 'ooc', 'starship'",
+        },
+        visibility: {
+          type: "string",
+          description: "Comma-separated visibility: 'public', 'private', 'secret'",
+        },
+        game_context: {
+          type: "string",
+          description: "Comma-separated game contexts: 'combat', 'narrative', 'exploration', 'trade', 'social', 'stealth', 'magic', 'dice'",
+        },
+        character: {
+          type: "string",
+          description: "Character name(s) involved (comma-separated)",
+        },
+        location: {
+          type: "string",
+          description: "In-game location(s) (comma-separated)",
+        },
+      },
+    },
+    username: {
+      type: "string",
+      description: "Override the webhook's displayed username for this message",
+    },
+    avatar_url: {
+      type: "string",
+      description: "Override the webhook's avatar for this message",
+    },
+    embeds: {
+      type: "array",
+      description: "Rich embed objects (max 10). Each embed can have title, description, color, fields, footer.",
+      items: {
         type: "object",
         properties: {
-          modifier: {
-            type: "integer",
-            description: "Modifier added to the 2d6 roll (default 0)",
-            default: 0,
+          title: { type: "string", description: "Embed title (max 256 chars)" },
+          description: { type: "string", description: "Embed description (max 4096 chars)" },
+          color: {
+            type: "string",
+            description: "Embed colour: name ('red', 'gold', 'teal') or hex ('#ff0000')",
           },
-          target_number: {
-            type: "integer",
-            description: "Target number to roll against; if provided, calculates effect margin and success/failure",
+          fields: {
+            type: "array",
+            description: "Embed fields (max 25)",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                value: { type: "string" },
+                inline: { type: "boolean" },
+              },
+              required: ["name", "value"],
+            },
+          },
+          footer: {
+            type: "object",
+            properties: {
+              text: { type: "string" },
+              icon_url: { type: "string" },
+            },
+            required: ["text"],
           },
         },
       },
     },
-    {
-      name: "roll_d20",
-      description:
-        "Roll a d20 with optional modifier, advantage/disadvantage, and target number comparison. Returns dice, total, hit/miss, critical hits (nat 20), and fumbles (nat 1). The core mechanic for d20-based fantasy RPGs (5E, 4E, Orcus, OSE).",
-      inputSchema: {
-        type: "object",
-        properties: {
-          modifier: {
-            type: "integer",
-            description: "Attack bonus or ability modifier added to the d20 roll (default 0)",
-            default: 0,
-          },
-          target: {
-            type: "integer",
-            description: "Target number to compare against (e.g., Armor Class, Difficulty Class). If provided, calculates hit/miss.",
-          },
-          advantage: {
-            type: "boolean",
-            description: "Roll with advantage (roll 2d20, take the higher). Default: false.",
-            default: false,
-          },
-          disadvantage: {
-            type: "boolean",
-            description: "Roll with disadvantage (roll 2d20, take the lower). If both advantage and disadvantage, they cancel to a normal roll.",
-            default: false,
-          },
-        },
-      },
+    tts: {
+      type: "boolean",
+      description: "Use text-to-speech for this message (default: false)",
+      default: false,
     },
+  },
+};
+
+export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] {
+  const tools: Tool[] = [
     {
-      name: "roll_percentile",
+      name: "roll",
       description:
-        "Roll percentile dice (d100) with optional target comparison. Returns tens and ones dice, total, success/failure, critical success (≤5% of target), and fumble (96-100). The core mechanic for BRP/percentile RPGs (Call of Cthulhu, Basic Roleplaying, Against the Darkmaster, Pendragon).",
-      inputSchema: {
-        type: "object",
-        properties: {
-          target: {
-            type: "integer",
-            description: "Target percentile — the d100 roll must be ≤ this value to succeed (BRP-style roll-under). If provided, calculates success and critical success thresholds.",
-          },
-        },
-      },
-    },
-    {
-      name: "roll_damage",
-      description:
-        "Roll damage dice with an optional damage type. Parses expressions like '2d6+3 fire', '1d8 piercing', '4d6 bludgeoning', or just '2d6'. Returns individual dice, total, damage type, and description.",
+        "Roll dice. Pass notation (e.g. 2d6+1, 1d20, 3d6, 2d6+3 fire). Optional mechanic: 2d6, d20, percentile, damage, or raw. When mechanic is omitted it is inferred from notation.",
       inputSchema: {
         type: "object",
         properties: {
           notation: {
             type: "string",
-            description: 'Damage dice notation, e.g. "2d6+3 fire", "1d8 piercing", "4d6", "2d6-1 cold"',
+            description: 'Dice notation, e.g. "2d6+1", "1d20", "d100", "2d6+3 fire"',
+          },
+          mechanic: {
+            type: "string",
+            enum: ["2d6", "d20", "percentile", "damage", "raw"],
+            description: "Resolution mechanic. Inferred from notation when omitted.",
+          },
+          modifier: {
+            type: "integer",
+            description: "Modifier added to 2d6 or d20 rolls (default 0)",
+            default: 0,
+          },
+          target: {
+            type: "integer",
+            description: "Target number (2d6/d20) or roll-under percentile. If provided, calculates success.",
+          },
+          advantage: {
+            type: "boolean",
+            description: "d20 only: roll twice, take the higher. Default false.",
+            default: false,
+          },
+          disadvantage: {
+            type: "boolean",
+            description: "d20 only: roll twice, take the lower. Cancels with advantage. Default false.",
+            default: false,
           },
         },
-        required: ["notation"],
       },
     },
     {
       name: "roll_table",
       description:
-        "Roll on a named table using a specified dice type (1d6, 2d6, d66, d20, d100, d4, d8, d10, d12, 1d3, 2d3). Returns the dice result, the matching table entry, and the full description.",
+        "Roll on a named table from the OGL database or from indexed personal files. With source=byod and no table_name, lists discovered tables.",
       inputSchema: {
         type: "object",
         properties: {
+          source: {
+            type: "string",
+            enum: ["ogl", "byod"],
+            description: "Where to look up the table. Default: ogl.",
+            default: "ogl",
+          },
           table_name: {
             type: "string",
-            description: "Name of the table to roll on (e.g., 'Reaction Table', 'Personal Encounter', 'Patron Encounter')",
+            description: "Name of the table. Optional when source=byod to list tables instead of rolling.",
           },
           dice_type: {
             type: "string",
             enum: ["1d6", "2d6", "d66", "1d3", "2d3", "d4", "d8", "d10", "d12", "d20", "d100"],
-            description: "Dice type for the table (default: 2d6)",
+            description: "Dice type when the table is not in the database (default: 2d6)",
             default: "2d6",
           },
-          system: {
-            type: "string",
-            enum: ["ogl"],
-            description: "Rules system database to search for the table. Only OGL tables are indexed today. Default: 'ogl'.",
-            default: "ogl",
-          },
         },
-        required: ["table_name"],
       },
     },
     {
-      name: "query_ogl_rules",
+      name: "query_rules",
       description:
-        "Search the pre-populated OGL rules database (Cepheus Engine SRD) for rules, skills, careers, equipment, or tables. Use this to reference game mechanics without third-party content.",
+        "Search a licensed rules database. system is required. Default category is core full-text search only. category=categories lists filters. search_term is optional for list/categories.",
       inputSchema: {
         type: "object",
         properties: {
+          system: {
+            type: "string",
+            enum: ["ogl", "dw", "brp", "5ecompatible", "orcus"],
+            description: "Rules database to search",
+          },
           search_term: {
             type: "string",
-            description: "Search term or category to look up (e.g., 'combat', 'laser rifle', 'navy career', 'task resolution')",
+            description: "Search term. Optional when category is categories or a list_* filter.",
           },
           category: {
             type: "string",
-            description: "Optional category filter: 'rules', 'skills', 'careers', 'equipment', 'tables', 'categories', or 'list_tables'",
+            description:
+              "Optional filter. Default: core FTS (rules). Use categories to list filters for the chosen system.",
           },
         },
-        required: ["search_term"],
+        required: ["system"],
       },
     },
     {
       name: "query_local_byod",
       description:
-        "Search your local ingested directory (BYOD) for rules and content. Requires BYOD consent. Searches PDFs, text files, and markdown files that have been indexed.",
+        "Search your locally ingested files. Requires BYOD consent. Results include chunkIndex for get_byod_chunk. Set include_full to attach full chunk text.",
       inputSchema: {
         type: "object",
         properties: {
           search_term: {
             type: "string",
-            description: "Search term to look up in your local BYOD index",
+            description: "Search term to look up in your local index",
+          },
+          include_full: {
+            type: "boolean",
+            description: "If true, include full chunk content for each hit (default false)",
+            default: false,
           },
         },
         required: ["search_term"],
+      },
+    },
+    {
+      name: "sync_byod",
+      description:
+        "Index files from your BYOD directory. Optional relative_path indexes a single file. Runs in time-budgeted batches; if complete is false, call again.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          relative_path: {
+            type: "string",
+            description: "If set, index only this file (relative to BYOD_PATH) instead of a bulk sync",
+          },
+        },
+      },
+    },
+    {
+      name: "clear_byod",
+      description:
+        "Delete the BYOD search index. Source files are not affected. The index is recreated on the next sync_byod call.",
+      inputSchema: {
+        type: "object",
+        properties: {},
+      },
+    },
+    {
+      name: "list_byod_files",
+      description:
+        "List indexed files with status and chunk counts. Pass relative_path to inspect chunk structure for one file.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          relative_path: {
+            type: "string",
+            description: "If set, inspect this file's chunks instead of listing all files",
+          },
+        },
+      },
+    },
+    {
+      name: "get_byod_chunk",
+      description:
+        "Retrieve the full content of a BYOD chunk by file path and chunk index from query_local_byod.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          relative_path: {
+            type: "string",
+            description: "Relative path of the file as shown in search results or list_byod_files",
+          },
+          chunk_index: {
+            type: "integer",
+            description: "The chunk index (0-based) to retrieve",
+          },
+        },
+        required: ["relative_path", "chunk_index"],
       },
     },
     {
@@ -159,412 +288,92 @@ export function getToolDefinitions(): Tool[] {
       },
     },
     {
-      name: "roll_custom",
-      description:
-        "Roll any dice notation (e.g., 3d6, 1d20, 4d6+2) and return individual dice results and total.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          notation: {
-            type: "string",
-            description: 'Dice notation, e.g. "2d6", "3d6+2", "1d20-1", "4d6"',
-          },
-        },
-        required: ["notation"],
-      },
-    },
-    {
-      name: "sync_byod",
-      description:
-        "Index files from your BYOD directory. Runs in time-budgeted batches (BYOD_SYNC_TIMEOUT_MS, default 15s). Returns progress with a 'complete' flag — if false, you MUST call this tool again to continue. Already-indexed files (unchanged since last sync) are skipped automatically.",
-      inputSchema: {
-        type: "object",
-        properties: {},
-      },
-    },
-    {
-      name: "sync_file",
-      description:
-        "Index a single file from your BYOD directory by its relative path. Use this for large files that time out in bulk syncs, or to selectively sync specific files without running a full sync.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          relative_path: {
-            type: "string",
-            description: "Relative path of the file within your BYOD_PATH directory",
-          },
-        },
-        required: ["relative_path"],
-      },
-    },
-    {
-      name: "clear_byod",
-      description:
-        "Delete the BYOD search index database. Use this to start fresh — all indexed files are forgotten. The database is recreated on the next sync_byod call. Does not affect your source files.",
-      inputSchema: {
-        type: "object",
-        properties: {},
-      },
-    },
-    {
-      name: "list_byod_files",
-      description:
-        "List all files currently in the BYOD database with their status (indexed or failed), chunk count, size, and ingestion date. Use this to understand what content is indexed and available for search.",
-      inputSchema: {
-        type: "object",
-        properties: {},
-      },
-    },
-    {
-      name: "inspect_byod_file",
-      description:
-        "Show detailed information about a specific file in the BYOD database, including all its chunks with titles and sizes. Use the relativePath from list_byod_files as input.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          relative_path: {
-            type: "string",
-            description: "The relative path of the file as shown in list_byod_files",
-          },
-        },
-        required: ["relative_path"],
-      },
-    },
-    {
-      name: "get_byod_chunk",
-      description:
-        "Retrieve the full content of a specific chunk from the BYOD index by file path and chunk index. Use after query_local_byod to get complete text for relevant chunks. Returns the full chunk content (up to 8KB) rather than the search snippet.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          relative_path: {
-            type: "string",
-            description: "The relative path of the file as shown in search results or list_byod_files",
-          },
-          chunk_index: {
-            type: "integer",
-            description: "The chunk index (0-based) to retrieve",
-          },
-        },
-        required: ["relative_path", "chunk_index"],
-      },
-    },
-    {
-      name: "query_brp_rules",
-      description:
-        "Search the Basic Roleplaying (BRP) rules database for characteristics, skills, professions, weapons, armor, spot rules, and sample foes. BRP data is Open Game Content under the BRP Open Game License v1.0.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          search_term: {
-            type: "string",
-            description: "Search term (e.g., 'combat', 'sword', 'soldier', 'stealth', 'resistance table', 'poison')",
-          },
-          category: {
-            type: "string",
-            description: "Optional category filter: 'rules', 'characteristics', 'skills', 'professions', 'weapons', 'melee_weapons', 'missile_weapons', 'armor', 'shields', 'spot_rules', 'foes', 'categories', 'list_skills', 'list_professions', 'list_weapons'",
-          },
-        },
-        required: ["search_term"],
-      },
-    },
-    {
-      name: "query_5ecompatible_rules",
-      description:
-        "Search the 5E-compatible SRD rules database for spells, monsters, classes, feats, and general rules. SRD data is Open Game Content from the 5.2.1 SRD (CC-BY-4.0) by Wizards of the Coast LLC.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          search_term: {
-            type: "string",
-            description: "Search term (e.g., 'fireball', 'dragon', 'barbarian', 'grappler', 'stealth', 'combat')",
-          },
-          category: {
-            type: "string",
-            description: "Optional category filter: 'rules', 'spells', 'monsters', 'classes', 'feats', 'list_spells', 'list_monsters', 'list_classes', 'list_feats'",
-          },
-        },
-        required: ["search_term"],
-      },
-    },
-    {
-      name: "query_orcus_rules",
-      description:
-        "Search the Orcus d20-compatible retro-clone rules database for rules, classes, monsters, and feats. Orcus is a retro-clone of 4th Edition by Chris Sakkas (Sanglorian), released under OGL v1.0a. See data/orcus/ATTRIBUTION for full details.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          search_term: {
-            type: "string",
-            description: "Search term (e.g., 'combat', 'Commander', 'dragon', 'Athame', 'skill check', 'extended challenge')",
-          },
-          category: {
-            type: "string",
-            description: "Optional category filter: 'rules', 'classes', 'monsters', 'feats', 'list_classes', 'list_monsters', 'list_feats'",
-          },
-        },
-        required: ["search_term"],
-      },
-    },
-    {
-      name: "query_dw_rules",
-      description:
-        "Search the Dungeon World rules database for moves, classes, spells, equipment, monsters, or GM tools. DW data is derived from Dungeon World by Sage LaTorra and Adam Koebel (CC-BY-3.0), converted to Markdown by agude. See data/dw/ATTRIBUTION for full attribution.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          search_term: {
-            type: "string",
-            description: "Search term (e.g., 'hack and slash', 'wizard', 'goblin', 'front', 'armor')",
-          },
-          category: {
-            type: "string",
-            description: "Optional category filter: 'moves', 'classes', 'spells', 'equipment', 'monsters', 'gm_tools', 'rules'",
-          },
-        },
-        required: ["search_term"],
-      },
-    },
-    {
       name: "discord_post",
       description:
-        "Post a message to one or more Discord webhooks. Supports rich embeds with fields, colours, and footers. Uses smart routing: provide context tags (e.g. 'gm', 'combat', 'narrative') to automatically select the best webhook(s), or explicitly name which webhooks to post to.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          content: {
-            type: "string",
-            description: "Plain text message content (max 2000 chars)",
-          },
-          webhook_names: {
-            type: "array",
-            items: { type: "string" },
-            description: "Explicit webhook names to post to. If provided, overrides smart routing.",
-          },
-          context: {
-            type: "object",
-            description: "Context for smart webhook routing. The system matches tags to find the best webhook(s).",
-            properties: {
-              channel_type: {
-                type: "string",
-                description: "Comma-separated channel types: 'gm', 'player', 'ooc', 'starship'",
-              },
-              visibility: {
-                type: "string",
-                description: "Comma-separated visibility: 'public', 'private', 'secret'",
-              },
-              game_context: {
-                type: "string",
-                description: "Comma-separated game contexts: 'combat', 'narrative', 'exploration', 'trade', 'social', 'stealth', 'magic', 'dice'",
-              },
-              character: {
-                type: "string",
-                description: "Character name(s) involved (comma-separated)",
-              },
-              location: {
-                type: "string",
-                description: "In-game location(s) (comma-separated)",
-              },
-            },
-          },
-          username: {
-            type: "string",
-            description: "Override the webhook's displayed username for this message",
-          },
-          avatar_url: {
-            type: "string",
-            description: "Override the webhook's avatar for this message",
-          },
-          embeds: {
-            type: "array",
-            description: "Rich embed objects (max 10). Each embed can have title, description, color, fields, footer.",
-            items: {
-              type: "object",
-              properties: {
-                title: { type: "string", description: "Embed title (max 256 chars)" },
-                description: { type: "string", description: "Embed description (max 4096 chars)" },
-                color: {
-                  type: "string",
-                  description: "Embed colour: name ('red', 'gold', 'teal') or hex ('#ff0000')",
-                },
-                fields: {
-                  type: "array",
-                  description: "Embed fields (max 25)",
-                  items: {
-                    type: "object",
-                    properties: {
-                      name: { type: "string" },
-                      value: { type: "string" },
-                      inline: { type: "boolean" },
-                    },
-                    required: ["name", "value"],
-                  },
-                },
-                footer: {
-                  type: "object",
-                  properties: {
-                    text: { type: "string" },
-                    icon_url: { type: "string" },
-                  },
-                  required: ["text"],
-                },
-              },
-            },
-          },
-          tts: {
-            type: "boolean",
-            description: "Use text-to-speech for this message (default: false)",
-            default: false,
-          },
-        },
-      },
+        "Post a message to one or more Discord webhooks. Supports rich embeds. Uses smart routing from context tags, or explicit webhook_names.",
+      inputSchema: DISCORD_POST_SCHEMA,
     },
     {
-      name: "discord_add_webhook",
+      name: "discord_webhook",
       description:
-        "Add a Discord webhook to the stored configuration. Webhooks are saved to .mcp-discord-webhooks.json (gitignored). Each webhook needs a unique name, a Discord webhook URL, and optional tags for smart routing.",
+        "Manage Discord webhooks stored in .mcp-discord-webhooks.json. action: add, remove, list, or test.",
       inputSchema: {
         type: "object",
         properties: {
+          action: {
+            type: "string",
+            enum: ["add", "remove", "list", "test"],
+            description: "Webhook action",
+          },
           name: {
             type: "string",
-            description: "Unique name for this webhook (e.g., 'gm-tower', 'main-table', 'ooc-channel')",
+            description: "Webhook name (required for add, remove, test)",
           },
           url: {
             type: "string",
-            description: "Discord webhook URL (https://discord.com/api/webhooks/...)",
+            description: "Discord webhook URL (required for add)",
           },
           tags: {
             type: "array",
             items: { type: "string" },
-            description: "Tags for smart routing: 'gm', 'player', 'public', 'private', 'combat', 'narrative', 'ooc', 'dice', 'starship', 'exploration', 'trade', 'social', 'stealth', 'magic'",
+            description: "Tags for smart routing (add)",
           },
           description: {
             type: "string",
-            description: "Human-readable description of this webhook's purpose",
+            description: "Human-readable description (add)",
           },
         },
-        required: ["name", "url"],
+        required: ["action"],
       },
     },
     {
-      name: "discord_remove_webhook",
+      name: "session",
       description:
-        "Remove a stored Discord webhook by name.",
+        "Manage game sessions. action: start, end, list, delete, or summarize.",
       inputSchema: {
         type: "object",
         properties: {
-          name: {
+          action: {
             type: "string",
-            description: "Name of the webhook to remove",
+            enum: ["start", "end", "list", "delete", "summarize"],
+            description: "Session action",
           },
-        },
-        required: ["name"],
-      },
-    },
-    {
-      name: "discord_list_webhooks",
-      description:
-        "List all configured Discord webhooks with their names, tags, and descriptions. URLs are partially masked for security.",
-      inputSchema: {
-        type: "object",
-        properties: {},
-      },
-    },
-    {
-      name: "discord_test_webhook",
-      description:
-        "Send a test message to a specific Discord webhook to verify connectivity. Posts a simple '2d6mcp connection test' message.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          name: {
+          session_id: {
             type: "string",
-            description: "Name of the webhook to test",
+            description: "Session ID (required for end, delete, summarize)",
           },
-        },
-        required: ["name"],
-      },
-    },
-    {
-      name: "session_start",
-      description:
-        "Start a new game session for transcript logging, rulings tracking, and context. Returns a session ID to use with other session tools.",
-      inputSchema: {
-        type: "object",
-        properties: {
           name: {
             type: "string",
-            description: "Optional session name (e.g., 'Session 12 - The Dungeon of Doom')",
+            description: "Optional session name (start)",
           },
           rules_system: {
             type: "string",
             enum: ["ogl", "dw", "brp", "5ecompatible", "orcus"],
-            description: "Rules system for this session. 'ogl' = sci-fi 2d6 RPG (Cepheus Engine), 'dw' = fantasy 2d6 RPG (Dungeon World), 'brp' = Basic Roleplaying (d100 percentile system), '5ecompatible' = 5E-compatible fantasy SRD (CC-BY-4.0), 'orcus' = d20-compatible retro-clone (OGL v1.0a). Default: ogl.",
+            description: "Rules system for this session. Default: ogl.",
             default: "ogl",
           },
           byod_system: {
             type: "string",
-            description: "Optional: narrow BYOD search to files matching this system name (e.g., 'call of cthulhu', 'traveller'). Recommended when using BYOD content.",
+            description: "Optional: narrow BYOD search to files matching this system name",
           },
-        },
-      },
-    },
-    {
-      name: "session_end",
-      description:
-        "End the active game session. Optionally set a summary and trigger summary generation.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          session_id: {
-            type: "string",
-            description: "The session ID from session_start",
-          },
-        },
-        required: ["session_id"],
-      },
-    },
-    {
-      name: "session_list",
-      description:
-        "List all recorded game sessions, most recent first.",
-      inputSchema: {
-        type: "object",
-        properties: {
           limit: {
             type: "integer",
-            description: "Max sessions to return (default 20)",
+            description: "Max sessions to return for list (default 20)",
             default: 20,
           },
         },
-      },
-    },
-    {
-      name: "session_summarize",
-      description:
-        "Generate an AI summary for a session using the full transcript. Requires MLX LLM (mlx_lm.generate) to be installed.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          session_id: {
-            type: "string",
-            description: "The session ID from session_start",
-          },
-        },
-        required: ["session_id"],
+        required: ["action"],
       },
     },
     {
       name: "log_transcript",
-      description:
-        "Log a transcript segment to the current session — what was just said at the table.",
+      description: "Log a transcript segment to a session — what was just said at the table.",
       inputSchema: {
         type: "object",
         properties: {
           session_id: {
             type: "string",
-            description: "The session ID from session_start",
+            description: "The session ID from session start",
           },
           text: {
             type: "string",
@@ -572,16 +381,16 @@ export function getToolDefinitions(): Tool[] {
           },
           speaker: {
             type: "string",
-            description: "Who said it (optional, e.g., 'GM', 'Player 1')",
+            description: "Who said it (optional, e.g. GM, Player 1)",
           },
           source: {
             type: "string",
-            description: "Source of the transcript: 'manual', 'voice', 'discord', 'push-to-ask'",
+            description: "Source of the transcript: manual, voice, discord",
             default: "manual",
           },
           intent: {
             type: "string",
-            description: "Classified intent: 'question', 'ruling', 'action', 'narration', 'discussion'",
+            description: "Classified intent: question, ruling, action, narration, discussion",
           },
         },
         required: ["session_id", "text"],
@@ -589,14 +398,13 @@ export function getToolDefinitions(): Tool[] {
     },
     {
       name: "get_session_context",
-      description:
-        "Get recent transcript segments and rulings from a session — the last N minutes of game context.",
+      description: "Get recent transcript segments and rulings from a session — the last N minutes of game context.",
       inputSchema: {
         type: "object",
         properties: {
           session_id: {
             type: "string",
-            description: "The session ID from session_start",
+            description: "The session ID from session start",
           },
           minutes: {
             type: "integer",
@@ -615,17 +423,17 @@ export function getToolDefinitions(): Tool[] {
     {
       name: "search_transcript",
       description:
-        "Full-text search across session transcripts — find what was said about a topic.",
+        "Search session transcripts with SQL LIKE (not FTS5). Find what was said about a topic.",
       inputSchema: {
         type: "object",
         properties: {
           session_id: {
             type: "string",
-            description: "The session ID from session_start",
+            description: "The session ID from session start",
           },
           query: {
             type: "string",
-            description: "Search term (e.g., 'goblin', 'merchant', 'trap')",
+            description: "Search term",
           },
         },
         required: ["session_id", "query"],
@@ -634,135 +442,73 @@ export function getToolDefinitions(): Tool[] {
     {
       name: "synthesize_ruling",
       description:
-        "Synthesize a rules ruling using local MLX LLM. Takes a question, auto-looks up relevant rules from OGL/DW/BRP/5E/BYOD, and returns a cited ruling. Requires mlx_lm.generate to be installed.",
+        "Synthesize a cited rules ruling with the local LLM. Auto-looks up licensed rules and BYOD (when consent is on). Default rules_system comes from the session when session_id is set. Set from_context to derive the question from recent transcript.",
       inputSchema: {
         type: "object",
         properties: {
           question: {
             type: "string",
-            description: "The rules question to answer (e.g., 'Can I grapple while prone?')",
+            description: "The rules question. Optional when from_context is true.",
           },
           rules_system: {
             type: "string",
             enum: ["ogl", "dw", "brp", "5ecompatible", "orcus", "auto"],
-            description: "Which rules DB to search. 'auto' searches all. Default: 'auto'.",
-            default: "auto",
+            description: "Which rules DB to search. Default: session rules_system when session_id is set, otherwise auto.",
           },
           session_id: {
             type: "string",
-            description: "Optional session ID — includes recent rulings for context continuity",
+            description: "Optional session ID — scopes lookup and includes recent rulings",
           },
           rules_context: {
             type: "string",
             description: "Optional explicit rules text to use instead of auto-lookup",
           },
-        },
-        required: ["question"],
-      },
-    },
-    {
-      name: "resolve_from_context",
-      description:
-        "Full producer pipeline: take recent session transcript, synthesize a ruling based on what was discussed, log the ruling. Use this when the GM wants a ruling on whatever the players were just talking about.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          session_id: {
-            type: "string",
-            description: "The session ID from session_start",
+          from_context: {
+            type: "boolean",
+            description: "If true, extract a question from recent session transcript and rule on it",
+            default: false,
           },
-          context_minutes: {
+          minutes: {
             type: "integer",
-            description: "How many minutes of transcript to use as context (default 2)",
+            description: "Minutes of transcript to use when from_context is true (default 2)",
             default: 2,
           },
         },
-        required: ["session_id"],
       },
     },
     {
       name: "transcribe_audio",
       description:
-        "Transcribe an audio file using local MLX Whisper. For files longer than 5 minutes, the tool processes audio in 2-minute chunks. Each call transcribes one chunk and returns incremental results. Call again with the same file_path and session_id to continue until 'complete' is true. Requires mlx_whisper and ffmpeg to be installed.",
+        "Transcribe an audio file with local Whisper. Files longer than 180 seconds are processed in 2-minute chunks. Each call transcribes one chunk; the last chunk sets complete true. action: transcribe (default), list, or clear.",
       inputSchema: {
         type: "object",
         properties: {
+          action: {
+            type: "string",
+            enum: ["transcribe", "list", "clear"],
+            description: "transcribe a file, list in-progress jobs, or clear progress",
+            default: "transcribe",
+          },
           file_path: {
             type: "string",
-            description: "Path to the audio file (WAV, MP3, M4A, FLAC, etc.)",
+            description: "Path to the audio file (required for transcribe; optional for clear)",
           },
           session_id: {
             type: "string",
-            description: "Optional session ID. If provided, each transcribed chunk is auto-logged as a transcript segment with source='voice'.",
+            description: "Optional session ID. If provided, each chunk is logged as a voice transcript segment.",
           },
           chunk_size_seconds: {
             type: "integer",
-            description: "Size of each chunk in seconds (default: 120). Ignored for files under 5 minutes.",
+            description: "Size of each chunk in seconds (default 120). Ignored for files under 180 seconds.",
             default: 120,
           },
         },
-        required: ["file_path"],
-      },
-    },
-    {
-      name: "list_transcriptions",
-      description: "List all in-progress audio transcriptions with their chunk progress. Shows which files are being transcribed, how many chunks remain, and session association.",
-      inputSchema: { type: "object", properties: {} },
-    },
-    {
-      name: "clear_transcription",
-      description: "Reset transcription progress for a specific file, or clear all transcription state. Use this if a transcription gets stuck or you want to restart fresh.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          file_path: { type: "string", description: "Optional: path to the audio file to reset. If omitted, clears ALL transcription progress." },
-        },
-      },
-    },
-    {
-      name: "roll_byod_table",
-      description:
-        "Search your BYOD index for a random table by name or description, parse its die-range entries, roll the appropriate dice, and return the matching result. Works with any system's tables (d100 encounter tables, d20 treasure tables, 2d6 reaction tables, d66 tables, etc.). System-agnostic.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          table_name: {
-            type: "string",
-            description: "Name or description of the table to find and roll on (e.g., 'encounter', 'treasure', 'reaction', 'random dungeon')",
-          },
-        },
-        required: ["table_name"],
-      },
-    },
-    {
-      name: "list_byod_tables",
-      description:
-        "Discover random tables available in your BYOD index. Searches for structured die-range tables and returns their names, dice types, entry counts, and sample entries. Use this to find tables before rolling on them with roll_byod_table. System-agnostic.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          search_term: {
-            type: "string",
-            description: "Search term to find tables (e.g., 'encounter', 'treasure', 'NPC'). Omit for a broad search across all tables.",
-          },
-          max_results: {
-            type: "integer",
-            description: "Maximum number of tables to return (default 10, max 30)",
-            default: 10,
-          },
-        },
-      },
-    },
-    {
-      name: "delete_session",
-      description: "Permanently delete a session and all its transcript segments and rulings. Use this to clean up old or test sessions. Irreversible.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          session_id: { type: "string", description: "The session ID to delete" },
-        },
-        required: ["session_id"],
       },
     },
   ];
+
+  if (options.byodConsented === false) {
+    return tools.filter((tool) => !BYOD_TOOL_NAMES.has(tool.name));
+  }
+  return tools;
 }

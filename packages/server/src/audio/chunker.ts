@@ -16,7 +16,7 @@ export interface ChunkManifest {
   sourceDurationSeconds: number;
 }
 
-export function isAudioLong(filePath: string, thresholdSeconds: number = 300): boolean {
+export function isAudioLong(filePath: string, thresholdSeconds: number = 180): boolean {
   try {
     const out = execFileSync(
       "ffprobe",

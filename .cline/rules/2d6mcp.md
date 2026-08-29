@@ -14,49 +14,33 @@ It shares rules databases, dice engine, prompt templates, and quality filters vi
 
 | Tool | Purpose |
 |------|---------|
-| `roll_2d6` | Roll 2d6 with modifier vs. target. Returns dice, total, effect margin. |
-| `roll_d20` | Roll d20 with modifier, advantage/disadvantage, AC/DC comparison. Returns dice, hit/miss, critical (nat 20), fumble (nat 1). |
-| `roll_percentile` | Roll d100 with BRP-style roll-under. Returns tens/ones, total, success, critical (≤5%), fumble (96-100). |
-| `roll_damage` | Roll damage dice with optional type (e.g., `"2d6+3 fire"`). |
-| `roll_custom` | Roll any dice notation (`3d6`, `1d20`, `4d6+2`, `d66`). |
-| `roll_table` | Roll on a named table from any rules system. Use `system` param to specify database. |
-| `query_ogl_rules` | Search OGL rules by term and optional category. |
-| `query_dw_rules` | Search DW rules by term and optional category (moves, classes, spells, equipment, monsters, gm_tools, rules). |
-| `query_brp_rules` | Search BRP rules for characteristics, skills, professions, weapons, armor, spot rules, foes |
-| `query_5ecompatible_rules` | Search 5E-compatible rules for spells, monsters, classes, feats, and rules |
-| `query_orcus_rules` | Search Orcus 4e-compatible rules for classes, monsters, feats, and core rules |
-| `query_local_byod` | Full-text search personal ingested files (requires consent). |
-| `parse_character` | Parse character sheet into structured data. |
-| `sync_byod` | Index BYOD files in time-budgeted batches. Re-call if `complete: false`. |
-| `clear_byod` | Delete BYOD index to start fresh. |
-| `list_byod_files` | List indexed files with status and chunk counts. |
-| `inspect_byod_file` | Show chunk structure for a specific file. |
-| `sync_file` | Index a single file by relative path. |
-| `get_byod_chunk` | Retrieve full chunk content by file path + chunk index. |
-| `discord_post` | Post messages to Discord webhooks with smart routing. |
-| `discord_add_webhook` | Add a Discord webhook. |
-| `discord_remove_webhook` | Remove a stored Discord webhook. |
-| `discord_list_webhooks` | List configured webhooks. |
-| `discord_test_webhook` | Test webhook connectivity. |
-| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM. Auto-looks up OGL/DW/BRP/5E-compatible/BYOD rules, returns a cited ruling. Requires `mlx_lm.generate`. |
-| `resolve_from_context` | Full producer pipeline: take recent transcript, detect rules question, look up rules, synthesize ruling, log it. |
-| `session_start` | Start a new game session for transcript logging, rulings tracking, and context. Returns a session ID. |
-| `session_end` | End the active game session. |
-| `session_list` | List all recorded game sessions, most recent first. |
-| `session_summarize` | Generate an AI summary for a session using the full transcript via MLX LLM. |
-| `log_transcript` | Log a transcript segment to the current session. |
-| `get_session_context` | Get recent transcript segments and rulings from a session. |
-| `search_transcript` | Full-text search across session transcripts. |
-| `transcribe_audio` | Transcribe an audio file using local MLX Whisper. Requires `mlx_whisper`. |
+| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`). Infers mechanic from notation when omitted. |
+| `roll_table` | Roll on a named table. `source`: `ogl` or `byod`. Omit `table_name` with `source=byod` to list tables. |
+| `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
+| `query_local_byod` | Search ingested personal files. Returns `chunkIndex`. Optional `include_full`. |
+| `sync_byod` | Index BYOD files. Optional `relative_path` for a single file. |
+| `clear_byod` | Delete the BYOD index. |
+| `list_byod_files` | List indexed files. Optional `relative_path` inspects one file. |
+| `get_byod_chunk` | Retrieve full chunk content by path + chunk index. |
+| `parse_character` | Parse a character sheet into structured data. |
+| `discord_post` | Post to Discord webhooks with smart routing and embeds. |
+| `discord_webhook` | Manage webhooks: `action` add, remove, list, or test. |
+| `session` | Manage sessions: `action` start, end, list, delete, or summarize. |
+| `log_transcript` | Log a transcript segment to a session. |
+| `get_session_context` | Get recent transcript and rulings. |
+| `search_transcript` | Search session transcripts with SQL LIKE (not FTS5). |
+| `synthesize_ruling` | Cited rules ruling. Optional `from_context` uses recent transcript. Default `rules_system` from the session when `session_id` is set. |
+| `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. `action`: transcribe, list, or clear. Last chunk sets `complete: true`. |
+
 
 
 ## Core Mechanics
 
 - **Multi-system resolution**:
-  - **2d6 (OGL/DW)**: 2d6 + modifier vs. target (typically 8+). Effect margin = total - target. Use `roll_2d6`.
-  - **d20 (5E/Orcus)**: d20 + modifier vs. AC/DC. Nat 20 = critical hit, nat 1 = fumble. Supports advantage/disadvantage. Use `roll_d20`.
-  - **d100 (BRP/CoC)**: Roll under target. ≤5% = critical, 96-100 = fumble. Use `roll_percentile`.
-  - **Damage**: Use `roll_damage("2d6+3 fire")` for weapon damage.
+  - **2d6 (OGL/DW)**: 2d6 + modifier vs. target (typically 8+). Effect margin = total - target. Use `roll` with mechanic `2d6`.
+  - **d20 (5E/Orcus)**: d20 + modifier vs. AC/DC. Nat 20 = critical hit, nat 1 = fumble. Supports advantage/disadvantage. Use `roll` with mechanic `d20`.
+  - **d100 (BRP/CoC)**: Roll under target. ≤5% = critical, 96-100 = fumble. Use `roll` with mechanic `percentile`.
+  - **Damage**: Use `roll(notation: "2d6+3 fire", mechanic: "damage")` for weapon damage.
 - **Difficulty (2d6)**: Modifiers +6 (simple) to -6 (formidable). Or adjust target: 6+ easy, 8+ average, 10+ difficult, 12+ very difficult, 14+ formidable.
 - **d66 tables**: Two d6s as tens/ones (11–66). `roll_table` with `"dice_type": "d66"`.
 - **Categories**: `skills`, `careers`, `equipment`, `tables`, `combat`, `starships`, `worlds`, `categories`, `list_tables`.
@@ -65,19 +49,19 @@ It shares rules databases, dice engine, prompt templates, and quality filters vi
 
 ## Key Workflows
 
-**Task resolution**: `roll_2d6(modifier, target)` for 2d6, `roll_d20(modifier, target, advantage)` for d20, `roll_percentile(target)` for d100, `roll_damage("2d6+3 fire")` for damage. Report margin and outcome.
+**Task resolution**: `roll(notation: "2d6", mechanic: "2d6", modifier, target)` for 2d6, `roll(mechanic: "d20", modifier, target, advantage)` for d20, `roll(mechanic: "percentile", target)` for d100, `roll(notation: "2d6+3 fire", mechanic: "damage")` for damage. Report margin and outcome.
 
-**Rules lookup**: `query_ogl_rules("term", category: "category")` for sci-fi. `query_dw_rules("term", category: "category")` for fantasy. Narrow with category for targeted results.
+**Rules lookup**: `query_rules(system: "ogl", "term", category: "category")` for sci-fi. `query_rules(system: "dw", "term", category: "category")` for fantasy. Narrow with category for targeted results.
 
-**Character creation**: Six `roll_custom("2d6")` for characteristics. `query_ogl_rules("name", category: "careers")` for careers. `parse_character(path)` for existing sheets.
+**Character creation**: Six `roll(notation: "2d6", mechanic: "raw")` for characteristics. `query_rules(system: "ogl", "name", category: "careers")` for careers. `parse_character(path)` for existing sheets.
 
-**BYOD**: `list_byod_files` to check indexed content → `sync_byod` (repeat until `complete: true`) → `query_local_byod("term")` to search → `get_byod_chunk(file_path, chunk_index)` for full content from snippets. Single file: `sync_file(relative_path)`. Inspect with `inspect_byod_file(path)`. Reset with `clear_byod`.
+**BYOD**: `list_byod_files` to check indexed content → `sync_byod` (repeat until `complete: true`) → `query_local_byod("term")` to search → `get_byod_chunk(file_path, chunk_index)` for full content from snippets. Single file: `sync_byod(relative_path)`. Inspect with `list_byod_files(relative_path)`. Reset with `clear_byod`.
 
-**Session management**: `session_start("Session Name")` → `log_transcript(session_id, text)` → `get_session_context(session_id, minutes)` for recent context → `search_transcript(session_id, "query")` → `session_end(session_id)`. List with `session_list`. Summarize with `session_summarize(session_id)`.
+**Session management**: `session(action: "start", "Session Name")` → `log_transcript(session_id, text)` → `get_session_context(session_id, minutes)` for recent context → `search_transcript(session_id, "query")` → `session(action: "end", session_id)`. List with `session` list. Summarize with `session(action: "summarize", session_id)`.
 
-**Ruling synthesis**: `synthesize_ruling("question", rules_system: "auto")` for AI rulings with OGL/DW/BRP/5E-compatible/BYOD citations. `resolve_from_context(session_id)` to auto-detect question from recent transcript. `transcribe_audio(file_path)` for voice-to-text.
+**Ruling synthesis**: `synthesize_ruling("question", rules_system: "auto")` for AI rulings with OGL/DW/BRP/5E-compatible/BYOD citations. `synthesize_ruling(from_context: true, session_id)` to auto-detect question from recent transcript. `transcribe_audio(file_path)` for voice-to-text.
 
-**Discord**: `discord_post(content, webhook_names, context)` for smart-routed messages with embeds. `discord_add_webhook(name, url, tags)` to configure. `discord_list_webhooks` to view. `discord_test_webhook(name)` to verify. `discord_remove_webhook(name)` to remove.
+**Discord**: `discord_post(content, webhook_names, context)` for smart-routed messages with embeds. `discord_webhook(action: "add", name, url, tags)` to configure. `discord_webhook(action: "list")` to view. `discord_webhook(action: "test", name)` to verify. `discord_webhook(action: "remove", name)` to remove.
 
 ## Configuration
 

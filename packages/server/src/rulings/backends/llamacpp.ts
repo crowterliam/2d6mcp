@@ -2,9 +2,12 @@
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 //
 // llama.cpp backend — cross-platform, C++, CPU/CUDA/Vulkan/Metal
-// CLI: llama-cli -m model.gguf -p "prompt" -n 512
+// CLI: llama-cli -m model.gguf -f prompt.txt -n 512
 
 import { execFile, execSync } from "node:child_process";
+import { writeFileSync, unlinkSync, existsSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 export interface SynthesizeResult {
   response: string;
@@ -55,34 +58,43 @@ export async function synthesizeWithLlamaCpp(
   const topP = options.topP ?? 0.9;
   const topK = options.topK ?? 40;
 
-  const args = [
-    "-m", model,
-    "-p", prompt,
-    "-n", String(maxTokens),
-    "--temp", String(temperature),
-    "--top-p", String(topP),
-    "--top-k", String(topK),
-    "--repeat-penalty", "1.1",
-    "--no-display-prompt",
-  ];
+  const tmpPath = join(tmpdir(), `2d6mcp-llama-prompt-${Date.now()}.txt`);
+  writeFileSync(tmpPath, prompt, "utf-8");
 
-  const startTime = Date.now();
-  const { stdout } = await execFileAsync("llama-cli", args);
-  const duration = (Date.now() - startTime) / 1000;
+  try {
+    const args = [
+      "-m", model,
+      "-f", tmpPath,
+      "-n", String(maxTokens),
+      "--temp", String(temperature),
+      "--top-p", String(topP),
+      "--top-k", String(topK),
+      "--repeat-penalty", "1.1",
+      "--no-display-prompt",
+    ];
 
-  const response = stdout
-    .replace(/^=+\n?/gm, "")
-    .replace(/\n?=+$/gm, "")
-    .replace(/\n?^llama_.*$/gm, "")
-    .trim();
+    const startTime = Date.now();
+    const { stdout } = await execFileAsync("llama-cli", args);
+    const duration = (Date.now() - startTime) / 1000;
 
-  return {
-    response,
-    model,
-    promptTokens: Math.ceil(prompt.length / 4),
-    completionTokens: Math.ceil(response.length / 4),
-    durationSeconds: Math.round(duration * 100) / 100,
-  };
+    const response = stdout
+      .replace(/^=+\n?/gm, "")
+      .replace(/\n?=+$/gm, "")
+      .replace(/\n?^llama_.*$/gm, "")
+      .trim();
+
+    return {
+      response,
+      model,
+      promptTokens: Math.ceil(prompt.length / 4),
+      completionTokens: Math.ceil(response.length / 4),
+      durationSeconds: Math.round(duration * 100) / 100,
+    };
+  } finally {
+    if (existsSync(tmpPath)) {
+      unlinkSync(tmpPath);
+    }
+  }
 }
 
 export function isLlamaCppAvailable(): boolean {

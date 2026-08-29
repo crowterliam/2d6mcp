@@ -15,6 +15,7 @@ import Database from "better-sqlite3";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DW_SCHEMA_DDL } from "./schema.sql.js";
+import { seedDwSections } from "./database.js";
 
 let dwDb: Database.Database | null = null;
 
@@ -49,7 +50,7 @@ export function populateDwDatabase(dbPath: string): { success: boolean; message:
     seedGmTools(db);
   });
   tx();
-  db.exec(`INSERT INTO dw_sections_fts(dw_sections_fts) VALUES ('rebuild');`);
+  seedDwSections(db);
   db.close();
   dwDb = null;
   return { success: true, message: `DW database populated at ${dbPath}` };

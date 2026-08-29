@@ -3,7 +3,6 @@
 
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, extname, resolve } from "node:path";
-import { createHash } from "node:crypto";
 import { DOMParser } from "@xmldom/xmldom";
 
 const TEXT_EXTENSIONS = new Set([".txt", ".json", ".xml", ".csv"]);
@@ -98,15 +97,6 @@ function walkDirectory(dir: string, baseDir: string, maxFileSize: number = MAX_F
 
           const fingerprint = String(stat.mtimeMs) + "-" + String(stat.size);
 
-          let contentHash: string | null = null;
-          try {
-            const buf = readFileSync(fullPath);
-            contentHash = createHash("sha256").update(buf).digest("hex");
-          } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "unknown error";
-            log(`Warning: could not compute content hash for ${entry}: ${msg}`);
-          }
-
           results.push({
             path: fullPath,
             relativePath: fullPath.replace(baseDir + "/", ""),
@@ -114,7 +104,7 @@ function walkDirectory(dir: string, baseDir: string, maxFileSize: number = MAX_F
             size: stat.size,
             ext,
             hash: fingerprint,
-            contentHash,
+            contentHash: null,
           });
         }
       }

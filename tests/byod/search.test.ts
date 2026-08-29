@@ -120,6 +120,7 @@ describe("searchByodIndex", () => {
     expect(results.length).toBeGreaterThanOrEqual(1);
     expect(results[0].title).toContain("Combat Rules");
     expect(results[0].filePath).toBe("rules.md");
+    expect(results[0].chunkIndex).toBe(0);
     closeByodDatabase(byodPath);
   });
 

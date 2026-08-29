@@ -18,6 +18,7 @@ import { dirname } from "node:path";
 import { BRP_SCHEMA_DDL } from "./schema.sql.js";
 
 let brpDb: Database.Database | null = null;
+let brpSchemaReady = false;
 
 export function getBrpDatabase(dbPath: string): Database.Database {
   if (brpDb) return brpDb;
@@ -46,7 +47,9 @@ export function initBrpSchema(db: Database.Database): void {
 
 export function ensureBrpSchema(dbPath: string): Database.Database {
   const database = getBrpDatabase(dbPath);
+  if (brpSchemaReady) return database;
   initBrpSchema(database);
+  brpSchemaReady = true;
   return database;
 }
 
@@ -55,4 +58,5 @@ export function closeBrpDatabase(): void {
     brpDb.close();
     brpDb = null;
   }
+  brpSchemaReady = false;
 }

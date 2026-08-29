@@ -16,6 +16,7 @@ import { dirname } from "node:path";
 import { SR5E_SCHEMA_DDL } from "./schema.sql.js";
 
 let sr5eDb: Database.Database | null = null;
+let sr5eSchemaReady = false;
 
 export function get5ecompatibleDatabase(dbPath: string): Database.Database {
   if (sr5eDb) return sr5eDb;
@@ -44,7 +45,9 @@ export function init5ecompatibleSchema(db: Database.Database): void {
 
 export function ensure5ecompatibleSchema(dbPath: string): Database.Database {
   const database = get5ecompatibleDatabase(dbPath);
+  if (sr5eSchemaReady) return database;
   init5ecompatibleSchema(database);
+  sr5eSchemaReady = true;
   return database;
 }
 
@@ -53,4 +56,5 @@ export function close5ecompatibleDatabase(): void {
     sr5eDb.close();
     sr5eDb = null;
   }
+  sr5eSchemaReady = false;
 }

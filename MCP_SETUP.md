@@ -95,7 +95,7 @@ After configuring your harness and restarting, ask your AI assistant:
 
 > "Roll 2d6+2 vs 8 for a standard skill check."
 
-If the server is connected, the assistant will call `roll_2d6` and return dice results with an effect margin.
+If the server is connected, the assistant will call `roll` and return dice results with an effect margin.
 
 ## Environment Variables
 

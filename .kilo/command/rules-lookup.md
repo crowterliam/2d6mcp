@@ -36,16 +36,16 @@ Query the 2d6mcp rules databases, synthesize AI rulings, and manage game session
 
 ## Behaviour
 
-- Without `in`, queries all categories in OGL
+- Without `in`, queries core FTS only (`query_rules` default category) for OGL
 - `in` narrows to: rules, skills, careers, equipment, tables, combat, starships, worlds, categories, list_tables
 - `dw` searches the Dungeon World database (moves, classes, spells, equipment, monsters, gm_tools)
 - `brp` searches the Basic Roleplaying database (characteristics, skills, professions, weapons, armor, spot_rules, foes)
 - `5e` searches the 5E-compatible database (spells, monsters, classes, feats, rules)
 - `4e` searches the Orcus 4e-compatible database (classes, monsters, feats, rules)
-- `table` rolls on and displays the named table. Use `system` to specify database (ogl/dw/brp/5ecompatible/orcus).
+- `table` rolls on and displays the named table. Use `source` `ogl` or `byod`.
 - `byod` searches your personal files (requires BYOD consent)
 - `ai` uses `synthesize_ruling` to auto-look up rules from all databases and produce a cited ruling
-- `resolve` uses `resolve_from_context` to take recent session transcript, detect the rules question, look up rules, and synthesize a ruling
+- `resolve` uses `synthesize_ruling` with `from_context` to take recent session transcript, detect the rules question, look up rules, and synthesize a ruling
 - `resolve <minutes>` specifies how many minutes of transcript to use as context (default: 2)
 
 ## Session Integration
@@ -53,10 +53,10 @@ Query the 2d6mcp rules databases, synthesize AI rulings, and manage game session
 Start a session to scope BYOD searches and enable the `resolve` command:
 
 ```
-session_start(name: "Session 12", byod_system: "call of cthulhu")
+session(action: "start", name: "Session 12", byod_system: "call of cthulhu")
 ```
 
-The `byod_system` parameter ensures `synthesize_ruling` and `resolve_from_context` only search files from that game system. Omit to search all BYOD content.
+The `byod_system` parameter ensures `synthesize_ruling` and `synthesize_ruling` with `from_context` only search files from that game system. Omit to search all BYOD content.
 
 ## Audio Transcription
 
@@ -66,4 +66,4 @@ Transcribe recorded game sessions directly:
 /transcribe <file_path>
 ```
 
-For large files (3+ minutes), this runs in chunked mode. Each call processes one chunk — repeat until complete. Auto-logs to the current session if one is active.
+For files longer than 180 seconds, this runs in chunked mode. Each call processes one chunk — repeat until complete. Auto-logs to the current session if one is active.

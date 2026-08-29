@@ -34,40 +34,24 @@ Agent instructions: `.kilo/agent/`, `.claude/skills/`, `.cursor/rules/`, `.cline
 
 | Tool | Purpose |
 |------|---------|
-| `roll_2d6` | 2d6 + modifier vs. target, effect margin |
-| `roll_d20` | d20 + modifier vs. AC/DC with advantage/disadvantage, critical hits, fumbles |
-| `roll_percentile` | d100 percentile roll-under with critical success and fumble detection |
-| `roll_damage` | Damage dice with optional type (`"2d6+3 fire"`, `"1d8 piercing"`) |
-| `roll_custom` | Any dice notation |
-| `roll_table` | Named OGL table (`system` is OGL-only today) |
-| `query_ogl_rules` | Search OGL rules (skills, careers, equipment, combat, starships, worlds) |
-| `query_dw_rules` | Search DW rules (moves, classes, spells, equipment, monsters, GM tools) |
-| `query_brp_rules` | Search BRP rules for characteristics, skills, professions, weapons, armor, spot rules, foes |
-| `query_5ecompatible_rules` | Search 5E-compatible rules for spells, monsters, classes, feats, and rules |
-| `query_orcus_rules` | Search Orcus 4e-compatible rules for classes, monsters, feats, and core rules |
-| `query_local_byod` | Search personal ingested files |
-| `parse_character` | Parse character sheet to structured data |
-| `sync_byod` | Index BYOD files (time-budgeted, re-call until complete) |
-| `clear_byod` | Delete BYOD index |
-| `list_byod_files` | List indexed files with status |
-| `inspect_byod_file` | Show chunk structure for a file |
-| `sync_file` | Index a single file by relative path |
-| `get_byod_chunk` | Retrieve full chunk content by file path + chunk index |
-| `discord_post` | Post messages to Discord webhooks with smart routing |
-| `discord_add_webhook` | Add a Discord webhook with name, URL, tags |
-| `discord_remove_webhook` | Remove a stored Discord webhook by name |
-| `discord_list_webhooks` | List all configured webhooks (URLs masked) |
-| `discord_test_webhook` | Send a test message to verify webhook connectivity |
-| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM. Auto-looks up OGL/DW/BRP/5E-compatible/BYOD rules, returns a cited ruling. Requires `mlx_lm.generate`. |
-| `resolve_from_context` | Full producer pipeline: take recent session transcript, detect rules question, look up rules, synthesize ruling, log it. |
-| `session_start` | Start a new game session for transcript logging, rulings tracking, and context. Returns a session ID. |
-| `session_end` | End the active game session. |
-| `session_list` | List all recorded game sessions, most recent first. |
-| `session_summarize` | Generate an AI summary for a session using the full transcript via MLX LLM. |
-| `log_transcript` | Log a transcript segment to the current session — what was just said at the table. |
-| `get_session_context` | Get recent transcript segments and rulings from a session — the last N minutes of game context. |
-| `search_transcript` | Full-text search across session transcripts — find what was said about a topic. |
-| `transcribe_audio` | Transcribe an audio file using local MLX Whisper. Requires `mlx_whisper` to be installed. |
+| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`). Infers mechanic from notation when omitted. |
+| `roll_table` | Roll on a named table. `source`: `ogl` or `byod`. Omit `table_name` with `source=byod` to list tables. |
+| `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
+| `query_local_byod` | Search ingested personal files. Returns `chunkIndex`. Optional `include_full`. |
+| `sync_byod` | Index BYOD files. Optional `relative_path` for a single file. |
+| `clear_byod` | Delete the BYOD index. |
+| `list_byod_files` | List indexed files. Optional `relative_path` inspects one file. |
+| `get_byod_chunk` | Retrieve full chunk content by path + chunk index. |
+| `parse_character` | Parse a character sheet into structured data. |
+| `discord_post` | Post to Discord webhooks with smart routing and embeds. |
+| `discord_webhook` | Manage webhooks: `action` add, remove, list, or test. |
+| `session` | Manage sessions: `action` start, end, list, delete, or summarize. |
+| `log_transcript` | Log a transcript segment to a session. |
+| `get_session_context` | Get recent transcript and rulings. |
+| `search_transcript` | Search session transcripts with SQL LIKE (not FTS5). |
+| `synthesize_ruling` | Cited rules ruling. Optional `from_context` uses recent transcript. Default `rules_system` from the session when `session_id` is set. |
+| `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. `action`: transcribe, list, or clear. Last chunk sets `complete: true`. |
+
 
 ## Environment
 

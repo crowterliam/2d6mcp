@@ -8,7 +8,7 @@ Use the **2d6 ± modifier vs. target number** mechanic. The standard difficulty 
 
 ### Standard Check
 ```
-roll_2d6(modifier, target_number)
+roll(notation: "2d6", mechanic: "2d6", modifier, target)
 ```
 - `modifier`: Integer from skill ranks, characteristic bonus, difficulty, or circumstance
 - `target_number`: Typically 8 for an average task (6 = easy, 10 = difficult, 12 = very difficult, 14 = formidable)
@@ -52,7 +52,7 @@ Alternative: some referees prefer adjusting the target number (easy = 6+, averag
 
 When no skill applies, use the characteristic modifier directly:
 ```
-roll_2d6(characteristic_bonus, 8)
+roll(mechanic: "2d6", modifier: characteristic_bonus, target: 8)
 ```
 The characteristic bonus is derived from the characteristic value (a hex digit 0–F in the UPP).
 
@@ -60,8 +60,8 @@ The characteristic bonus is derived from the characteristic value (a hex digit 0
 
 When circumstances are unusually favourable or unfavourable, roll 3d6 and keep the highest (boon) or lowest (bane) two:
 
-- **Boon**: Roll `roll_custom("3d6")`, take the two highest dice + modifier
-- **Bane**: Roll `roll_custom("3d6")`, take the two lowest dice + modifier
+- **Boon**: Roll `roll(notation: "3d6", mechanic: "raw")`, take the two highest dice + modifier
+- **Bane**: Roll `roll(notation: "3d6", mechanic: "raw")`, take the two lowest dice + modifier
 
 Note: You'll need to inspect individual dice from the custom roll to apply boon/bane logic manually.
 
@@ -71,7 +71,7 @@ Use the **d20 + modifier vs. target number** mechanic. The target is typically A
 
 ### Standard Check
 ```
-roll_d20(modifier, target, advantage, disadvantage)
+roll(mechanic: "d20", modifier, target, advantage, disadvantage)
 ```
 - `modifier`: Attack bonus, ability modifier, or proficiency bonus
 - `target`: Armor Class or Difficulty Class (optional — omitting returns a raw roll)
@@ -101,7 +101,7 @@ Use the **d100 roll-under** mechanic. Roll ≤ target to succeed. Lower rolls ar
 
 ### Standard Check
 ```
-roll_percentile(target)
+roll(mechanic: "percentile", target)
 ```
 - `target`: The percentile chance of success (e.g., 45 for a 45% skill, 60 for DEX×5)
 - `target` is optional — omitting returns a raw percentile roll
@@ -127,7 +127,7 @@ The tool returns:
 Use `roll_damage` for weapon damage with type labels:
 ```
 roll_damage("1d8 piercing")
-roll_damage("2d6+3 fire")
+roll(notation: "2d6+3 fire", mechanic: "damage")
 roll_damage("4d6 bludgeoning")
 roll_damage("1d4-1 slashing")
 ```

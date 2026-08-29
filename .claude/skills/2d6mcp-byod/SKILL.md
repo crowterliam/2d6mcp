@@ -23,7 +23,7 @@ Returns summary: `total`, `indexed`, `failed` counts, plus array of files with `
 
 ### Inspecting
 ```
-inspect_byod_file(relative_path)
+list_byod_files(relative_path)
 ```
 Shows how a file was chunked: metadata plus each chunk's `title`, `size`, `chunkIndex`. Titles reveal structure: PDF pages, markdown breadcrumbs, or part numbers.
 
@@ -35,7 +35,7 @@ Full-text search across all indexed files. 20 results max. AND-first with OR fal
 
 ### Single File Syncing
 ```
-sync_file(relative_path)
+sync_byod(relative_path)
 ```
 Indexes a single file by its relative path within `BYOD_PATH`. Use for large files that timeout in bulk `sync_byod`, or for selective indexing without a full sync. Already-indexed files (unchanged mtime+size) are skipped.
 
@@ -43,7 +43,7 @@ Indexes a single file by its relative path within `BYOD_PATH`. Use for large fil
 ```
 get_byod_chunk(file_path, chunk_index)
 ```
-`query_local_byod` returns search snippets. Use `get_byod_chunk` to retrieve the full chunk content for inference. Pass the file path and chunk index (from search results or `inspect_byod_file`). Essential when you need complete text rather than truncated snippets.
+`query_local_byod` returns search snippets. Use `get_byod_chunk` to retrieve the full chunk content for inference. Pass the file path and chunk index (from search results or `list_byod_files` with `relative_path`). Essential when you need complete text rather than truncated snippets.
 
 ### Clearing
 ```

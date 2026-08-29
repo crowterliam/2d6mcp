@@ -18,7 +18,7 @@
 import Database from "better-sqlite3";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { ensure5ecompatibleSchema } from "./database.js";
+import { ensure5ecompatibleSchema, close5ecompatibleDatabase } from "./database.js";
 
 const DEFAULT_SRD_PATH = resolve(process.cwd(), ".reference", "SRD");
 
@@ -52,7 +52,7 @@ export function populate5ecompatibleDatabase(
   });
   tx();
   rebuildFts(db);
-  db.close();
+  close5ecompatibleDatabase();
   return { success: true, message: `5E-compatible database populated at ${dbPath}` };
 }
 

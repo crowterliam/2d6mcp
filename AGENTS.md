@@ -38,7 +38,7 @@ The project is system-agnostic and avoids all third-party trademarks.
 npm install              # install all workspace dependencies
 npm run build            # compile all packages (tsc --build)
 npm run start            # run MCP server (packages/server/dist/index.js)
-npm test                 # run test suite (vitest, 209 tests)
+npm test                 # run test suite (vitest)
 npm run test:watch       # run tests in watch mode
 npm run test:coverage    # run tests with coverage
 npm run setup            # create BYOD consent token
@@ -113,9 +113,6 @@ packages/server/src/
   server.ts         # Server class, tool registration
   config.ts         # Environment config + BYOD gate
   cli.ts            # CLI entry for setup/populate commands
-  dice/
-    roller.ts       # Dice notation parser, 2d6 resolution (IMPORTS from @2d6mcp/shared)
-    tables.ts       # d66 / 2d6 table rolling
   ogl/
     database.ts     # SQLite connection + FTS5 setup (IMPORTS from @2d6mcp/ogl)
     queries.ts      # Rule search queries
@@ -148,6 +145,7 @@ packages/server/src/
     chunker.ts         # ffmpeg chunking, repetition cleanup
     speakers.ts        # silence-gap speaker diarization
   rulings/
+    retrieve.ts        # Shared rules lookup for synthesize_ruling
     mlx-synthesize.ts  # MLX LM + llama.cpp backend dispatch, quality filter
     backends/
       llamacpp.ts      # llama.cpp LLM backend (Win/Linux)
@@ -172,50 +170,30 @@ packages/shared/src/
 
 | Tool | Purpose |
 |------|---------|
-| `roll_2d6` | Roll 2d6 with modifier, compare against target |
-| `roll_d20` | Roll d20 with modifier, advantage/disadvantage, AC/DC comparison, critical hits, fumbles |
-| `roll_percentile` | Roll d100 with BRP-style roll-under, critical success, and fumble detection |
-| `roll_damage` | Roll damage dice with optional type (e.g., `"2d6+3 fire"`, `"1d8 piercing"`) |
-| `roll_custom` | Roll any dice notation (`3d6`, `d66`, `4d6+2`) |
-| `roll_table` | Roll on a named table from any rules system (use `system` param: ogl/dw/brp/5ecompatible/orcus) |
-| `query_ogl_rules` | Search OGL rules for skills, careers, equipment, tables |
-| `query_dw_rules` | Search DW rules for moves, classes, spells, equipment, monsters, GM tools |
-| `query_brp_rules` | Search BRP rules for characteristics, skills, professions, weapons, armor, spot rules, foes |
-| `query_5ecompatible_rules` | Search 5E-compatible rules for spells, monsters, classes, feats |
-| `query_orcus_rules` | Search Orcus d20-compatible rules for classes, monsters, feats, and core rules |
-| `query_local_byod` | Full-text search across personal ingested files |
-| `parse_character` | Parse character sheet into structured data |
-| `sync_byod` | Index/re-index files from BYOD directory |
-| `clear_byod` | Delete BYOD index to start fresh |
-| `list_byod_files` | List indexed files with status and chunk counts |
-| `inspect_byod_file` | Show chunk structure for a specific file |
-| `sync_file` | Index a single file by relative path (for large files that timeout in bulk sync) |
-| `get_byod_chunk` | Retrieve full chunk content by file path + chunk index |
-| `discord_post` | Post messages to Discord webhooks with smart routing based on context tags |
-| `discord_add_webhook` | Add a Discord webhook with name, URL, tags, and description |
-| `discord_remove_webhook` | Remove a stored Discord webhook by name |
-| `discord_list_webhooks` | List all configured webhooks (URLs partially masked) |
-| `discord_test_webhook` | Send a test message to verify webhook connectivity |
-| `synthesize_ruling` | Synthesize a rules ruling using local MLX LLM. Auto-looks up OGL/DW/BRP/5E/Orcus/BYOD rules, returns a cited ruling. Requires `mlx_lm.generate`. |
-| `resolve_from_context` | Full producer pipeline: take recent session transcript, detect rules question, look up rules, synthesize ruling, log it. |
-| `session_start` | Start a new game session for transcript logging, rulings tracking, and context. Returns a session ID. |
-| `session_end` | End the active game session. |
-| `session_list` | List all recorded game sessions, most recent first. |
-| `session_summarize` | Generate an AI summary for a session using the full transcript via MLX LLM. |
-| `log_transcript` | Log a transcript segment to the current session — what was just said at the table. |
-| `get_session_context` | Get recent transcript segments and rulings from a session — the last N minutes of game context. |
-| `search_transcript` | Full-text search across session transcripts — find what was said about a topic. |
-| `transcribe_audio` | Transcribe an audio file using local MLX Whisper. Requires `mlx_whisper` to be installed. |
-| `list_transcriptions` | List all in-progress audio transcriptions with chunk progress. |
-| `clear_transcription` | Reset transcription progress for a specific file, or clear all state. |
-| `delete_session` | Permanently delete a session and all its transcript segments and rulings. |
+| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`). Infers mechanic from notation when omitted. |
+| `roll_table` | Roll on a named table. `source`: `ogl` or `byod`. Omit `table_name` with `source=byod` to list tables. |
+| `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
+| `query_local_byod` | Search ingested personal files. Returns `chunkIndex`. Optional `include_full`. |
+| `sync_byod` | Index BYOD files. Optional `relative_path` for a single file. |
+| `clear_byod` | Delete the BYOD index. |
+| `list_byod_files` | List indexed files. Optional `relative_path` inspects one file. |
+| `get_byod_chunk` | Retrieve full chunk content by path + chunk index. |
+| `parse_character` | Parse a character sheet into structured data. |
+| `discord_post` | Post to Discord webhooks with smart routing and embeds. |
+| `discord_webhook` | Manage webhooks: `action` add, remove, list, or test. |
+| `session` | Manage sessions: `action` start, end, list, delete, or summarize. |
+| `log_transcript` | Log a transcript segment to a session. |
+| `get_session_context` | Get recent transcript and rulings. |
+| `search_transcript` | Search session transcripts with SQL LIKE (not FTS5). |
+| `synthesize_ruling` | Cited rules ruling. Optional `from_context` uses recent transcript. Default `rules_system` from the session when `session_id` is set. BYOD runs whenever consent is on. |
+| `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. `action`: transcribe, list, or clear. Last chunk sets `complete: true`. |
 
 ## Session Management & Ruling Synthesis
 
-- **Session lifecycle**: Start with `session_start`, log with `log_transcript`, end with `session_end`.
-- **BYOD system scoping**: Pass `byod_system` to `session_start` to filter BYOD searches.
-- **Ruling synthesis**: `synthesize_ruling` auto-looks up OGL/DW/BRP/5E/Orcus/BYOD rules, passes to MLX LLM, returns cited ruling with quality filter.
-- **Audio transcription**: `transcribe_audio` processes files in 2-minute chunks with progress tracking. Call repeatedly until `complete: true`.
+- **Session lifecycle**: Start with `session` `action: start`, log with `log_transcript`, end with `session` `action: end`.
+- **BYOD system scoping**: Pass `byod_system` on session start to filter BYOD searches.
+- **Ruling synthesis**: `synthesize_ruling` auto-looks up licensed rules and BYOD (when consent is on). Default `rules_system` comes from the session when `session_id` is set.
+- **Audio transcription**: `transcribe_audio` processes files longer than 180 seconds in 2-minute chunks. Call repeatedly until `complete: true`. The last chunk sets `complete` itself.
 
 ## Cross-Platform Backends
 
@@ -304,7 +282,7 @@ These rules apply to **all AI coding agents** working on this repository. Follow
 Run these **before every commit** that includes code changes:
 
 ```bash
-npm run typecheck    # tsc --build --noEmit across all packages
+npm run typecheck    # tsc --build across all packages
 npm test             # vitest test suite
 npm run build        # full compilation (tsc --build)
 ```
@@ -336,7 +314,7 @@ npm run build        # full compilation (tsc --build)
 2. **PR description** must include:
    - What changed (2-3 sentences)
    - Files affected (list key files)
-   - Test results (`npm test` output — 270 pass)
+   - Test results (`npm test` output)
    - Breaking changes (if any)
 
 3. **Do not self-merge without review.** A second pair of eyes catches things you missed — especially security issues and path mismatches. Wait for approval before merging.

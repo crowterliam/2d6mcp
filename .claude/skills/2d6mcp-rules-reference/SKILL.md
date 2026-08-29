@@ -10,7 +10,7 @@ You have access to five pre-populated rules databases (OGL/Cepheus Engine SRD fo
 ## OGL Database Search
 
 ```
-query_ogl_rules(search_term, category?)
+query_rules(system: "ogl", search_term, category?)
 ```
 
 ### Categories
@@ -30,16 +30,16 @@ query_ogl_rules(search_term, category?)
 
 ### Examples
 ```
-query_ogl_rules("laser rifle")                    → equipment match
-query_ogl_rules("combat", category: "rules")      → combat rules only
-query_ogl_rules("navy", category: "careers")      → navy career path
-query_ogl_rules("Astrogation", category: "skills") → skill description
+query_rules(system: "ogl", "laser rifle")                    → equipment match
+query_rules(system: "ogl", "combat", category: "rules")      → combat rules only
+query_rules(system: "ogl", "navy", category: "careers")      → navy career path
+query_rules(system: "ogl", "Astrogation", category: "skills") → skill description
 ```
 
 ## DW Database Search
 
 ```
-query_dw_rules(search_term, category?)
+query_rules(system: "dw", search_term, category?)
 ```
 
 ### Categories
@@ -56,16 +56,16 @@ query_dw_rules(search_term, category?)
 
 ### Examples
 ```
-query_dw_rules("hack and slash")               → move description
-query_dw_rules("wizard", category: "classes")   → wizard class
-query_dw_rules("goblin", category: "monsters")  → goblin stat block
-query_dw_rules("front", category: "gm_tools")   → front creation rules
+query_rules(system: "dw", "hack and slash")               → move description
+query_rules(system: "dw", "wizard", category: "classes")   → wizard class
+query_rules(system: "dw", "goblin", category: "monsters")  → goblin stat block
+query_rules(system: "dw", "front", category: "gm_tools")   → front creation rules
 ```
 
 ## BRP Database Search
 
 ```
-query_brp_rules(search_term, category?)
+query_rules(system: "brp", search_term, category?)
 ```
 
 ### Categories
@@ -82,16 +82,16 @@ query_brp_rules(search_term, category?)
 
 ### Examples
 ```
-query_brp_rules("dodge", category: "skills")          → dodge skill
-query_brp_rules("sword", category: "weapons")          → sword stats
-query_brp_rules("armor", category: "armor")            → armor types
-query_brp_rules("combat", category: "spot_rules")      → combat spot rules
+query_rules(system: "brp", "dodge", category: "skills")          → dodge skill
+query_rules(system: "brp", "sword", category: "weapons")          → sword stats
+query_rules(system: "brp", "armor", category: "armor")            → armor types
+query_rules(system: "brp", "combat", category: "spot_rules")      → combat spot rules
 ```
 
 ## 5E-compatible Database Search
 
 ```
-query_5ecompatible_rules(search_term, category?)
+query_rules(system: "5ecompatible", search_term, category?)
 ```
 
 ### Categories
@@ -107,7 +107,7 @@ query_5ecompatible_rules(search_term, category?)
 ## 4E-Compatible (Orcus) Database Search
 
 ```
-query_orcus_rules(search_term, category?)
+query_rules(system: "orcus", search_term, category?)
 ```
 
 Search the Orcus 4e-compatible rules database for classes, monsters, feats, and core rules.
@@ -123,15 +123,15 @@ Search the Orcus 4e-compatible rules database for classes, monsters, feats, and 
 
 ### Examples
 ```
-query_orcus_rules("Commander", category: "classes")           → class features
-query_orcus_rules("dragon", category: "monsters")              → monster stat block
+query_rules(system: "orcus", "Commander", category: "classes")           → class features
+query_rules(system: "orcus", "dragon", category: "monsters")              → monster stat block
 ```
 
 ### Examples
 ```
-query_5ecompatible_rules("fireball", category: "spells")     → spell description
-query_5ecompatible_rules("goblin", category: "monsters")     → monster stat block
-query_5ecompatible_rules("tough", category: "feats")         → feat description
+query_rules(system: "5ecompatible", "fireball", category: "spells")     → spell description
+query_rules(system: "5ecompatible", "goblin", category: "monsters")     → monster stat block
+query_rules(system: "5ecompatible", "tough", category: "feats")         → feat description
 ```
 
 ## Table Rolling
@@ -140,7 +140,7 @@ query_5ecompatible_rules("tough", category: "feats")         → feat descriptio
 roll_table(table_name, dice_type?, system?)
 ```
 
-Roll on a named table from any rules system. Use the `system` parameter to specify which database to search (ogl/dw/brp/5ecompatible/orcus, default: ogl). Available dice types: `1d6`, `2d6`, `d66`, `1d3`, `2d3`, `d4`, `d8`, `d10`, `d12`, `d20`, `d100`. Use `query_ogl_rules("", category: "list_tables")` to see all available OGL tables.
+Roll on a named table from any rules system. Use the `system` parameter to specify which database to search (ogl/dw/brp/5ecompatible/orcus, default: ogl). Available dice types: `1d6`, `2d6`, `d66`, `1d3`, `2d3`, `d4`, `d8`, `d10`, `d12`, `d20`, `d100`. Use `query_rules(system: "ogl", "", category: "list_tables")` to see all available OGL tables.
 
 ## BYOD Search
 
@@ -158,7 +158,7 @@ Retrieves the full chunk content for a specific file and chunk index. Use after 
 
 ## Search Strategy
 
-1. **Match the system**: Use the appropriate tool — `query_ogl_rules` (sci-fi), `query_dw_rules` (fantasy), `query_brp_rules` (percentile), `query_5ecompatible_rules` (d20 fantasy), or `query_orcus_rules` (4e-compatible)
+1. **Match the system**: Use the appropriate tool — `query_rules` with `system: "ogl"` (sci-fi), `query_rules` with `system: "dw"` (fantasy), `query_rules` with `system: "brp"` (percentile), `query_rules` with `system: "5ecompatible"` (d20 fantasy), or `query_rules` with `system: "orcus"` (4e-compatible)
 2. **Be specific**: Search for the exact mechanic name or equipment item
 3. **Try categories**: If a broad search returns too much, narrow with a `category`
 4. **Fall back to BYOD**: If core rules don't have what you need, try `query_local_byod`

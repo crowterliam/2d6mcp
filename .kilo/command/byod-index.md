@@ -29,9 +29,9 @@ Manage your personal RPG file index in 2d6mcp.
 ## Behaviour
 
 - `sync`: Indexes files in time-budgeted batches. Returns `complete: false` if more files remain — re-run.
-- `file`: Indexes a single file by relative path. Useful for large files that timeout during bulk sync.
+- `file`: Calls `sync_byod` with `relative_path`. Useful for large files that timeout during bulk sync.
 - `list`: Shows all files with status, chunk counts, and ingestion dates
-- `inspect`: Shows how a file was chunked (page boundaries for PDFs, headings for markdown)
+- `inspect`: Calls `list_byod_files` with `relative_path` to show how a file was chunked
 - `get`: Retrieves full chunk content (up to 8KB) by file path and chunk index. Use after `search` returns snippets.
 - `search`: Full-text search across all indexed files
 - `clear`: Deletes the database. Next sync starts from zero.

@@ -18,7 +18,7 @@ Take a natural-language rules question, auto-look up relevant rules from OGL/DW/
 - Rulings include `[Verify: ...]` warnings when numbers in the ruling don't appear in the source text (quality filter)
 
 ```
-resolve_from_context(session_id, context_minutes?)
+synthesize_ruling(from_context: true, session_id, minutes)
 ```
 
 Full producer pipeline: takes the last N minutes of session transcript, searches rules, synthesizes a ruling, and logs it. Use when the GM wants a ruling on what was just discussed — no need to formulate the question.
@@ -26,7 +26,7 @@ Full producer pipeline: takes the last N minutes of session transcript, searches
 ## OGL Database Search
 
 ```
-query_ogl_rules(search_term, category?)
+query_rules(system: "ogl", search_term, category?)
 ```
 
 ### Categories
@@ -48,17 +48,17 @@ When no category is specified, the search queries ALL categories and returns com
 
 ### Examples
 ```
-query_ogl_rules("laser rifle")                    → equipment match
-query_ogl_rules("combat", category: "rules")      → combat rules only
-query_ogl_rules("navy", category: "careers")      → navy career path
-query_ogl_rules("Astrogation", category: "skills") → skill description
-query_ogl_rules("critical hit", category: "starships") → ship damage tables
+query_rules(system: "ogl", "laser rifle")                    → equipment match
+query_rules(system: "ogl", "combat", category: "rules")      → combat rules only
+query_rules(system: "ogl", "navy", category: "careers")      → navy career path
+query_rules(system: "ogl", "Astrogation", category: "skills") → skill description
+query_rules(system: "ogl", "critical hit", category: "starships") → ship damage tables
 ```
 
 ## Dungeon World Database Search
 
 ```
-query_dw_rules(search_term, category?)
+query_rules(system: "dw", search_term, category?)
 ```
 
 Search the Dungeon World rules database for moves, classes, spells, equipment, monsters, or GM tools.
@@ -77,17 +77,17 @@ Search the Dungeon World rules database for moves, classes, spells, equipment, m
 
 ### Examples
 ```
-query_dw_rules("hack and slash")              → basic move
-query_dw_rules("wizard", category: "classes") → wizard class
-query_dw_rules("fireball", category: "spells") → wizard spell
-query_dw_rules("goblin", category: "monsters") → monster stat block
-query_dw_rules("front", category: "gm_tools")  → campaign front rules
+query_rules(system: "dw", "hack and slash")              → basic move
+query_rules(system: "dw", "wizard", category: "classes") → wizard class
+query_rules(system: "dw", "fireball", category: "spells") → wizard spell
+query_rules(system: "dw", "goblin", category: "monsters") → monster stat block
+query_rules(system: "dw", "front", category: "gm_tools")  → campaign front rules
 ```
 
 ## BRP Database Search
 
 ```
-query_brp_rules(search_term, category?)
+query_rules(system: "brp", search_term, category?)
 ```
 
 Search the Basic Roleplaying rules database for characteristics, skills, professions, weapons, armor, spot rules, or foes.
@@ -106,16 +106,16 @@ Search the Basic Roleplaying rules database for characteristics, skills, profess
 
 ### Examples
 ```
-query_brp_rules("firearm")                    → weapon match
-query_brp_rules("soldier", category: "professions") → profession template
-query_brp_rules("dodge", category: "skills")  → skill description
-query_brp_rules("armor", category: "spot_rules") → spot rules
+query_rules(system: "brp", "firearm")                    → weapon match
+query_rules(system: "brp", "soldier", category: "professions") → profession template
+query_rules(system: "brp", "dodge", category: "skills")  → skill description
+query_rules(system: "brp", "armor", category: "spot_rules") → spot rules
 ```
 
 ## 5E-Compatible Database Search
 
 ```
-query_5ecompatible_rules(search_term, category?)
+query_rules(system: "5ecompatible", search_term, category?)
 ```
 
 Search the 5E-compatible SRD rules database for spells, monsters, classes, feats, and rules.
@@ -132,16 +132,16 @@ Search the 5E-compatible SRD rules database for spells, monsters, classes, feats
 
 ### Examples
 ```
-query_5ecompatible_rules("fireball", category: "spells")    → spell description
-query_5ecompatible_rules("dragon", category: "monsters")    → monster stat block
-query_5ecompatible_rules("fighter", category: "classes")    → class features
-query_5ecompatible_rules("grappler", category: "feats")     → feat description
+query_rules(system: "5ecompatible", "fireball", category: "spells")    → spell description
+query_rules(system: "5ecompatible", "dragon", category: "monsters")    → monster stat block
+query_rules(system: "5ecompatible", "fighter", category: "classes")    → class features
+query_rules(system: "5ecompatible", "grappler", category: "feats")     → feat description
 ```
 
 ## 4E-Compatible (Orcus) Database Search
 
 ```
-query_orcus_rules(search_term, category?)
+query_rules(system: "orcus", search_term, category?)
 ```
 
 Search the Orcus 4e-compatible rules database for classes, monsters, feats, and core rules. Orcus is a 4e-compatible system released under OGL v1.0a.
@@ -157,9 +157,9 @@ Search the Orcus 4e-compatible rules database for classes, monsters, feats, and 
 
 ### Examples
 ```
-query_orcus_rules("Commander", category: "classes")           → class features
-query_orcus_rules("dragon", category: "monsters")              → monster stat block
-query_orcus_rules("Athame", category: "classes")               → class features
+query_rules(system: "orcus", "Commander", category: "classes")           → class features
+query_rules(system: "orcus", "dragon", category: "monsters")              → monster stat block
+query_rules(system: "orcus", "Athame", category: "classes")               → class features
 ```
 
 ## Table Rolling
@@ -190,11 +190,11 @@ Searches your personally ingested PDFs, text files, and markdown files. Requires
 
 ### BYOD System Filter
 
-When you start a session with `byod_system` set (e.g., `"call of cthulhu"`, `"traveller"`), all BYOD searches in `synthesize_ruling` and `resolve_from_context` are automatically filtered to files whose names contain that system. This prevents cross-system contamination — Trail of Cthulhu results won't appear when you're running Call of Cthulhu.
+When you start a session with `byod_system` set (e.g., `"call of cthulhu"`, `"traveller"`), all BYOD searches in `synthesize_ruling` and `synthesize_ruling` with `from_context` are automatically filtered to files whose names contain that system. This prevents cross-system contamination — Trail of Cthulhu results won't appear when you're running Call of Cthulhu.
 
 Start a session with the filter:
 ```
-session_start(name: "Session 1", byod_system: "call of cthulhu")
+session(action: "start", name: "Session 1", byod_system: "call of cthulhu")
 ```
 
 ### Search Details
@@ -222,7 +222,7 @@ Transcribe an audio file (WAV, MP3, M4A, FLAC) using local MLX Whisper. Requires
 
 ## Search Strategy
 
-1. **Match the system**: Use the appropriate tool — `query_ogl_rules` (sci-fi), `query_dw_rules` (fantasy), `query_brp_rules` (percentile), `query_5ecompatible_rules` (d20 fantasy), or `query_orcus_rules` (4e-compatible)
+1. **Match the system**: Use the appropriate tool — `query_rules` with `system: "ogl"` (sci-fi), `query_rules` with `system: "dw"` (fantasy), `query_rules` with `system: "brp"` (percentile), `query_rules` with `system: "5ecompatible"` (d20 fantasy), or `query_rules` with `system: "orcus"` (4e-compatible)
 2. **Be specific**: Search for the exact mechanic name or equipment item
 3. **Try categories**: If a broad search returns too much, narrow with a `category`
 4. **Use AI synthesis for natural questions**: `synthesize_ruling` auto-looks up rules across all databases and produces a cited answer

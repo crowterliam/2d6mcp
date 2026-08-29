@@ -15,6 +15,7 @@ import { dirname } from "node:path";
 import { ORCUS_SCHEMA_DDL } from "./schema.sql.js";
 
 let orcusDb: Database.Database | null = null;
+let orcusSchemaReady = false;
 
 export function getOrcusDatabase(dbPath: string): Database.Database {
   if (orcusDb) return orcusDb;
@@ -43,7 +44,9 @@ export function initOrcusSchema(db: Database.Database): void {
 
 export function ensureOrcusSchema(dbPath: string): Database.Database {
   const database = getOrcusDatabase(dbPath);
+  if (orcusSchemaReady) return database;
   initOrcusSchema(database);
+  orcusSchemaReady = true;
   return database;
 }
 
@@ -52,4 +55,5 @@ export function closeOrcusDatabase(): void {
     orcusDb.close();
     orcusDb = null;
   }
+  orcusSchemaReady = false;
 }
