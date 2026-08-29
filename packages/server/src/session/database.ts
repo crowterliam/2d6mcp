@@ -287,6 +287,7 @@ export interface TranscriptionProgress {
   source_duration_seconds: number | null;
   model_used: string | null;
   session_id: string | null;
+  assembled_text: string;
   created_at: number;
   updated_at: number;
 }
@@ -301,6 +302,7 @@ export function getOrCreateProgress(
 
   if (existing) {
     existing.processed_chunks = JSON.parse(existing.processed_chunks as unknown as string);
+    existing.assembled_text = existing.assembled_text ?? "";
     return existing;
   }
 
@@ -308,8 +310,8 @@ export function getOrCreateProgress(
   database
     .prepare(
       `INSERT INTO transcription_progress
-       (file_path, chunk_size_seconds, total_chunks, processed_chunks, created_at, updated_at)
-       VALUES (?, ?, ?, '[]', ?, ?)`
+       (file_path, chunk_size_seconds, total_chunks, processed_chunks, assembled_text, created_at, updated_at)
+       VALUES (?, ?, ?, '[]', '', ?, ?)`
     )
     .run(filePath, 120, 0, now, now);
 
@@ -322,6 +324,7 @@ export function getOrCreateProgress(
     source_duration_seconds: null,
     model_used: null,
     session_id: null,
+    assembled_text: "",
     created_at: now,
     updated_at: now,
   };
@@ -377,6 +380,32 @@ export function markChunkProcessed(
       "UPDATE transcription_progress SET processed_chunks = ?, updated_at = ? WHERE file_path = ?"
     )
     .run(JSON.stringify([...processed]), now, filePath);
+}
+
+/** Append a chunk's transcript text for later full_text assembly (order = processing order). */
+export function appendAssembledText(
+  database: Database.Database,
+  filePath: string,
+  text: string
+): void {
+  const progress = getOrCreateProgress(database, filePath);
+  const next = progress.assembled_text
+    ? `${progress.assembled_text} ${text}`
+    : text;
+  const now = Date.now();
+  database
+    .prepare(
+      "UPDATE transcription_progress SET assembled_text = ?, updated_at = ? WHERE file_path = ?"
+    )
+    .run(next, now, filePath);
+}
+
+export function getAssembledText(
+  database: Database.Database,
+  filePath: string
+): string {
+  const progress = getOrCreateProgress(database, filePath);
+  return progress.assembled_text ?? "";
 }
 
 export function getNextUnprocessedChunk(

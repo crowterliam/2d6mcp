@@ -49,10 +49,14 @@ CREATE TABLE IF NOT EXISTS transcription_progress (
   source_duration_seconds REAL,
   model_used TEXT,
   session_id TEXT,
+  assembled_text TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
 
 -- Migration: add byod_system column to existing sessions table
 ALTER TABLE sessions ADD COLUMN byod_system TEXT;
+
+-- Migration: accumulate chunk text for full_text without relying on session transcripts
+ALTER TABLE transcription_progress ADD COLUMN assembled_text TEXT NOT NULL DEFAULT '';
 `;

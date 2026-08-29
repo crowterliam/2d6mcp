@@ -9,10 +9,11 @@ import {
   getRecentContext,
   storeRuling,
   logTranscript,
-  getTranscript,
   getOrCreateProgress,
   updateProgress,
   markChunkProcessed,
+  appendAssembledText,
+  getAssembledText,
   getNextUnprocessedChunk,
   deleteProgress,
 } from "../../session/database.js";
@@ -27,19 +28,9 @@ const LONG_AUDIO_SECONDS = 180;
 
 function assembleTranscript(
   sessionDb: ReturnType<typeof openSessionDb>,
-  sessionId: string | undefined,
-  lastChunkText: string
+  filePath: string
 ): string {
-  if (sessionId) {
-    const segments = getTranscript(sessionDb, sessionId, 500);
-    if (segments.length > 0) {
-      return segments
-        .reverse()
-        .map((s) => s.text)
-        .join(" ");
-    }
-  }
-  return lastChunkText;
+  return getAssembledText(sessionDb, filePath).trim();
 }
 
 export async function handleSynthesizeRuling(args: Record<string, unknown> | undefined): Promise<{
@@ -213,6 +204,7 @@ export async function handleTranscribeAudio(args: Record<string, unknown> | unde
         const diarized = await transcribeChunk(chunkFile, config.mlxWhisperModel);
 
         markChunkProcessed(sessionDb, resolvedPath, 0);
+        appendAssembledText(sessionDb, resolvedPath, diarized.text);
         if (sessionId) {
           try {
             for (const seg of diarized.segments) {
@@ -223,6 +215,7 @@ export async function handleTranscribeAudio(args: Record<string, unknown> | unde
 
         if (manifest.totalChunks <= 1) {
           if (manifest.tempDir) cleanupChunks(manifest.tempDir);
+          const fullText = assembleTranscript(sessionDb, resolvedPath);
           deleteProgress(sessionDb, resolvedPath);
           return {
             content: [{ type: "text", text: JSON.stringify({
@@ -231,7 +224,7 @@ export async function handleTranscribeAudio(args: Record<string, unknown> | unde
               total_chunks: 1,
               segment_logged: !!sessionId,
               text: diarized.text,
-              full_text: assembleTranscript(sessionDb, sessionId, diarized.text),
+              full_text: fullText,
               segments: diarized.segments,
               speakers_detected: diarized.speakerCount,
             }, null, 2) }],
@@ -255,8 +248,7 @@ export async function handleTranscribeAudio(args: Record<string, unknown> | unde
       const nextChunk = getNextUnprocessedChunk(sessionDb, resolvedPath);
 
       if (nextChunk === null) {
-        const lastText = "";
-        const fullText = assembleTranscript(sessionDb, sessionId, lastText);
+        const fullText = assembleTranscript(sessionDb, resolvedPath);
         if (progress?.temp_dir) cleanupChunks(progress.temp_dir);
         deleteProgress(sessionDb, resolvedPath);
 
@@ -281,6 +273,7 @@ export async function handleTranscribeAudio(args: Record<string, unknown> | unde
       const diarized = await transcribeChunk(chunkFile!, config.mlxWhisperModel);
 
       markChunkProcessed(sessionDb, resolvedPath, nextChunk);
+      appendAssembledText(sessionDb, resolvedPath, diarized.text);
       if (sessionId) {
         try {
           for (const seg of diarized.segments) {
@@ -291,7 +284,7 @@ export async function handleTranscribeAudio(args: Record<string, unknown> | unde
 
       const remaining = (progress?.total_chunks ?? 0) - nextChunk - 1;
       if (remaining <= 0) {
-        const fullText = assembleTranscript(sessionDb, sessionId, diarized.text);
+        const fullText = assembleTranscript(sessionDb, resolvedPath);
         if (progress?.temp_dir) cleanupChunks(progress.temp_dir);
         deleteProgress(sessionDb, resolvedPath);
         return {

@@ -152,6 +152,13 @@ export function rebuildByodFts(db: Database.Database): void {
   db.exec(`INSERT INTO byod_fts(byod_fts) VALUES ('rebuild');`);
 }
 
+/** True when byod_chunks and external-content byod_fts row counts diverge (e.g. crash before rebuild). */
+export function isByodFtsStale(db: Database.Database): boolean {
+  const chunks = (db.prepare("SELECT COUNT(*) AS c FROM byod_chunks").get() as { c: number }).c;
+  const fts = (db.prepare("SELECT COUNT(*) AS c FROM byod_fts").get() as { c: number }).c;
+  return chunks !== fts;
+}
+
 export function hasIndexedFiles(db: Database.Database): boolean {
   const row = db.prepare("SELECT COUNT(*) AS cnt FROM byod_files").get() as { cnt: number };
   return row.cnt > 0;
