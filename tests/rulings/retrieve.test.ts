@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { retrieveRulesContext, questionFromTranscript } from "../../packages/server/src/rulings/retrieve.js";
@@ -62,10 +62,6 @@ describe("retrieveRulesContext", () => {
   it("runs BYOD for ogl when consent is on", async () => {
     const byodPath = join(tmpdir(), `2d6mcp-retrieve-byod-${Date.now()}`);
     mkdirSync(join(byodPath, "Uniquebyodgrant"), { recursive: true });
-    writeFileSync(
-      join(byodPath, "Uniquebyodgrant", "house.md"),
-      "Uniquebyodgrant: cover always grants a -2 DM."
-    );
     process.env.AGREE_BYOD_USE = "true";
     process.env.BYOD_PATH = byodPath;
 
