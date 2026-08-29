@@ -42,7 +42,7 @@ export async function handleDiscordPost(args: Record<string, unknown> | undefine
               success: false,
               routing,
               results: [],
-              error: "No webhooks matched. Use discord_add_webhook to configure webhooks, or provide explicit webhook_names.",
+              error: "No webhooks matched. Use discord_webhook with action add to configure webhooks, or provide explicit webhook_names.",
             },
             null,
             2
@@ -205,6 +205,28 @@ export async function handleDiscordListWebhooks(args: Record<string, unknown> | 
   };
 }
 
+export async function handleDiscordWebhook(args: Record<string, unknown> | undefined): Promise<{
+  content: Array<{ type: "text"; text: string }>;
+  isError?: boolean;
+}> {
+  const action = typeof args?.action === "string" ? args.action : "";
+  switch (action) {
+    case "add":
+      return handleDiscordAddWebhook(args);
+    case "remove":
+      return handleDiscordRemoveWebhook(args);
+    case "list":
+      return handleDiscordListWebhooks(args);
+    case "test":
+      return handleDiscordTestWebhook(args);
+    default:
+      return {
+        content: [{ type: "text", text: "Error: action must be add, remove, list, or test" }],
+        isError: true,
+      };
+  }
+}
+
 export async function handleDiscordTestWebhook(args: Record<string, unknown> | undefined): Promise<{
   content: Array<{ type: "text"; text: string }>;
   isError?: boolean;
@@ -223,7 +245,7 @@ export async function handleDiscordTestWebhook(args: Record<string, unknown> | u
       content: [
         {
           type: "text",
-          text: `Webhook "${name}" not found. Use discord_list_webhooks to see available webhooks.`,
+          text: `Webhook "${name}" not found. Use discord_webhook with action list to see available webhooks.`,
         },
       ],
       isError: true,

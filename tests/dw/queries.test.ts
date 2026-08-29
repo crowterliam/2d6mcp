@@ -36,9 +36,11 @@ describe("DW queries against bundled database", () => {
   });
 
   describe("searchDwRules", () => {
-    it("returns results or empty gracefully for any term", () => {
-      const results = searchDwRules(db, "move");
-      expect(Array.isArray(results)).toBe(true);
+    it("returns FTS rows after dw_sections is seeded", () => {
+      const results = searchDwRules(db, "hack");
+      expect(results.length).toBeGreaterThan(0);
+      expect(results[0]).toHaveProperty("title");
+      expect(results[0]).toHaveProperty("snippet");
     });
 
     it("returns empty for nonsense terms", () => {

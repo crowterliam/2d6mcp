@@ -15,7 +15,7 @@
 import Database from "better-sqlite3";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve, join } from "node:path";
-import { ensureOrcusSchema } from "./database.js";
+import { ensureOrcusSchema, closeOrcusDatabase } from "./database.js";
 
 const DEFAULT_ORCUS_PATH = resolve(process.cwd(), ".reference", "orcus");
 
@@ -48,7 +48,7 @@ export function populateOrcusDatabase(
   });
   tx();
   rebuildFts(db);
-  db.close();
+  closeOrcusDatabase();
   return { success: true, message: `Orcus database populated at ${dbPath}` };
 }
 

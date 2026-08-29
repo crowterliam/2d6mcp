@@ -292,9 +292,9 @@ async function main() {
     }
   }
 
-  // Step 6 — Test resolve_from_context
+  // Step 6 — Test synthesize_ruling from_context
   console.log(`\n${"-".repeat(50)}`);
-  console.log("[resolve_from_context] Testing contextual pipeline...");
+  console.log("[synthesize_ruling from_context] Testing contextual pipeline...");
 
   const { transcripts, rulings } = getRecentContext(sessionDb, session.id, 60);
   console.log(`  Recent transcript segments: ${transcripts.length}`);

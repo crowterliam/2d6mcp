@@ -8,9 +8,6 @@ dist/
 .mcp-byod-consent-accepted
 .mcp-discord-webhooks.json
 .reference
-.dev.vars
-.wrangler/
-wrangler.toml
 
 # macOS system files
 .DS_Store

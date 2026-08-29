@@ -24,7 +24,7 @@
 
 import Database from "better-sqlite3";
 import { existsSync } from "node:fs";
-import { ensureBrpSchema } from "./database.js";
+import { ensureBrpSchema, closeBrpDatabase } from "./database.js";
 
 export function populateBrpDatabase(dbPath: string): { success: boolean; message: string } {
   if (existsSync(dbPath)) {
@@ -47,7 +47,7 @@ export function populateBrpDatabase(dbPath: string): { success: boolean; message
   });
   tx();
   rebuildFts(db);
-  db.close();
+  closeBrpDatabase();
   return { success: true, message: `BRP database populated at ${dbPath}` };
 }
 

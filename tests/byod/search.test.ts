@@ -120,6 +120,23 @@ describe("searchByodIndex", () => {
     expect(results.length).toBeGreaterThanOrEqual(1);
     expect(results[0].title).toContain("Combat Rules");
     expect(results[0].filePath).toBe("rules.md");
+    expect(results[0].chunkIndex).toBe(0);
+    closeByodDatabase(byodPath);
+  });
+
+  it("rebuilds FTS when chunks exist but the index is empty", async () => {
+    const { getByodDatabase, indexChunks, searchByodIndex, ensureByodFts, closeByodDatabase } = await import("../../packages/server/src/byod/search.js");
+    const byodPath = uniqueByodPath();
+    mkdirSync(byodPath, { recursive: true });
+    const db = getByodDatabase(byodPath);
+    indexChunks(db, "rules.md", "rules.md", ".md", 100, "h1", null, [
+      { title: "Combat Rules", content: "When attacking, roll 2d6 and add your skill modifier", chunkIndex: 0 },
+    ]);
+
+    expect(searchByodIndex(db, "attacking")).toEqual([]);
+
+    ensureByodFts(db);
+    expect(searchByodIndex(db, "attacking").length).toBeGreaterThanOrEqual(1);
     closeByodDatabase(byodPath);
   });
 

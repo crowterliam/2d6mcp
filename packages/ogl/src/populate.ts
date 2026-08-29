@@ -12,7 +12,7 @@
 
 import Database from "better-sqlite3";
 import { existsSync } from "node:fs";
-import { ensureSchema } from "./database.js";
+import { ensureSchema, closeDatabase } from "./database.js";
 
 export function populateOglDatabase(dbPath: string): { success: boolean; message: string } {
   if (existsSync(dbPath)) {
@@ -35,7 +35,7 @@ export function populateOglDatabase(dbPath: string): { success: boolean; message
   });
   tx();
   rebuildFts(db);
-  db.close();
+  closeDatabase();
   return { success: true, message: `OGL database populated at ${dbPath}` };
 }
 

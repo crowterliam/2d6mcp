@@ -45,7 +45,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   typecheck:
-    name: Worker & Bridge Type Check
+    name: Type Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -57,11 +57,5 @@ jobs:
 
       - run: npm ci
 
-      - name: Build shared packages (Worker needs type declarations)
+      - name: Build and typecheck
         run: npm run build
-
-      - name: Worker typecheck
-        run: npx tsc --noEmit --project apps/worker/tsconfig.json
-
-      - name: Bridge typecheck
-        run: npx tsc --noEmit --project apps/bridge/tsconfig.json

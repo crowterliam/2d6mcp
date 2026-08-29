@@ -33,7 +33,7 @@ export async function handleRollByodTable(args: Record<string, unknown> | undefi
   const tables: { table: ParsedTable; filePath: string; fileName: string; chunkIndex: number }[] = [];
 
   for (const result of results) {
-    const chunk = getChunkContent(db, result.filePath, 0);
+    const chunk = getChunkContent(db, result.filePath, result.chunkIndex);
     if (!chunk) continue;
 
     const startIdx = chunk.chunk.content.toLowerCase().indexOf(tableName.toLowerCase());

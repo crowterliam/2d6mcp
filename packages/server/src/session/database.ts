@@ -284,11 +284,65 @@ export interface TranscriptionProgress {
   chunk_size_seconds: number;
   total_chunks: number;
   processed_chunks: number[];
+  chunk_texts: Record<string, string>;
   source_duration_seconds: number | null;
   model_used: string | null;
   session_id: string | null;
   created_at: number;
   updated_at: number;
+}
+
+function parseJsonArray(raw: unknown): number[] {
+  if (Array.isArray(raw)) return raw as number[];
+  if (typeof raw !== "string") return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? parsed as number[] : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseChunkTexts(raw: unknown): Record<string, string> {
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    return raw as Record<string, string>;
+  }
+  if (typeof raw !== "string" || !raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, string>;
+    }
+  } catch {
+    // ignore corrupt JSON
+  }
+  return {};
+}
+
+function hydrateProgress(row: Record<string, unknown>): TranscriptionProgress {
+  return {
+    file_path: String(row.file_path),
+    temp_dir: (row.temp_dir as string | null) ?? null,
+    chunk_size_seconds: Number(row.chunk_size_seconds),
+    total_chunks: Number(row.total_chunks),
+    processed_chunks: parseJsonArray(row.processed_chunks),
+    chunk_texts: parseChunkTexts(row.chunk_texts),
+    source_duration_seconds: (row.source_duration_seconds as number | null) ?? null,
+    model_used: (row.model_used as string | null) ?? null,
+    session_id: (row.session_id as string | null) ?? null,
+    created_at: Number(row.created_at),
+    updated_at: Number(row.updated_at),
+  };
+}
+
+export function assembleChunkTranscript(progress: TranscriptionProgress): string {
+  const parts: string[] = [];
+  const n = progress.total_chunks || Object.keys(progress.chunk_texts).length;
+  for (let i = 0; i < n; i++) {
+    const text = progress.chunk_texts[String(i)];
+    if (typeof text === "string" && text.length > 0) parts.push(text);
+  }
+  return parts.join(" ").trim();
 }
 
 export function getOrCreateProgress(
@@ -297,19 +351,18 @@ export function getOrCreateProgress(
 ): TranscriptionProgress {
   const existing = database
     .prepare("SELECT * FROM transcription_progress WHERE file_path = ?")
-    .get(filePath) as TranscriptionProgress | undefined;
+    .get(filePath) as Record<string, unknown> | undefined;
 
   if (existing) {
-    existing.processed_chunks = JSON.parse(existing.processed_chunks as unknown as string);
-    return existing;
+    return hydrateProgress(existing);
   }
 
   const now = Date.now();
   database
     .prepare(
       `INSERT INTO transcription_progress
-       (file_path, chunk_size_seconds, total_chunks, processed_chunks, created_at, updated_at)
-       VALUES (?, ?, ?, '[]', ?, ?)`
+       (file_path, chunk_size_seconds, total_chunks, processed_chunks, chunk_texts, created_at, updated_at)
+       VALUES (?, ?, ?, '[]', '{}', ?, ?)`
     )
     .run(filePath, 120, 0, now, now);
 
@@ -319,6 +372,7 @@ export function getOrCreateProgress(
     chunk_size_seconds: 120,
     total_chunks: 0,
     processed_chunks: [],
+    chunk_texts: {},
     source_duration_seconds: null,
     model_used: null,
     session_id: null,
@@ -365,18 +419,23 @@ export function updateProgress(
 export function markChunkProcessed(
   database: Database.Database,
   filePath: string,
-  chunkIndex: number
+  chunkIndex: number,
+  text?: string
 ): void {
   const progress = getOrCreateProgress(database, filePath);
   const processed = new Set(progress.processed_chunks);
   processed.add(chunkIndex);
+  const chunkTexts = { ...progress.chunk_texts };
+  if (typeof text === "string") {
+    chunkTexts[String(chunkIndex)] = text;
+  }
 
   const now = Date.now();
   database
     .prepare(
-      "UPDATE transcription_progress SET processed_chunks = ?, updated_at = ? WHERE file_path = ?"
+      "UPDATE transcription_progress SET processed_chunks = ?, chunk_texts = ?, updated_at = ? WHERE file_path = ?"
     )
-    .run(JSON.stringify([...processed]), now, filePath);
+    .run(JSON.stringify([...processed]), JSON.stringify(chunkTexts), now, filePath);
 }
 
 export function getNextUnprocessedChunk(
@@ -413,12 +472,9 @@ export function deleteAllProgress(database: Database.Database): number {
 export function listAllProgress(database: Database.Database): TranscriptionProgress[] {
   const rows = database
     .prepare("SELECT * FROM transcription_progress ORDER BY updated_at DESC")
-    .all() as Array<Omit<TranscriptionProgress, "processed_chunks"> & { processed_chunks: string }>;
+    .all() as Record<string, unknown>[];
 
-  return rows.map((r) => ({
-    ...r,
-    processed_chunks: JSON.parse(r.processed_chunks),
-  }));
+  return rows.map((r) => hydrateProgress(r));
 }
 
 export function deleteSession(

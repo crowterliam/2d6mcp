@@ -19,7 +19,6 @@ and `data/dw/` directories.
 Full license text: https://www.gnu.org/licenses/agpl-3.0.en.html
 
 ### Covered files include (non-exhaustive):
-- `apps/**/*.ts`
 - `packages/**/*.ts`
 - `package.json`
 - `tsconfig.json`

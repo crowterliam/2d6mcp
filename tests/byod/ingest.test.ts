@@ -64,13 +64,12 @@ describe("discoverFiles", () => {
     expect(f!.hash).toContain("-");
   });
 
-  it("computes contentHash from file contents", () => {
+  it("does not hash file contents during discovery", () => {
     writeFileSync(join(TMP, "sha.txt"), "sha test content");
     const files = discoverFiles(TMP);
     const f = files.find((f) => f.name === "sha.txt");
     expect(f).toBeDefined();
-    expect(f!.contentHash).toBeTruthy();
-    expect(f!.contentHash).toHaveLength(64);
+    expect(f!.contentHash).toBeNull();
   });
 
   it("walks subdirectories", () => {

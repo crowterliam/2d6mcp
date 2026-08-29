@@ -23,6 +23,30 @@ import {
 } from "../../session/database.js";
 import { synthesizeRuling as mlxSynthesizeRuling } from "../../rulings/mlx-synthesize.js";
 
+export async function handleSession(args: Record<string, unknown> | undefined): Promise<{
+  content: Array<{ type: "text"; text: string }>;
+  isError?: boolean;
+}> {
+  const action = typeof args?.action === "string" ? args.action : "";
+  switch (action) {
+    case "start":
+      return handleSessionStart(args);
+    case "end":
+      return handleSessionEnd(args);
+    case "list":
+      return handleSessionList(args);
+    case "delete":
+      return handleDeleteSession(args);
+    case "summarize":
+      return handleSessionSummarize(args);
+    default:
+      return {
+        content: [{ type: "text", text: "Error: action must be start, end, list, delete, or summarize" }],
+        isError: true,
+      };
+  }
+}
+
 export async function handleSessionStart(args: Record<string, unknown> | undefined): Promise<{
   content: Array<{ type: "text"; text: string }>;
   isError?: boolean;

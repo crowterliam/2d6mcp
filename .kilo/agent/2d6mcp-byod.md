@@ -16,7 +16,7 @@ Indexes all supported files from your `BYOD_PATH` directory. Runs in time-budget
 
 ### Syncing a Single File
 ```
-sync_file(relative_path)
+sync_byod(relative_path)
 ```
 Indexes a single file by its relative path within `BYOD_PATH`. Useful for large PDFs that timeout during bulk sync, or to selectively re-index a modified file without running a full sync.
 
@@ -34,7 +34,7 @@ Use this to understand what content is available for search.
 
 ### Inspecting a File
 ```
-inspect_byod_file(relative_path)
+list_byod_files(relative_path)
 ```
 Shows how a specific file was split into chunks:
 - File metadata (name, size, status)
@@ -52,7 +52,7 @@ Retrieves the full content of a specific chunk by file path and chunk index. Use
 ```
 query_local_byod(search_term)
 ```
-Full-text search across all indexed files. Returns up to 20 matching chunks with highlighted snippets and file paths. When the session has a `byod_system` set, `synthesize_ruling` and `resolve_from_context` automatically filter results to that system — but `query_local_byod` searches everything, giving you unfiltered access when you need it.
+Full-text search across all indexed files. Returns up to 20 matching chunks with highlighted snippets and file paths. When the session has a `byod_system` set, `synthesize_ruling` and `synthesize_ruling` with `from_context` automatically filter results to that system — but `query_local_byod` searches everything, giving you unfiltered access when you need it.
 
 ### Clearing the Index
 ```
@@ -62,10 +62,10 @@ Deletes the entire BYOD database. Use this to start fresh — all indexed files 
 
 ## BYOD System Filter
 
-When you start a session with a `byod_system` parameter, all subsequent `synthesize_ruling` and `resolve_from_context` calls filter BYOD search results to files whose names contain the specified system. This prevents wrong-system contamination — e.g., Call of Cthulhu sessions won't accidentally draw rulings from Trail of Cthulhu or Traveller content.
+When you start a session with a `byod_system` parameter, all subsequent `synthesize_ruling` and `synthesize_ruling` with `from_context` calls filter BYOD search results to files whose names contain the specified system. This prevents wrong-system contamination — e.g., Call of Cthulhu sessions won't accidentally draw rulings from Trail of Cthulhu or Traveller content.
 
 ```
-session_start(name: "Session 1", byod_system: "call of cthulhu")
+session(action: "start", name: "Session 1", byod_system: "call of cthulhu")
 ```
 
 The filter matches any filename containing ALL words from the system name (case-insensitive):
@@ -111,10 +111,10 @@ The sync process uses a 3-tier check to avoid unnecessary work:
 ## Typical Session Workflow
 
 1. **Start of session**: Run `list_byod_files` to check what's indexed
-2. **Start session tracking**: `session_start(name: "Session 12", byod_system: "call of cthulhu")`
+2. **Start session tracking**: `session(action: "start", name: "Session 12", byod_system: "call of cthulhu")`
 3. **Added new files?**: Run `sync_byod`. Repeat if `complete` is `false`
 4. **Need a rule?**: Try `synthesize_ruling` for natural-language questions — it auto-searches OGL/DW/BYOD with the system filter applied
-5. **Search manually**: Use `query_ogl_rules`, `query_dw_rules`, or `query_local_byod` for direct search
+5. **Search manually**: Use `query_rules` with `system: "ogl"`, `query_rules` with `system: "dw"`, or `query_local_byod` for direct search
 6. **Need full text?**: Use `get_byod_chunk(path, index)` to retrieve complete chunk content after search returns snippets
 7. **Index seems stale?**: Files whose mtime or size changed are automatically re-ingested on sync
 8. **Start fresh after reorganisation?**: `clear_byod` then `sync_byod`
@@ -123,9 +123,9 @@ The sync process uses a 3-tier check to avoid unnecessary work:
 
 The session management tools integrate with BYOD to maintain game context:
 
-- `session_start(byod_system: "traveller")` scopes future BYOD rulings to Traveller content
+- `session(action: "start", byod_system: "traveller")` scopes future BYOD rulings to Traveller content
 - `synthesize_ruling(session_id: "abc")` reads the session's `byod_system` and filters accordingly
-- `resolve_from_context(session_id: "abc")` uses recent transcript to auto-detect the rules question, then synthesizes with the session's BYOD scope
+- `synthesize_ruling(from_context: true, session_id: "abc")` uses recent transcript to auto-detect the rules question, then synthesizes with the session's BYOD scope
 - `log_transcript` logs table discussion — use in combination with audio transcription or manual entry
 - `transcribe_audio(session_id: "abc", file_path: "session.flac")` transcribes audio into the session in chunks, each auto-logged
 
@@ -143,4 +143,4 @@ The session management tools integrate with BYOD to maintain game context:
 
 **Changes not showing up in search**: Run `sync_byod` to pick up file changes. The fingerprint (mtime + size) detects modifications automatically.
 
-**Wrong system results appearing**: Start the session with `byod_system` set to your game system (e.g., `"call of cthulhu"`). This filters BYOD results in `synthesize_ruling` and `resolve_from_context` to only files matching that system name.
+**Wrong system results appearing**: Start the session with `byod_system` set to your game system (e.g., `"call of cthulhu"`). This filters BYOD results in `synthesize_ruling` and `synthesize_ruling` with `from_context` to only files matching that system name.
