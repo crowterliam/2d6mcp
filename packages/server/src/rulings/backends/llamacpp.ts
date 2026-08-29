@@ -60,28 +60,33 @@ const DEFAULT_MODEL_PATH = process.env.LLAMACPP_MODEL || DEFAULT_MODEL;
 export function createPrivatePromptFile(contents: string): { path: string; cleanup: () => void } {
   const dir = mkdtempSync(join(tmpdir(), "2d6mcp-llama-"));
   try {
-    chmodSync(dir, 0o700);
-  } catch {
-    // Windows ignores POSIX modes.
-  }
-  const path = join(dir, "prompt.txt");
-  const fd = openSync(path, "wx", 0o600);
-  try {
-    writeSync(fd, contents, null, "utf-8");
     try {
-      fchmodSync(fd, 0o600);
+      chmodSync(dir, 0o700);
     } catch {
       // Windows ignores POSIX modes.
     }
-  } finally {
-    closeSync(fd);
+    const path = join(dir, "prompt.txt");
+    const fd = openSync(path, "wx", 0o600);
+    try {
+      writeSync(fd, contents, null, "utf-8");
+      try {
+        fchmodSync(fd, 0o600);
+      } catch {
+        // Windows ignores POSIX modes.
+      }
+    } finally {
+      closeSync(fd);
+    }
+    return {
+      path,
+      cleanup: () => {
+        rmSync(dir, { recursive: true, force: true });
+      },
+    };
+  } catch (err) {
+    rmSync(dir, { recursive: true, force: true });
+    throw err;
   }
-  return {
-    path,
-    cleanup: () => {
-      rmSync(dir, { recursive: true, force: true });
-    },
-  };
 }
 
 export async function synthesizeWithLlamaCpp(
