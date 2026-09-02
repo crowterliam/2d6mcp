@@ -37,7 +37,7 @@
     "@2d6mcp/5ecompatible": "*",
     "@2d6mcp/orcus": "*",
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "@xmldom/xmldom": "^0.9.10",
+    "@xmldom/xmldom": "^0.9.12",
     "better-sqlite3": "^11.8.0",
     "pdf-parse": "^2.4.5",
     "zod": "^3.24.3"
