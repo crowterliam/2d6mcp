@@ -127,8 +127,12 @@ function jsonResult(data: unknown, isError = false) {
 }
 
 /** Map display names from rules_categories onto query_rules filter keys. */
-function aliasOglCategory(category: string): string {
-  const collapsed = category.replace(/[&/_-]+/g, " ").replace(/\s+/g, " ").trim();
+export function aliasOglCategory(category: string): string {
+  const collapsed = category
+    .replace(/[&/_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
   if (
     collapsed === "trade" ||
     collapsed === "commerce" ||
