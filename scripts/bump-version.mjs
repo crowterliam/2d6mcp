@@ -204,8 +204,15 @@ export function assertLockstep(root) {
   const rootVersion = records[0]?.version;
   const drifted = records.filter((record) => record.version !== rootVersion);
   if (!rootVersion || drifted.length > 0) {
-    const lines = records.map((record) => `  ${record.file}: ${record.version}`).join("\n");
-    throw new Error(`Workspace versions drifted from lockstep:\n${lines}`);
+    const lines = [];
+    const seen = new Set();
+    for (const record of records) {
+      const key = `${record.file}\0${record.version}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      lines.push(`  ${record.file}: ${record.version}`);
+    }
+    throw new Error(`Workspace versions drifted from lockstep:\n${lines.join("\n")}`);
   }
 
   return { version: rootVersion, records };
