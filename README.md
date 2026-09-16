@@ -237,7 +237,7 @@ Do not paste commercial core-book text. Use the bundled OGL tables and these age
 1. List tables: `query_rules(system=ogl, category=list_tables)` or `roll_table(source=ogl)` with a known name.
 2. Passage / patrons / random persons: `roll_table(table_name="Patron Encounter")`, `roll_table(table_name="Personal Encounter")`.
 3. Wilderness or starship encounter ticks: `query_rules(system=ogl, search_term="encounter", category=worlds)` and `category=starships`.
-4. Freight/trade: `query_rules(system=ogl, search_term="trade", category=rules)` then roll 2d6 with `roll` for broker/effect checks. Exact commercial freight matrices stay in BYOD if the operator indexed that shelf.
+4. Freight/trade: `query_rules(system=ogl, search_term="freight", category=trade)` (aliases: `Trade & Commerce`, `commerce`). Returns Open SRD freight rate (Cr1,000/ton per jump), speculative trade, passengers, and mail. Broker: `category=skills`. Trade codes/routes: `category=worlds`. `category=list_tables` has no commercial freight-lot matrix — use Population/starport as a guide, or BYOD if the operator indexed a licensed book.
 
 ### Percentile (CoC 7e-style) helpers
 

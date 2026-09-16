@@ -41,6 +41,7 @@ query_rules(system: "ogl", search_term, category?)
 | `combat` | Personal combat rules, damage, healing |
 | `starships` | Starship operations, space combat, critical hits, boarding |
 | `worlds` | World building, UWP creation, trade codes, starports |
+| `trade` | Trade & Commerce: freight, speculative trade, passengers, mail (aliases: `Trade & Commerce`, `commerce`) |
 | `categories` | List of all available categories |
 | `list_tables` | List of all named tables |
 
@@ -53,6 +54,8 @@ query_rules(system: "ogl", "combat", category: "rules")      → combat rules on
 query_rules(system: "ogl", "navy", category: "careers")      → navy career path
 query_rules(system: "ogl", "Astrogation", category: "skills") → skill description
 query_rules(system: "ogl", "critical hit", category: "starships") → ship damage tables
+query_rules(system: "ogl", "freight", category: "trade")      → Trade & Commerce freight (not Game Themes)
+query_rules(system: "ogl", "trade", category: "worlds")       → Trade Codes / Trade Routes
 ```
 
 ## Dungeon World Database Search
@@ -240,9 +243,9 @@ The OGL database covers:
 - **Personal Combat**: Initiative, attack rolls, damage, armour, cover, healing
 - **Equipment**: Armour types, weapons (melee and ranged), augments, medical supplies, computers, survival gear, vehicles
 - **Starships**: Design (hulls, drives, weapons), space combat, critical hits, boarding actions
-- **World Building**: UWP generation, starports, trade codes, government types, law levels, passenger and freight tables
+- **World Building**: UWP generation, starports, trade codes, government types, law levels
 - **Encounters**: Personal, starship, starport, patron, animal encounter tables
-- **Trade & Commerce**: Trade goods, freight, passenger types
+- **Trade & Commerce**: Freight rate (Cr1,000/ton per jump), speculative trade, passengers, mail. Query `category=trade` (alias `Trade & Commerce`). Commercial lot-count matrices are not bundled — use Population/starport, `category=worlds` (Trade Codes/Routes), `category=skills` (Broker), `category=list_tables`, or BYOD.
 
 The Dungeon World database covers:
 

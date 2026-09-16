@@ -67,6 +67,7 @@ describe("query_rules", () => {
     expect(Array.isArray(payload.categories)).toBe(true);
     expect(payload.categories).toContain("skills");
     expect(payload.categories).toContain("rules");
+    expect(payload.categories).toContain("trade");
   });
 
   it("osr category=categories lists mid-session filters", async () => {
@@ -86,5 +87,82 @@ describe("query_rules", () => {
     expect(payload).toHaveProperty("skills");
     expect(payload).not.toHaveProperty("rules");
     expect(payload).not.toHaveProperty("careers");
+  });
+
+  it("Trade & Commerce freight does not return Game Themes Overview", async () => {
+    const payload = parsePayload(
+      await dispatchToolCall("query_rules", {
+        system: "ogl",
+        category: "Trade & Commerce",
+        search_term: "freight",
+      })
+    );
+    expect(payload).toHaveProperty("rules");
+    const rules = payload.rules as Array<{ section: string; title: string; snippet: string }>;
+    expect(rules.length).toBeGreaterThan(0);
+    expect(rules[0].section.toLowerCase()).not.toBe("game themes");
+    expect(rules[0].title.toLowerCase()).not.toBe("overview");
+    expect(
+      rules.some(
+        (r) => /trade/i.test(r.section) && /freight/i.test(`${r.title} ${r.snippet}`)
+      )
+    ).toBe(true);
+    expect(
+      rules.some((r) => /game themes/i.test(r.section) && /overview/i.test(r.title))
+    ).toBe(false);
+  });
+
+  it("category=trade finds Broker and trade-route content", async () => {
+    const broker = parsePayload(
+      await dispatchToolCall("query_rules", {
+        system: "ogl",
+        category: "trade",
+        search_term: "Broker",
+      })
+    );
+    const brokerRules = broker.rules as Array<{ title: string; snippet: string }>;
+    expect(brokerRules.some((r) => /broker/i.test(`${r.title} ${r.snippet}`))).toBe(true);
+
+    const routes = parsePayload(
+      await dispatchToolCall("query_rules", {
+        system: "ogl",
+        category: "trade",
+        search_term: "trade route",
+      })
+    );
+    const routeRules = routes.rules as Array<{ title: string; snippet: string }>;
+    expect(routeRules.some((r) => /trade route/i.test(`${r.title} ${r.snippet}`))).toBe(true);
+  });
+
+  it("skills Broker and worlds trade remain valid related lookups", async () => {
+    const skills = parsePayload(
+      await dispatchToolCall("query_rules", {
+        system: "ogl",
+        category: "skills",
+        search_term: "Broker",
+      })
+    );
+    const skillHits = skills.skills as Array<{ name: string }>;
+    expect(skillHits.some((s) => /broker/i.test(s.name))).toBe(true);
+
+    const worlds = parsePayload(
+      await dispatchToolCall("query_rules", {
+        system: "ogl",
+        category: "worlds",
+        search_term: "trade",
+      })
+    );
+    const worldHits = worlds.worlds as Array<{ topic: string }>;
+    expect(worldHits.some((w) => /trade/i.test(w.topic))).toBe(true);
+  });
+
+  it("list_tables does not invent a commercial freight-lot matrix", async () => {
+    const payload = parsePayload(
+      await dispatchToolCall("query_rules", { system: "ogl", category: "list_tables" })
+    );
+    const tables = payload.tables_list as Array<{ name: string }>;
+    expect(Array.isArray(tables)).toBe(true);
+    expect(tables.length).toBeGreaterThan(0);
+    expect(tables.some((t) => /freight/i.test(t.name))).toBe(false);
   });
 });
