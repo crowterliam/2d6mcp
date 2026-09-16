@@ -66,7 +66,16 @@ import {
   listOrcusMonsters,
   listOrcusFeats,
 } from "@2d6mcp/orcus";
-import { ensureOglDb, ensureDwDb, ensureBrpDb, ensure5ecompatibleDb, ensureOrcusDb } from "../helpers.js";
+import { ensureOsrSchema } from "@2d6mcp/osr/database";
+import {
+  searchOsrRules,
+  searchOsrProcedures,
+  searchOsrTables,
+  listOsrCategories,
+  listOsrTables,
+  listOsrProcedureCategories,
+} from "@2d6mcp/osr";
+import { ensureOglDb, ensureDwDb, ensureBrpDb, ensure5ecompatibleDb, ensureOrcusDb, ensureOsrDb } from "../helpers.js";
 import { RULES_SYSTEMS, type NamedRulesSystem } from "../../rulings/retrieve.js";
 
 const CATEGORY_FILTERS: Record<NamedRulesSystem, string[]> = {
@@ -90,6 +99,19 @@ const CATEGORY_FILTERS: Record<NamedRulesSystem, string[]> = {
   ],
   "5ecompatible": ["rules", "spells", "monsters", "classes", "feats", "list_spells", "list_monsters", "list_classes", "list_feats"],
   orcus: ["rules", "classes", "monsters", "feats", "list_classes", "list_monsters", "list_feats"],
+  osr: [
+    "rules",
+    "saves",
+    "combat",
+    "reaction",
+    "morale",
+    "hirelings",
+    "encumbrance",
+    "exploration",
+    "procedures",
+    "tables",
+    "list_tables",
+  ],
 };
 
 function isNamedSystem(value: string): value is NamedRulesSystem {
@@ -314,6 +336,55 @@ function queryOrcus(searchTerm: string, category: string): Record<string, unknow
   return response;
 }
 
+function queryOsr(searchTerm: string, category: string): Record<string, unknown> {
+  const db = ensureOsrSchema(ensureOsrDb().dbPath);
+  const response: Record<string, unknown> = {};
+
+  switch (category) {
+    case "saves":
+      response.procedures = searchOsrProcedures(db, searchTerm, "saves");
+      break;
+    case "combat":
+      response.procedures = searchOsrProcedures(db, searchTerm, "combat");
+      break;
+    case "reaction":
+      response.procedures = searchOsrProcedures(db, searchTerm, "reaction");
+      break;
+    case "morale":
+      response.procedures = searchOsrProcedures(db, searchTerm, "morale");
+      break;
+    case "hirelings":
+      response.procedures = searchOsrProcedures(db, searchTerm, "hirelings");
+      break;
+    case "encumbrance":
+      response.procedures = searchOsrProcedures(db, searchTerm, "encumbrance");
+      break;
+    case "exploration":
+      response.procedures = searchOsrProcedures(db, searchTerm, "exploration");
+      break;
+    case "procedures":
+      response.procedures = searchOsrProcedures(db, searchTerm);
+      break;
+    case "tables": {
+      const table = searchTerm ? searchOsrTables(db, searchTerm) : null;
+      response.tables = table ? [{ name: table.name, entries: table.entries }] : [];
+      break;
+    }
+    case "list_tables":
+      response.tables_list = listOsrTables(db);
+      break;
+    case "categories":
+      response.categories = CATEGORY_FILTERS.osr;
+      response.rules_categories = listOsrCategories(db);
+      response.procedure_categories = listOsrProcedureCategories(db);
+      break;
+    default:
+      response.rules = searchOsrRules(db, searchTerm);
+      break;
+  }
+  return response;
+}
+
 export async function handleQueryRules(args: Record<string, unknown> | undefined): Promise<{
   content: Array<{ type: "text"; text: string }>;
   isError?: boolean;
@@ -345,6 +416,9 @@ export async function handleQueryRules(args: Record<string, unknown> | undefined
       break;
     case "orcus":
       response = queryOrcus(searchTerm, category);
+      break;
+    case "osr":
+      response = queryOsr(searchTerm, category);
       break;
   }
 

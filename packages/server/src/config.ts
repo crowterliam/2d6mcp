@@ -32,6 +32,7 @@ export interface Config {
   brpDbPath: string;
   sr5eDbPath: string;
   orcusDbPath: string;
+  osrDbPath: string;
   sessionDbPath: string;
   mlxWhisperModel: string;
   mlxLLMModel: string;
@@ -130,6 +131,10 @@ export function loadConfig(): Config {
     process.env.ORCUS_DB_PATH ||
     resolve(PROJECT_ROOT, "data", "orcus", "orcus.db");
 
+  const osrDbPath =
+    process.env.OSR_DB_PATH ||
+    resolve(PROJECT_ROOT, "data", "osr", "osr-procedures.db");
+
   const sessionDbPath =
     process.env.SESSION_DB_PATH ||
     resolve(homedir(), ".2d6mcp", "sessions.db");
@@ -153,7 +158,7 @@ export function loadConfig(): Config {
   const sttBackend = (process.env.STT_BACKEND === "whispercpp") ? "whispercpp" : "mlx";
   const llmBackend = (process.env.LLM_BACKEND === "llamacpp") ? "llamacpp" : "mlx";
 
-  return { byodConsented, byodPath, oglDbPath, dwDbPath, brpDbPath, sr5eDbPath, orcusDbPath, sessionDbPath, mlxWhisperModel, mlxLLMModel, whisperCppModel, llamaCppModel, sttBackend, llmBackend, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs, byodMaxFileSize, byodNetwork };
+  return { byodConsented, byodPath, oglDbPath, dwDbPath, brpDbPath, sr5eDbPath, orcusDbPath, osrDbPath, sessionDbPath, mlxWhisperModel, mlxLLMModel, whisperCppModel, llamaCppModel, sttBackend, llmBackend, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs, byodMaxFileSize, byodNetwork };
 }
 
 export function isByodEnabled(): boolean {

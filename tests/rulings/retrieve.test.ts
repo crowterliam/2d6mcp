@@ -59,6 +59,17 @@ describe("retrieveRulesContext", () => {
     expect(result.searchCalls).toBeLessThanOrEqual(8);
   });
 
+  it("scopes lookup to OSR procedures", async () => {
+    const result = await retrieveRulesContext({
+      question: "morale check after casualties",
+      rulesSystem: "osr",
+    });
+    expect(result.resolvedSystem).toBe("osr");
+    expect(result.systemsSearched).toEqual(["osr"]);
+    expect(result.context.length).toBeGreaterThan(0);
+    expect(result.context.toLowerCase()).toMatch(/morale/);
+  });
+
   it("runs BYOD for ogl when consent is on", async () => {
     const byodPath = join(tmpdir(), `2d6mcp-retrieve-byod-${Date.now()}`);
     mkdirSync(join(byodPath, "Uniquebyodgrant"), { recursive: true });
@@ -134,6 +145,6 @@ describe("retrieveRulesContext", () => {
       rulesSystem: "auto",
     });
     expect(auto.searchCalls).toBeLessThan(40);
-    expect(auto.systemsSearched).toHaveLength(5);
+    expect(auto.systemsSearched).toHaveLength(6);
   });
 });

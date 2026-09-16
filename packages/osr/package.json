@@ -1,0 +1,23 @@
+{
+  "name": "@2d6mcp/osr",
+  "version": "0.7.0",
+  "description": "B/X-style (OSR / B/X-compatible) procedures database — original mechanical summaries, queries, and population for 2d6mcp",
+  "type": "module",
+  "main": "dist/queries.js",
+  "types": "dist/queries.d.ts",
+  "exports": {
+    ".": "./dist/queries.js",
+    "./database": "./dist/database.js",
+    "./populate": "./dist/populate.js",
+    "./schema": "./dist/schema.sql.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "AGPL-3.0-only",
+  "dependencies": {
+    "@2d6mcp/shared": "*",
+    "better-sqlite3": "^11.8.0"
+  }
+}

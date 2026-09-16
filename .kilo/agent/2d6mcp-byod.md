@@ -143,4 +143,6 @@ The session management tools integrate with BYOD to maintain game context:
 
 **Changes not showing up in search**: Run `sync_byod` to pick up file changes. The fingerprint (mtime + size) detects modifications automatically.
 
-**Wrong system results appearing**: Start the session with `byod_system` set to your game system (e.g., `"call of cthulhu"`). This filters BYOD results in `synthesize_ruling` and `synthesize_ruling` with `from_context` to only files matching that system name.
+**Wrong system results appearing**: Start the session with `byod_system` set to your game system (e.g., `"osr"` or `"call of cthulhu"`). This filters BYOD results in `synthesize_ruling` to only files matching that system name.
+
+**Multi-shelf**: Point `BYOD_PATH` at the parent of game folders. Example (docs only): `/path/to/rpg-shelf`. `sync_byod` with no args lists collections; `query="old-school"` indexes the matching folder. High-latency: `BYOD_NETWORK=true`.

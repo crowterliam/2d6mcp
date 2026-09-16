@@ -49,6 +49,12 @@ describe("loadConfig", () => {
     expect(config.dwDbPath).toBe("/tmp/test-dw.db");
   });
 
+  it("reads OSR_DB_PATH from env", () => {
+    process.env.OSR_DB_PATH = "/tmp/test-osr.db";
+    const config = loadConfig();
+    expect(config.osrDbPath).toBe("/tmp/test-osr.db");
+  });
+
   it("clamps BYOD_CHUNK_SIZE within bounds", () => {
     process.env.BYOD_CHUNK_SIZE = "10";
     let config = loadConfig();

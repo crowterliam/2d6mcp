@@ -47,6 +47,7 @@ export interface SessionRow {
   name: string | null;
   rules_system: string;
   byod_system: string | null;
+  table_label: string | null;
   started_at: number;
   ended_at: number | null;
   summary: string | null;
@@ -57,27 +58,36 @@ export function createSession(
   database: Database.Database,
   rulesSystem: string = "ogl",
   name?: string,
-  byodSystem?: string
+  byodSystem?: string,
+  tableLabel?: string
 ): SessionRow {
   const id = `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const now = Date.now();
+  const label = normalizeTableLabel(tableLabel);
 
   database
     .prepare(
-      "INSERT INTO sessions (id, name, rules_system, byod_system, started_at) VALUES (?, ?, ?, ?, ?)"
+      "INSERT INTO sessions (id, name, rules_system, byod_system, table_label, started_at) VALUES (?, ?, ?, ?, ?, ?)"
     )
-    .run(id, name ?? null, rulesSystem, byodSystem ?? null, now);
+    .run(id, name ?? null, rulesSystem, byodSystem ?? null, label, now);
 
   return {
     id,
     name: name ?? null,
     rules_system: rulesSystem,
     byod_system: byodSystem ?? null,
+    table_label: label,
     started_at: now,
     ended_at: null,
     summary: null,
     summary_generated_at: null,
   };
+}
+
+export function normalizeTableLabel(value: string | undefined | null): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 export function endSession(
@@ -132,13 +142,43 @@ export function getActiveSession(database: Database.Database): SessionRow | null
 
 export function listSessions(
   database: Database.Database,
-  limit: number = 20
+  limit: number = 20,
+  tableLabel?: string
 ): SessionRow[] {
+  const label = normalizeTableLabel(tableLabel);
+  if (label) {
+    return database
+      .prepare(
+        "SELECT * FROM sessions WHERE table_label = ? COLLATE NOCASE ORDER BY started_at DESC LIMIT ?"
+      )
+      .all(label, limit) as SessionRow[];
+  }
   return database
     .prepare(
       "SELECT * FROM sessions ORDER BY started_at DESC LIMIT ?"
     )
     .all(limit) as SessionRow[];
+}
+
+export function getLatestSessionByLabel(
+  database: Database.Database,
+  tableLabel: string
+): SessionRow | null {
+  const label = normalizeTableLabel(tableLabel);
+  if (!label) return null;
+  const active = database
+    .prepare(
+      "SELECT * FROM sessions WHERE table_label = ? COLLATE NOCASE AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1"
+    )
+    .get(label) as SessionRow | undefined;
+  if (active) return active;
+  return (
+    (database
+      .prepare(
+        "SELECT * FROM sessions WHERE table_label = ? COLLATE NOCASE ORDER BY started_at DESC LIMIT 1"
+      )
+      .get(label) as SessionRow | undefined) ?? null
+  );
 }
 
 export interface TranscriptSegment {
@@ -213,6 +253,58 @@ export function searchTranscript(
       "SELECT * FROM transcript_segments WHERE session_id = ? AND text LIKE ? ORDER BY timestamp DESC LIMIT 30"
     )
     .all(sessionId, `%${query}%`) as TranscriptSegment[];
+}
+
+export function searchTranscriptByLabel(
+  database: Database.Database,
+  tableLabel: string,
+  query: string
+): TranscriptSegment[] {
+  const label = normalizeTableLabel(tableLabel);
+  if (!label) return [];
+  return database
+    .prepare(
+      `SELECT t.* FROM transcript_segments t
+       INNER JOIN sessions s ON s.id = t.session_id
+       WHERE s.table_label = ? COLLATE NOCASE AND t.text LIKE ?
+       ORDER BY t.timestamp DESC LIMIT 30`
+    )
+    .all(label, `%${query}%`) as TranscriptSegment[];
+}
+
+export function getRecentTranscriptByLabel(
+  database: Database.Database,
+  tableLabel: string,
+  minutes: number = 5
+): TranscriptSegment[] {
+  const label = normalizeTableLabel(tableLabel);
+  if (!label) return [];
+  const cutoff = Date.now() - minutes * 60 * 1000;
+  return database
+    .prepare(
+      `SELECT t.* FROM transcript_segments t
+       INNER JOIN sessions s ON s.id = t.session_id
+       WHERE s.table_label = ? COLLATE NOCASE AND t.timestamp >= ?
+       ORDER BY t.timestamp DESC`
+    )
+    .all(label, cutoff) as TranscriptSegment[];
+}
+
+export function getRecentRulingsByLabel(
+  database: Database.Database,
+  tableLabel: string,
+  limit: number = 5
+): RulingRow[] {
+  const label = normalizeTableLabel(tableLabel);
+  if (!label) return [];
+  return database
+    .prepare(
+      `SELECT r.* FROM rulings r
+       INNER JOIN sessions s ON s.id = r.session_id
+       WHERE s.table_label = ? COLLATE NOCASE
+       ORDER BY r.created_at DESC LIMIT ?`
+    )
+    .all(label, limit) as RulingRow[];
 }
 
 export interface RulingRow {

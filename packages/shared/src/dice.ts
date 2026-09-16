@@ -250,6 +250,211 @@ export function rollPercentile(
 }
 
 // ---------------------------------------------------------------------------
+// CoC 7e percentile — Hard/Extreme, bonus/penalty dice, SAN loss, opposed
+// ---------------------------------------------------------------------------
+
+export type CocSuccessLevel = "critical" | "extreme" | "hard" | "regular" | "failure" | "fumble";
+
+const COC_LEVEL_RANK: Record<CocSuccessLevel, number> = {
+  critical: 5,
+  extreme: 4,
+  hard: 3,
+  regular: 2,
+  failure: 1,
+  fumble: 0,
+};
+
+export function successLevelRank(level: CocSuccessLevel): number {
+  return COC_LEVEL_RANK[level];
+}
+
+export function classifyCocSuccess(total: number, skill: number): CocSuccessLevel {
+  const skillClamped = Math.max(0, Math.floor(skill));
+  const extreme = Math.floor(skillClamped / 5);
+  const hard = Math.floor(skillClamped / 2);
+  const fumbleFloor = skillClamped < 50 ? 96 : 100;
+  if (total >= fumbleFloor) return "fumble";
+  if (total === 1) return "critical";
+  if (total <= extreme) return "extreme";
+  if (total <= hard) return "hard";
+  if (total <= skillClamped) return "regular";
+  return "failure";
+}
+
+function d100FromTensOnes(tens: number, ones: number): number {
+  if (tens === 0 && ones === 0) return 100;
+  return tens * 10 + ones;
+}
+
+function rollDigit(): number {
+  return Math.floor(Math.random() * 10);
+}
+
+export function rollSanLossAmount(notation: string): number {
+  const trimmed = notation.trim();
+  if (!trimmed) return 0;
+  if (/^\d+$/.test(trimmed)) return parseInt(trimmed, 10);
+  return rollCustom(trimmed).total;
+}
+
+export interface RollPercentileCocOptions {
+  target?: number | null;
+  bonusDice?: number;
+  penaltyDice?: number;
+  sanSuccess?: string;
+  sanFail?: string;
+  opposedTarget?: number | null;
+}
+
+export interface RollPercentileCocResult {
+  tensDice: number[];
+  ones: number;
+  tens: number;
+  total: number;
+  target: number | null;
+  hardThreshold: number | null;
+  extremeThreshold: number | null;
+  bonusDice: number;
+  penaltyDice: number;
+  netDice: number;
+  success: boolean | null;
+  successLevel: CocSuccessLevel | null;
+  critical: boolean;
+  fumble: boolean;
+  opposedTarget: number | null;
+  opposedTotal: number | null;
+  opposedSuccessLevel: CocSuccessLevel | null;
+  opposedWinner: "attacker" | "defender" | "tie" | null;
+  sanLossNotation: string | null;
+  sanLoss: number | null;
+  description: string;
+}
+
+function rollCocD100(bonusDice: number, penaltyDice: number): {
+  tensDice: number[];
+  ones: number;
+  tens: number;
+  total: number;
+  netDice: number;
+} {
+  const bonus = Math.max(0, Math.floor(bonusDice));
+  const penalty = Math.max(0, Math.floor(penaltyDice));
+  const netDice = bonus - penalty;
+  const extra = Math.abs(netDice);
+  const ones = rollDigit();
+  const tensDice: number[] = [];
+  for (let i = 0; i < 1 + extra; i++) {
+    tensDice.push(rollDigit());
+  }
+  const candidates = tensDice.map((tens) => d100FromTensOnes(tens, ones));
+  let pickIndex = 0;
+  if (netDice > 0) {
+    let best = candidates[0];
+    for (let i = 1; i < candidates.length; i++) {
+      if (candidates[i] < best) {
+        best = candidates[i];
+        pickIndex = i;
+      }
+    }
+  } else if (netDice < 0) {
+    let worst = candidates[0];
+    for (let i = 1; i < candidates.length; i++) {
+      if (candidates[i] > worst) {
+        worst = candidates[i];
+        pickIndex = i;
+      }
+    }
+  }
+  return {
+    tensDice,
+    ones,
+    tens: tensDice[pickIndex],
+    total: candidates[pickIndex],
+    netDice,
+  };
+}
+
+export function rollPercentileCoc(options: RollPercentileCocOptions = {}): RollPercentileCocResult {
+  const target = typeof options.target === "number" ? options.target : null;
+  const bonusDice = Math.max(0, Math.floor(options.bonusDice ?? 0));
+  const penaltyDice = Math.max(0, Math.floor(options.penaltyDice ?? 0));
+  const primary = rollCocD100(bonusDice, penaltyDice);
+
+  const hardThreshold = target !== null ? Math.floor(target / 2) : null;
+  const extremeThreshold = target !== null ? Math.floor(target / 5) : null;
+  const successLevel = target !== null ? classifyCocSuccess(primary.total, target) : null;
+  const success = successLevel !== null ? successLevelRank(successLevel) >= COC_LEVEL_RANK.regular : null;
+  const critical = successLevel === "critical";
+  const fumble = successLevel === "fumble";
+
+  let opposedTarget: number | null = typeof options.opposedTarget === "number" ? options.opposedTarget : null;
+  let opposedTotal: number | null = null;
+  let opposedSuccessLevel: CocSuccessLevel | null = null;
+  let opposedWinner: "attacker" | "defender" | "tie" | null = null;
+
+  if (opposedTarget !== null) {
+    const opposed = rollCocD100(0, 0);
+    opposedTotal = opposed.total;
+    opposedSuccessLevel = classifyCocSuccess(opposed.total, opposedTarget);
+    if (successLevel) {
+      const a = successLevelRank(successLevel);
+      const b = successLevelRank(opposedSuccessLevel);
+      if (a > b) opposedWinner = "attacker";
+      else if (b > a) opposedWinner = "defender";
+      else if (a < COC_LEVEL_RANK.regular) opposedWinner = "tie";
+      else if (primary.total > opposed.total) opposedWinner = "attacker";
+      else if (opposed.total > primary.total) opposedWinner = "defender";
+      else opposedWinner = "tie";
+    }
+  }
+
+  let sanLossNotation: string | null = null;
+  let sanLoss: number | null = null;
+  if (success === true && options.sanSuccess) {
+    sanLossNotation = options.sanSuccess;
+    sanLoss = rollSanLossAmount(options.sanSuccess);
+  } else if (success === false && options.sanFail) {
+    sanLossNotation = options.sanFail;
+    sanLoss = rollSanLossAmount(options.sanFail);
+  }
+
+  const tensStr = primary.tensDice.map((d) => String(d)).join("/");
+  const targetStr = target !== null ? ` (skill ${target}; Hard ${hardThreshold}, Extreme ${extremeThreshold})` : "";
+  const diceStr = primary.netDice !== 0 ? ` tens[${tensStr}] ones[${primary.ones}]` : ` [${String(primary.tens)}${String(primary.ones)}]`;
+  const levelStr = successLevel ? ` — ${successLevel}` : "";
+  const opposedStr =
+    opposedSuccessLevel && opposedTotal !== null
+      ? ` vs opposed ${opposedTotal} (${opposedSuccessLevel}${opposedWinner ? `, ${opposedWinner}` : ""})`
+      : "";
+  const sanStr = sanLoss !== null ? ` SAN ${sanLoss} (${sanLossNotation})` : "";
+  const desc = `${diceStr} = ${primary.total}${targetStr}${levelStr}${opposedStr}${sanStr}`;
+
+  return {
+    tensDice: primary.tensDice,
+    ones: primary.ones,
+    tens: primary.tens,
+    total: primary.total,
+    target,
+    hardThreshold,
+    extremeThreshold,
+    bonusDice,
+    penaltyDice,
+    netDice: primary.netDice,
+    success,
+    successLevel,
+    critical,
+    fumble,
+    opposedTarget,
+    opposedTotal,
+    opposedSuccessLevel,
+    opposedWinner,
+    sanLossNotation,
+    sanLoss,
+    description: desc,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Damage dice parser & roller — parses expressions like "2d6+3 fire"
 // ---------------------------------------------------------------------------
 
@@ -324,6 +529,15 @@ export const RollPercentileInput = z.object({
   target: z.number().int().optional().describe("Target percentile — roll ≤ target to succeed (BRP-style). 5% of target is critical success threshold."),
 });
 
+export const RollPercentileCocInput = z.object({
+  target: z.number().int().optional().describe("Skill or characteristic percentile to roll under."),
+  bonus_dice: z.number().int().min(0).default(0).describe("Extra tens dice; keep the lowest d100 result."),
+  penalty_dice: z.number().int().min(0).default(0).describe("Extra tens dice; keep the highest d100 result."),
+  san_success: z.string().optional().describe("SAN loss dice or integer if the roll succeeds."),
+  san_fail: z.string().optional().describe("SAN loss dice or integer if the roll fails."),
+  opposed_target: z.number().int().optional().describe("Opposed roll-under target (e.g. POW)."),
+});
+
 export const RollDamageInput = z.object({
   notation: z.string().describe('Damage dice notation, e.g. "2d6+3 fire", "1d8 piercing", "4d6", "1d4-1 slashing"'),
 });
@@ -332,4 +546,5 @@ export type Roll2d6Params = z.infer<typeof Roll2d6Input>;
 export type RollCustomParams = z.infer<typeof RollCustomInput>;
 export type RollD20Params = z.infer<typeof RollD20Input>;
 export type RollPercentileParams = z.infer<typeof RollPercentileInput>;
+export type RollPercentileCocParams = z.infer<typeof RollPercentileCocInput>;
 export type RollDamageParams = z.infer<typeof RollDamageInput>;

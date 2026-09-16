@@ -5,7 +5,7 @@ description: Rules lookup, table rolling, OGL and BYOD search strategies for the
 
 # 2D6 Rules Reference
 
-You have access to five pre-populated rules databases (OGL/Cepheus Engine SRD for sci-fi, Dungeon World CC-BY-3.0 for fantasy, Basic Roleplaying BRP OGL v1.0 for percentile, 5E-compatible SRD CC-BY-4.0 for d20 fantasy, and Orcus OGL v1.0a for 4e-compatible), plus your own BYOD files and AI ruling synthesis.
+You have access to six pre-populated rules databases (OGL/Cepheus Engine SRD for sci-fi, Dungeon World CC-BY-3.0 for fantasy, Basic Roleplaying BRP OGL v1.0 for percentile, 5E-compatible SRD CC-BY-4.0 for d20 fantasy, Orcus OGL v1.0a for 4e-compatible, and original B/X-style OSR / B/X-compatible procedures), plus your own BYOD files and AI ruling synthesis.
 
 ## OGL Database Search
 
@@ -191,3 +191,4 @@ Classes, monsters, feats, and core rules for 4e-compatible RPGs. Includes charac
 | `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Custom BRP database path |
 | `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Custom 5E-compatible database path |
 | `ORCUS_DB_PATH` | `data/orcus/orcus.db` | Custom Orcus database path |
+| `OSR_DB_PATH` | `data/osr/osr-procedures.db` | OSR / B/X-compatible procedures database path |

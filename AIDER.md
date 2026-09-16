@@ -24,6 +24,7 @@ packages/           # npm workspaces
   brp/              # @2d6mcp/brp — BRP rules (Basic Roleplaying SRD)
   5ecompatible/     # @2d6mcp/5ecompatible — 5E-compatible rules (CC-BY-4.0)
   orcus/            # @2d6mcp/orcus — Orcus d20-compatible rules (OGL v1.0a)
+  osr/              # @2d6mcp/osr — B/X-style procedures (original summaries)
 data/               # SQLite databases (shared)
 tests/              # Vitest test suite
 ```
@@ -34,8 +35,8 @@ Agent instructions: `.kilo/agent/`, `.claude/skills/`, `.cursor/rules/`, `.cline
 
 | Tool | Purpose |
 |------|---------|
-| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`). Infers mechanic from notation when omitted. |
-| `roll_table` | Roll on a named table. `source`: `ogl` or `byod`. Omit `table_name` with `source=byod` to list tables. |
+| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`, `coc`). Infers mechanic from notation when omitted. |
+| `roll_table` | Roll on a named table. `source`: `ogl`, `osr`, or `byod`. Omit `table_name` with `source=byod` or `source=osr` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
 | `query_local_byod` | Search ingested personal files. Returns `chunkIndex`. Optional `include_full`. |
 | `sync_byod` | Index BYOD files. Optional `relative_path` for a single file. |
@@ -68,6 +69,7 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 | `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Custom BRP database path |
 | `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Custom 5E-compatible database path |
 | `ORCUS_DB_PATH` | `data/orcus/orcus.db` | Custom Orcus database path |
+| `OSR_DB_PATH` | `data/osr/osr-procedures.db` | OSR / B/X-compatible procedures database path |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LLM model |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |

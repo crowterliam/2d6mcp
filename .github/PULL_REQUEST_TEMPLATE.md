@@ -18,4 +18,8 @@
 - [ ] New tools use Zod schemas for input validation
 - [ ] New tools are offline-first (no network calls)
 - [ ] License-compatible (see `LICENSE.md` for multi-license rules)
+- [ ] Licensing Firewall: no commercial book PDFs, OCR dumps, or extracted book text in git (`data/`, `packages/`, fixtures, PR artifacts)
+- [ ] Licensing Firewall: `osr` in-repo text is original short AGPL helpers only; full books via BYOD (`AGREE_BYOD_USE`, never uploaded)
+- [ ] Licensing Firewall: `LICENSE.md` Product Identity list is exclusion/attribution only
+- [ ] Licensing Firewall: session labels in docs are abstract (`table-a`, `campaign-label`)
 - [ ] Tested against an MCP client

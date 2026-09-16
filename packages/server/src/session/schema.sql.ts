@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   name TEXT,
   rules_system TEXT NOT NULL DEFAULT 'ogl',
   byod_system TEXT,
+  table_label TEXT,
   started_at INTEGER NOT NULL,
   ended_at INTEGER,
   summary TEXT,
@@ -56,5 +57,7 @@ CREATE TABLE IF NOT EXISTS transcription_progress (
 
 -- Migration: add byod_system column to existing sessions table
 ALTER TABLE sessions ADD COLUMN byod_system TEXT;
+ALTER TABLE sessions ADD COLUMN table_label TEXT;
+CREATE INDEX IF NOT EXISTS idx_sessions_table_label ON sessions(table_label);
 ALTER TABLE transcription_progress ADD COLUMN chunk_texts TEXT;
 `;

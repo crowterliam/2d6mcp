@@ -36,6 +36,7 @@
     "@2d6mcp/brp": "*",
     "@2d6mcp/5ecompatible": "*",
     "@2d6mcp/orcus": "*",
+    "@2d6mcp/osr": "*",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@xmldom/xmldom": "^0.9.12",
     "better-sqlite3": "^11.8.0",
