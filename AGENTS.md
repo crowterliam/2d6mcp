@@ -229,7 +229,8 @@ MCP resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://
 - All files under `data/brp/`: BRP OGL v1.0
 - All files under `data/5ecompatible/`: CC-BY-4.0
 - All files under `data/orcus/`: OGL v1.0a
-- All files under `data/osr/`: original 2d6mcp procedure summaries (AGPL); see `data/osr/NOTICE.txt`
+- All files under `data/osr/`: original 2d6mcp procedure summaries (AGPL); see `data/osr/NOTICE.txt`. Full commercial books are BYOD only (local, consent-gated, never uploaded).
+- `LICENSE.md` lists Product Identity / trademarks used for exclusion and attribution only. Do not commit commercial book PDFs or extracted dumps. CI runs `scripts/license-firewall.mjs`.
 - `LICENSE` contains the AGPL-3.0 text
 - `LICENSE.md` describes the firewall in detail
 - `OGL-1.0a.txt` contains the full OGL text with Cepheus SRD copyright attributions

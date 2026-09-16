@@ -42,11 +42,22 @@ describe("OSR queries against populated database", () => {
 
   it("does not contain commercial book dump markers", () => {
     const db = ensureOsrSchema(DB_PATH);
-    const rows = db.prepare("SELECT content FROM osr_core_rules").all() as { content: string }[];
+    const rows = db
+      .prepare(
+        `SELECT content AS text FROM osr_core_rules
+         UNION ALL SELECT content FROM osr_procedures
+         UNION ALL SELECT result FROM osr_tables`
+      )
+      .all() as { text: string }[];
+    let total = 0;
     for (const row of rows) {
-      expect(row.content.toLowerCase()).not.toContain(["necrotic", " gnome"].join(""));
-      expect(row.content).not.toMatch(/©/);
+      expect(row.text.toLowerCase()).not.toContain(["necrotic", " gnome"].join(""));
+      expect(row.text).not.toMatch(/©/);
+      expect(row.text).not.toMatch(/\bISBN\b/i);
+      expect(row.text.length).toBeLessThan(2000);
+      total += row.text.length;
     }
+    expect(total).toBeLessThan(20_000);
   });
 
   it("filters procedures by category", () => {

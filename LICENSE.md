@@ -133,6 +133,10 @@ This Product is **not** affiliated with, endorsed by, or sponsored by:
 - Wizards of the Coast, Inc.
 - Sage LaTorra or Adam Koebel
 - agude (Dungeon World Markdown contributor)
+- Necrotic Gnome or the owners of Old-School Essentials, Advanced Fantasy Tomes, or AF Tomes
+- the owners of Black Streams
+- Chaosium Inc. for commercial Call of Cthulhu campaign books (including Masks)
+- Mongoose Publishing for commercial Traveller core rulebooks (Mongoose CRB) beyond Open Game Content already designated above
 
 The use of the Traveller System Reference Document, the Cepheus Engine System
 Reference Document, and Dungeon World does not convey the endorsement of this Product
@@ -169,7 +173,43 @@ contamination between the code and the game content.
 
 ## OSR / B/X-compatible procedures (`data/osr/`)
 
-Rows generated into `data/osr/osr-procedures.db` are original mechanical summaries
-authored for 2d6mcp (AGPL-3.0-only). They are not derived from commercial old-school
-rulebooks. See `data/osr/NOTICE.txt`. Licensed book PDFs must be indexed locally via
-BYOD and must never be committed to this repository.
+The public rules system id is `osr` (OSR / B/X-compatible mechanical helpers).
+That id is not a commercial product abbreviation.
+
+Rows generated into `data/osr/osr-procedures.db` are **original short mechanical
+summaries authored for 2d6mcp** and are licensed AGPL-3.0-only like the software
+engine. They describe common B/X-style procedures (saves, combat, reaction, morale,
+hirelings, encumbrance, exploration) in original wording. See `data/osr/NOTICE.txt`.
+
+**In-repo (`osr`)** = original AGPL helpers and named 2d6/1d6 packs.
+**Full books** = operator-local BYOD only (`AGREE_BYOD_USE` + `BYOD_PATH`). BYOD
+indexes stay on the operator's machine; they are never uploaded and must never be
+committed to git.
+
+This repository does **not** contain, and contributors must not add:
+
+- PDFs or extracted dumps of commercial old-school or closed-content books
+- text copied from Old-School Essentials, Advanced Fantasy Tomes, AF Tomes,
+  Black Streams, Masks, Mongoose CRB, or other proprietary corpora
+- screenshots of copyrighted book pages, OCR dumps, or seed files derived from them
+
+`npm run populate-osr` seeds only the original short helpers. Optional
+`--source-dir` imports the operator's own `.md`/`.txt` notes into a local database
+and never vendors PDFs.
+
+### OSR Product Identity (exclusion / attribution only)
+
+The following names are **Product Identity or trademarks of their respective owners**.
+They are listed here solely to identify works this project does **not** ship, and
+do not grant any licence to copy those works:
+
+- "Old-School Essentials" (trademark of Necrotic Gnome)
+- "Necrotic Gnome"
+- "Advanced Fantasy Tomes" / "AF Tomes"
+- "Black Streams"
+- "Masks" as the title of a commercial campaign book
+- "Mongoose CRB" and other closed Mongoose Traveller core-book text (distinct from
+  Open Game Content already designated under `data/ogl/`)
+
+These marks are used for attribution and exclusion only. No challenge to ownership
+is intended. Operators who own licensed copies may index them locally with BYOD.

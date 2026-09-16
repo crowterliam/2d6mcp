@@ -6,7 +6,7 @@ import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 
 describe("licensing firewall", () => {
-  it("rejects vendored PDFs and forbidden identifiers", () => {
+  it("rejects vendored PDFs, book dumps, and closed-content identifiers", () => {
     const script = resolve("scripts/license-firewall.mjs");
     const output = execFileSync(process.execPath, [script], { encoding: "utf8" });
     expect(output).toContain("Licensing firewall: ok");

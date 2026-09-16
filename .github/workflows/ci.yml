@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Guard against vendored PDFs and forbidden identifiers
+      - name: Guard against vendored PDFs and closed-content dumps
         run: node scripts/license-firewall.mjs
 
   build:

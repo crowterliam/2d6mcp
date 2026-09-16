@@ -219,9 +219,9 @@ Set an optional durable `table_label` on `session` start so `get_session_context
 
 ### OSR lookup vs commercial books
 
-- Mid-session procedures: `query_rules(system=osr)` and `roll_table(source=osr)` (Monster Reaction, Morale Check, Hireling Reaction, Wandering Encounter Tick). Bundled text is original 2d6mcp wording, not a book dump.
-- Operator's local OSR/B/X shelf PDFs: index with BYOD. Example path (docs only): `/path/to/rpg-shelf`. Set `AGREE_BYOD_USE=true` and `BYOD_PATH` to the shelf (or a parent that contains that folder). `sync_byod(query="old-school")` then `query_local_byod`.
-- Optional: `npm run populate-osr -- --source-dir <notes>` imports operator `.md`/`.txt` into the local DB. PDFs stay in BYOD. Never commit book PDFs.
+- Mid-session procedures: `query_rules(system=osr)` and `roll_table(source=osr)` (Monster Reaction, Morale Check, Hireling Reaction, Wandering Encounter Tick). Bundled text is original 2d6mcp AGPL wording, not a book dump.
+- Full commercial books are BYOD only: local-only, consent-gated (`AGREE_BYOD_USE`), never uploaded, never committed. Example path (docs only): `/path/to/rpg-shelf`. `sync_byod(query="old-school")` then `query_local_byod`.
+- Optional: `npm run populate-osr -- --source-dir <notes>` imports operator `.md`/`.txt` into the local DB. PDFs stay in BYOD. Never commit book PDFs or extracted dumps. Product Identity exclusions are in `LICENSE.md`.
 
 ### Multi-shelf BYOD
 
@@ -249,7 +249,7 @@ This project uses a multi-license architecture:
 - **Dungeon World data** (`data/dw/**`): [CC-BY-3.0](data/dw/CC-BY-3.0.txt)
 - **Basic Roleplaying data** (`data/brp/**`): [BRP Open Game License v1.0](data/brp/BRP-OGL-1.0.txt)
 - **5E-compatible SRD data** (`data/5ecompatible/**`): [CC-BY-4.0](data/5ecompatible/SRD-NOTICE.txt)
-- **OSR / B/X-compatible procedures** (`data/osr/**`): original 2d6mcp summaries ([NOTICE](data/osr/NOTICE.txt)); commercial books via BYOD only
+- **OSR / B/X-compatible procedures** (`data/osr/**`): original 2d6mcp summaries ([NOTICE](data/osr/NOTICE.txt), AGPL); full books via BYOD only. Product Identity exclusions: [LICENSE.md](LICENSE.md)
 
 The BRP logo (`BRP.png` in the project root and `data/brp/BRP.png`) is a trademark of Chaosium Inc., displayed in compliance with Section 15 of the BRP Open Game License v1.0.
 
