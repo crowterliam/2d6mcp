@@ -1,6 +1,6 @@
 {
   "name": "@2d6mcp/osr",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "B/X-style (OSR / B/X-compatible) procedures database — original mechanical summaries, queries, and population for 2d6mcp",
   "type": "module",
   "main": "dist/queries.js",

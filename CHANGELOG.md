@@ -11,6 +11,8 @@ with **lockstep** versions across the npm workspaces (see [VERSIONING.md](VERSIO
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-16
+
 ### Added
 
 - OSR / B/X-compatible procedures database (`query_rules` / `roll_table` with `system`/`source` `osr`). Bundled rows are original mechanical summaries; full commercial books stay on the operator's local shelf (BYOD, consent-gated, never uploaded).
@@ -36,5 +38,6 @@ with **lockstep** versions across the npm workspaces (see [VERSIONING.md](VERSIO
 
 - Self-hosted MCP server: dice, licensed rules databases, BYOD ingest, sessions, local STT/LLM backends, Discord webhook posting.
 
-[Unreleased]: https://github.com/crowterliam/2d6mcp/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/crowterliam/2d6mcp/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/crowterliam/2d6mcp/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/crowterliam/2d6mcp/releases/tag/v0.7.0

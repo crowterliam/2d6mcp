@@ -1,6 +1,6 @@
 {
   "name": "2d6mcp",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "bin": {
     "2d6mcp": "./packages/server/dist/index.js",
     "crowterliam-2d6mcp": "./packages/server/dist/index.js"

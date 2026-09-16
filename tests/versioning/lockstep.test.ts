@@ -63,6 +63,9 @@ describe("lockstep versioning", () => {
     for (const record of result.records) {
       expect(record.version).toBe(rootPkg.version);
     }
+    const changelog = readFileSync(join(ROOT, "CHANGELOG.md"), "utf8");
+    expect(changelog).toContain("## [Unreleased]");
+    expect(changelog).toContain(`## [${rootPkg.version}]`);
   });
 
   it("exposes the root package.json version on the MCP server and info resource", () => {
