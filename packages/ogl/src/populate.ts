@@ -152,6 +152,26 @@ function seedCoreRules(db: Database.Database): void {
       "Awareness (self): Suspended Animation, Enhanced Strength (+4 STR for PSI mins), Enhanced Endurance (+4 END), Regeneration (heal 1d per PSI point). Clairvoyance (distant sensing): Sense (detect at range), Clairvoyance (see distant location), Clairaudience, Clairsentience. Telekinesis: Move objects (Strength = PSI score). Telepathy: Life Detection, Telempathy, Read Surface Thoughts, Send Thoughts, Probe, Assault (mental attack), Shield (mental defense). Teleportation: instant travel (PSI x 10m range).",
       "Chapter 3"],
 
+    // Trade & Commerce (Open SRD summaries — not commercial core-book matrices)
+    ["Trade & Commerce", "Freight",
+      "Freight is cargo hauled for a paying consignor, not goods the crew owns. Open SRD rate: Cr1,000 per displacement ton per jump. Typical lot sizes: incidental about 1d6 tons, minor about 1d6×5 tons, major about 1d6×10 tons. How many lots appear scales with source and destination population and starport quality (low-pop worlds fewer lots, high-pop industrial worlds more). A Broker or Admin check finds freight contracts. Mail is a special freight job (see Mail). This Open SRD does not bundle a commercial freight-lot matrix — use Population/starport as a guide, or the operator's licensed book via BYOD.",
+      "Trade & Commerce"],
+    ["Trade & Commerce", "Speculative Trade",
+      "Buy goods on one world and sell them on another. 1) Find a supplier (Broker, Streetwise, or Admin check). 2) See which goods the source world's trade codes make available. 3) Purchase price: 2d6 + Broker + SOC DM, modified by source trade codes. 4) Transport the cargo. 5) Find a buyer (Broker check). 6) Sale price: 2d6 + Broker + SOC DM, modified by destination trade codes. Effect and trade-code DMs shift price as a percentage of base cost. Illegal cargo needs Streetwise/black-market Broker and risks law-level seizure. Look up Trade Codes and Trade Routes under World Generation.",
+      "Trade & Commerce"],
+    ["Trade & Commerce", "Passengers",
+      "High passage: Cr10,000 (stateroom, 1,000kg baggage, steward). Middle passage: Cr8,000 (standby stateroom, 100kg). Low passage: Cr1,000 (cold sleep, 10kg, Endurance check on revival). Working passage: labour in lieu of fare (typically max 3 jumps). Stowaway is illegal. Passenger demand follows population and starport. Steward improves service. See also Off-World Travel / Passenger Travel under starships.",
+      "Trade & Commerce"],
+    ["Trade & Commerce", "Mail",
+      "Mail is a guaranteed-payout freight contract: Cr5,000 per 5 tons. It occupies cargo tonnage on a jump-capable route and usually wants a trusted or armed ship. Treat mail as freight with a posted rate rather than speculative cargo.",
+      "Trade & Commerce"],
+    ["Trade & Commerce", "Broker and Markets",
+      "Broker is the trade skill (EDU; specializations Trade, Black Market, Futures). Add Broker level to purchase and sale checks. A hired local broker typically takes a cut of the deal (about 5%, or about 1% per Broker level — referee's call). Trade codes (Ag, In, Ri, Po, Ni, Hi, and similar) decide what is cheap to buy and dear to sell. Charter rates are about Cr2,500 per ton per month. For world-pair links see Trade Routes; for Broker itself use category skills.",
+      "Trade & Commerce"],
+    ["Trade & Commerce", "Trade Goods",
+      "Speculative cargo families in this Open SRD: common electronics, industrial goods, manufactured goods, raw materials, consumables, and ores; advanced electronics, machine parts, manufactured goods, weapons, and vehicles; biochemicals, crystals and gems, cybernetics, live animals, luxury consumables and goods, medical supplies, petrochemicals, pharmaceuticals, polymers, precious metals, radioactives, robots, spices, textiles, uncommon ores and raw materials, wood, and vehicles. Illegal variants (biochemicals, cybernetics, drugs, luxuries, weapons) use black-market Broker/Streetwise. Base prices and per-good purchase/sale DM columns live in a licensed trade-goods table — this SRD lists families and the Broker procedure, not a commercial price matrix. Use trade codes for availability; roll 2d6 + Broker + SOC DM for price.",
+      "Trade & Commerce"],
+
     // Common Themes
     ["Game Themes", "Overview",
       "Colonial (settle new world), Commerce (trading and freight), Drifter/Sandbox (odd jobs, exploration), Espionage (spy missions), Exploration (survey uncharted space), Mercenary (military contracts), Political (diplomacy and intrigue), Rebellion (civil war).",
@@ -707,7 +727,8 @@ function seedCommonVessels(db: Database.Database): void {
     ["Space Combat: Crew Positions", "Commander (initiative/tactics), Pilot (evasive action), Navigator (jump plot), Engineer (power management), Gunners (weapon fire), Screens Operator (defense). Automated positions possible with appropriate software.", "Space Combat"],
     ["Space Combat: Initiative", "1d6 + Commander's Tactics skill + ship's Thrust rating. Each crew position acts in order during the turn. Commander can use Leadership to increase another position's initiative.", "Space Combat"],
     ["Space Combat: Ship Damage", "Hull hits reduce Hull by 1. Structure hits reduce Structure by 1. At 0 Hull: internal system hits. At 0 Structure: ship destroyed. Armor reduces damage. Critical hits on specific systems (weapons, drives, power plant, sensors, computer, bridge).", "Space Combat"],
-    ["Trade: Speculative Trade", "1) Find supplier (Broker check). 2) Determine goods available (roll on trade goods table). 3) Purchase price: 2d6 + Broker + SOC DM, modify by world trade codes. 4) Sell: 2d6 + Broker + SOC DM, modify by destination world. 5) Profit margin determines success.", "Trade & Commerce"],
+    ["Trade: Freight", "Freight is paid cargo for a consignor. Open SRD rate: Cr1,000 per ton per jump. Typical lots: incidental ~1d6 tons, minor ~1d6×5 tons, major ~1d6×10 tons. Lot counts scale with population and starport; this SRD has no commercial lot-count matrix. Broker or Admin finds contracts. Mail is special freight (Cr5,000 per 5 tons).", "Trade & Commerce"],
+    ["Trade: Speculative Trade", "Speculative cargo the crew buys and resells, distinct from freight contracts. 1) Find supplier (Broker check). 2) Determine goods available from world trade codes. 3) Purchase price: 2d6 + Broker + SOC DM, modify by source trade codes. 4) Transport. 5) Find a buyer (Broker check). 6) Sell: 2d6 + Broker + SOC DM, modify by destination world. Profit is the margin after freight-equivalent transport costs.", "Trade & Commerce"],
     ["Environments: Hazards", "Acid: 1d6-4d6 damage per round. Disease: END check vs infection, effects vary. Temperature extremes: exposure damage per hour. Fire: 1d6 per round. Falling: 1d6 per 3m. Poison: DM varies by type. Radiation: rads accumulate, effects from nausea to death. Vacuum: 1d6 damage per round, unconscious in END rounds, death in 2x END rounds.", "Environments"],
   ];
   for (const e of entries) s.run(...e);

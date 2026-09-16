@@ -8,6 +8,7 @@ import {
   searchOglSkills,
   searchOglCareers,
   searchOglEquipment,
+  searchOglTrade,
   searchCombat,
   searchShipOps,
   searchWorldBuilding,
@@ -79,7 +80,7 @@ import { ensureOglDb, ensureDwDb, ensureBrpDb, ensure5ecompatibleDb, ensureOrcus
 import { RULES_SYSTEMS, type NamedRulesSystem } from "../../rulings/retrieve.js";
 
 const CATEGORY_FILTERS: Record<NamedRulesSystem, string[]> = {
-  ogl: ["rules", "skills", "careers", "equipment", "tables", "combat", "starships", "worlds", "list_tables"],
+  ogl: ["rules", "skills", "careers", "equipment", "tables", "combat", "starships", "worlds", "trade", "list_tables"],
   dw: ["rules", "moves", "classes", "spells", "equipment", "monsters", "gm_tools"],
   brp: [
     "rules",
@@ -125,12 +126,27 @@ function jsonResult(data: unknown, isError = false) {
   };
 }
 
+/** Map display names from rules_categories onto query_rules filter keys. */
+function aliasOglCategory(category: string): string {
+  const compact = category.replace(/[&/_-]+/g, " ").replace(/\s+/g, " ").trim();
+  if (
+    compact === "trade" ||
+    compact === "commerce" ||
+    compact === "trade commerce" ||
+    compact === "trade and commerce"
+  ) {
+    return "trade";
+  }
+  return compact;
+}
+
 function queryOgl(searchTerm: string, category: string): Record<string, unknown> {
   const { dbPath } = ensureOglDb();
   const db = getDatabase(dbPath);
   const response: Record<string, unknown> = {};
+  const filter = aliasOglCategory(category);
 
-  switch (category) {
+  switch (filter) {
     case "skills":
       response.skills = searchOglSkills(db, searchTerm);
       break;
@@ -148,6 +164,9 @@ function queryOgl(searchTerm: string, category: string): Record<string, unknown>
     case "categories":
       response.categories = CATEGORY_FILTERS.ogl;
       response.rules_categories = listOglCategories(db);
+      response.category_aliases = {
+        trade: ["Trade & Commerce", "commerce", "trade and commerce"],
+      };
       break;
     case "combat":
       response.combat = searchCombat(db, searchTerm);
@@ -159,6 +178,12 @@ function queryOgl(searchTerm: string, category: string): Record<string, unknown>
     case "worlds":
     case "world_building":
       response.worlds = searchWorldBuilding(db, searchTerm);
+      break;
+    case "trade":
+      response.rules = searchOglTrade(db, searchTerm);
+      response.related_filters = ["skills", "worlds", "starships", "list_tables"];
+      response.note =
+        "Open SRD freight rate is Cr1,000/ton per jump, plus speculative trade, passengers, and mail. Commercial lot-count matrices are not bundled; use Population/starport as a guide, category=skills (Broker), category=worlds (Trade Codes/Routes), category=list_tables, or BYOD for a licensed book.";
       break;
     case "list_tables":
       response.tables_list = listOglTables(db);

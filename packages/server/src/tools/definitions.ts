@@ -213,7 +213,7 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
           category: {
             type: "string",
             description:
-              "Optional filter. Default: core FTS (rules). Use categories to list filters for the chosen system.",
+              "Optional filter. Default: core FTS (rules). Use categories to list filters. OGL trade aliases: trade, Trade & Commerce.",
           },
         },
         required: ["system"],

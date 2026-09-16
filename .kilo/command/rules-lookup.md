@@ -22,6 +22,7 @@ Query the 2d6mcp rules databases, synthesize AI rulings, and manage game session
 /rules combat
 /rules "laser rifle" in equipment
 /rules navy in careers
+/rules freight in trade
 /rules dw "hack and slash"
 /rules dw wizard in classes
 /rules brp "characteristics" in characteristics
@@ -37,7 +38,7 @@ Query the 2d6mcp rules databases, synthesize AI rulings, and manage game session
 ## Behaviour
 
 - Without `in`, queries core FTS only (`query_rules` default category) for OGL
-- `in` narrows to: rules, skills, careers, equipment, tables, combat, starships, worlds, categories, list_tables
+- `in` narrows to: rules, skills, careers, equipment, tables, combat, starships, worlds, trade, categories, list_tables
 - `dw` searches the Dungeon World database (moves, classes, spells, equipment, monsters, gm_tools)
 - `brp` searches the Basic Roleplaying database (characteristics, skills, professions, weapons, armor, spot_rules, foes)
 - `5e` searches the 5E-compatible database (spells, monsters, classes, feats, rules)

@@ -216,6 +216,7 @@ MCP resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://
 - **Session lifecycle**: Start with `session` `action: start`, log with `log_transcript`, end with `session` `action: end`.
 - **Table labels**: Pass optional `table_label` on start (examples: `table-a`, `campaign-label`) so list/context/search stay per-table.
 - **OSR vs OGL**: `query_rules(system=ogl)` is 2d6 sci-fi SRD. B/X-style procedures use `system=osr`. Full commercial books are BYOD (`AGREE_BYOD_USE` + `BYOD_PATH`, for example `/path/to/rpg-shelf` for the operator's local OSR/B/X shelf PDFs).
+- **OGL trade**: `query_rules(system=ogl, category=trade)` (alias `Trade & Commerce`) for freight, speculative trade, passengers, and mail. Broker is `category=skills`; Trade Codes/Routes are `category=worlds`. Commercial freight-lot matrices are not bundled (`category=list_tables` has none) — use Population/starport or BYOD.
 - **BYOD system scoping**: Pass `byod_system` on session start to filter BYOD searches.
 - **Ruling synthesis**: `synthesize_ruling` auto-looks up licensed rules and BYOD (when consent is on). BYOD indexes matching top-level collections on demand from the question or session `byod_system`. Default `rules_system` comes from the session when `session_id` is set.
 - **Audio transcription**: `transcribe_audio` processes files longer than 180 seconds in 2-minute chunks. Call repeatedly until `complete: true`. The last chunk sets `complete` itself.

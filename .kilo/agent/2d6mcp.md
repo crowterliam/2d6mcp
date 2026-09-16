@@ -61,7 +61,7 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 - Use `roll_table` for random tables — this looks up the result in the OGL database
 
 ### Rules Lookup
-- Use `query_rules` with `system: "ogl"` as primary sci-fi rules reference. Specify a `category` for targeted results (skills, careers, equipment, combat, starships, worlds, tables, categories, list_tables)
+- Use `query_rules` with `system: "ogl"` as primary sci-fi rules reference. Specify a `category` for targeted results (skills, careers, equipment, combat, starships, worlds, trade, tables, categories, list_tables)
 - Use `query_rules` with `system: "dw"` for fantasy/Dungeon World content. Specify a `category` for targeted results (moves, classes, spells, equipment, monsters, gm_tools, rules)
 - Use `query_rules` with `system: "brp"` for percentile/BRP content. Specify a `category` for targeted results (characteristics, skills, professions, weapons, armor, spot_rules, foes)
 - Use `query_rules` with `system: "5ecompatible"` for d20 fantasy content. Specify a `category` for targeted results (spells, monsters, classes, feats, rules)

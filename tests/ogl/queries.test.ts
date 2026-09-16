@@ -15,6 +15,7 @@ import {
   searchCombat,
   searchShipOps,
   searchWorldBuilding,
+  searchOglTrade,
 } from "@2d6mcp/ogl";
 import { getDatabase, initSchema, ensureSchema, closeDatabase } from "@2d6mcp/ogl/database";
 import { populateOglDatabase } from "@2d6mcp/ogl/populate";
@@ -66,6 +67,16 @@ describe("OGL queries against bundled database", () => {
     it("does not return results for partial words that match nothing", () => {
       const results = searchOglRules(db, "zzqqxx");
       expect(results).toEqual([]);
+    });
+
+    it("ranks Trade & Commerce Freight above Game Themes Overview for freight", () => {
+      const results = searchOglRules(db, "freight");
+      expect(results.length).toBeGreaterThan(0);
+      const top = results[0];
+      expect(top.section.toLowerCase()).not.toBe("game themes");
+      expect(top.title.toLowerCase()).not.toBe("overview");
+      expect(top.section).toBe("Trade & Commerce");
+      expect(`${top.title} ${top.snippet}`.toLowerCase()).toContain("freight");
     });
   });
 
@@ -179,6 +190,55 @@ describe("OGL queries against bundled database", () => {
     it("returns world building rules", () => {
       const results = searchWorldBuilding(db, "starport");
       expect(results.length).toBeGreaterThan(0);
+    });
+
+    it("finds trade codes and trade routes", () => {
+      const results = searchWorldBuilding(db, "trade");
+      expect(results.some((r) => /trade codes/i.test(r.topic))).toBe(true);
+      expect(results.some((r) => /trade routes/i.test(r.topic))).toBe(true);
+    });
+  });
+
+  describe("searchOglTrade", () => {
+    it("freight hits Trade & Commerce content, not Game Themes Overview", () => {
+      const results = searchOglTrade(db, "freight");
+      expect(results.length).toBeGreaterThan(0);
+      expect(results.some((r) => /game themes/i.test(r.section) && /overview/i.test(r.title))).toBe(
+        false
+      );
+      expect(
+        results.some(
+          (r) =>
+            /trade/i.test(r.section) && /freight/i.test(`${r.title} ${r.snippet}`)
+        )
+      ).toBe(true);
+      expect(results[0].section.toLowerCase()).not.toBe("game themes");
+      expect(results[0].title.toLowerCase()).not.toBe("overview");
+    });
+
+    it("finds Broker procedure under Trade & Commerce", () => {
+      const results = searchOglTrade(db, "Broker");
+      expect(results.length).toBeGreaterThan(0);
+      expect(
+        results.some((r) => /broker/i.test(`${r.title} ${r.snippet}`))
+      ).toBe(true);
+    });
+
+    it("finds speculative trade procedure", () => {
+      const results = searchOglTrade(db, "speculative");
+      expect(results.some((r) => /speculative/i.test(`${r.title} ${r.snippet}`))).toBe(true);
+    });
+
+    it("finds trade-route style world content", () => {
+      const results = searchOglTrade(db, "trade route");
+      expect(results.some((r) => /trade route/i.test(`${r.title} ${r.snippet}`))).toBe(true);
+    });
+
+    it("lists Trade & Commerce sections when the term is empty", () => {
+      const results = searchOglTrade(db, "");
+      expect(results.some((r) => r.section === "Trade & Commerce" && /freight/i.test(r.title))).toBe(
+        true
+      );
     });
   });
 });

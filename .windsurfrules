@@ -52,7 +52,7 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 
 **Task resolution**: `roll(notation: "2d6", mechanic: "2d6", modifier, target)` for 2d6, `roll(mechanic: "d20", modifier, target, advantage, disadvantage)` for d20, `roll(mechanic: "percentile", target)` for d100. For damage: `roll(notation: "2d6+3 fire", mechanic: "damage")`. Report margin and outcome.
 
-**Rules lookup**: `query_rules(system: "ogl", "term", category: "category")`. Use category to narrow: skills, careers, equipment, tables, combat, starships, worlds. For DW: `query_rules` with `system: "dw"`. For BRP: `query_rules` with `system: "brp"`. For 5E: `query_rules` with `system: "5ecompatible"`. For 4E-compatible: `query_rules` with `system: "orcus"`. For B/X-style procedures: `query_rules` with `system: "osr"` (commercial books via BYOD).
+**Rules lookup**: `query_rules(system: "ogl", "term", category: "category")`. Use category to narrow: skills, careers, equipment, tables, combat, starships, worlds, trade. For DW: `query_rules` with `system: "dw"`. For BRP: `query_rules` with `system: "brp"`. For 5E: `query_rules` with `system: "5ecompatible"`. For 4E-compatible: `query_rules` with `system: "orcus"`. For B/X-style procedures: `query_rules` with `system: "osr"` (commercial books via BYOD).
 
 **Character creation**: Roll six `roll(notation: "2d6", mechanic: "raw")` for characteristics. Look up careers with `query_rules(system: "ogl", "name", category: "careers")`. Parse existing sheets with `parse_character(path)`.
 

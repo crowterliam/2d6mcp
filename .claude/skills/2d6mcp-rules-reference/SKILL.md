@@ -25,6 +25,7 @@ query_rules(system: "ogl", search_term, category?)
 | `combat` | Personal combat rules, damage, healing |
 | `starships` | Starship operations, space combat, critical hits, boarding |
 | `worlds` | World building, UWP creation, trade codes, starports |
+| `trade` | Trade & Commerce: freight, speculative trade, passengers, mail (aliases: `Trade & Commerce`, `commerce`) |
 | `categories` | List of all available categories |
 | `list_tables` | List of all named tables |
 
@@ -34,6 +35,8 @@ query_rules(system: "ogl", "laser rifle")                    → equipment match
 query_rules(system: "ogl", "combat", category: "rules")      → combat rules only
 query_rules(system: "ogl", "navy", category: "careers")      → navy career path
 query_rules(system: "ogl", "Astrogation", category: "skills") → skill description
+query_rules(system: "ogl", "freight", category: "trade")      → Trade & Commerce freight (not Game Themes)
+query_rules(system: "ogl", "trade", category: "worlds")       → Trade Codes / Trade Routes
 ```
 
 ## DW Database Search
@@ -168,7 +171,7 @@ Retrieves the full chunk content for a specific file and chunk index. Use after 
 ## Content Coverage
 
 ### OGL (Cepheus Engine SRD)
-Rules, skills, careers, equipment, combat, starship operations, world building, and random tables for 2d6 sci-fi RPGs.
+Rules, skills, careers, equipment, combat, starship operations, world building, Trade & Commerce (freight, speculative trade, passengers, mail; `category=trade`), and random tables for 2d6 sci-fi RPGs. Commercial freight-lot matrices are not bundled.
 
 ### DW (Dungeon World CC-BY-3.0)
 Moves, classes, spells, equipment, monsters, and GM tools (agendas, principles, fronts, dangers) for 2d6 fantasy RPGs.
