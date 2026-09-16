@@ -178,7 +178,10 @@ npm test              # run the Vitest suite
 npm run typecheck     # type-check without emitting
 npm run start         # run the MCP server (packages/server/dist/index.js)
 npm run sync-byod     # list BYOD collections; pass a query to index matches
+npm run version:check # assert lockstep SemVer across workspaces
 ```
+
+Versioning is **SemVer 2.0 lockstep** (root + every `packages/*` share one version). MCP `server.version` is read from root `package.json`. See [VERSIONING.md](VERSIONING.md) for bump rules and [CHANGELOG.md](CHANGELOG.md) for release notes. Do not npm publish from this repo until the maintainer explicitly approves it.
 
 ## Environment Variables
 

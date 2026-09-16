@@ -51,7 +51,13 @@ npm run populate-5ecompatible  # regenerate 5E-compatible SQLite database
 npm run populate-orcus     # regenerate Orcus SQLite database
 npm run populate-osr      # regenerate OSR / B/X-compatible procedures database
 npm run sync-byod          # list BYOD collections; pass a query to index matches
+npm run version:check      # assert lockstep SemVer (root + packages/*)
+npm run version:bump -- patch|minor|major  # write lockstep version (see VERSIONING.md)
 ```
+
+## Versioning
+
+Lockstep SemVer 2.0: root `package.json` and every `packages/*/package.json` share one product version. MCP `server.version` comes from root `package.json` via `getServerVersion()`. On **0.x**, breaking changes bump **minor** (unstable API). Tags are `vX.Y.Z` after merge; do not npm publish or auto-publish GitHub Releases. Operator guide: `VERSIONING.md`. Changelog: `CHANGELOG.md`.
 
 ## Agent Modes
 
@@ -299,6 +305,7 @@ These rules apply to **all AI coding agents** working on this repository. Follow
    fix(security): resolve ReDoS in quality filter regex
    docs(readme): update monorepo architecture diagram
    ```
+   Map to lockstep bumps (`VERSIONING.md`): `fix`/`docs`/`chore`/`test` → patch; `feat` → minor; `BREAKING CHANGE`/`!` → minor on 0.x, major after 1.0.0. Never invent `1.0.0` unless asked. Use `npm run version:bump` — do not edit package versions by hand.
 
 4. **Before committing — verify what changed.** Run `git status --short` and `git diff --stat`. Only stage files you intend to change. Never `git add -A` blindly.
 
@@ -310,6 +317,7 @@ Run these **before every commit** that includes code changes:
 npm run typecheck    # tsc --build across all packages
 npm test             # vitest test suite
 npm run build        # full compilation (tsc --build)
+npm run version:check  # lockstep versions still match root
 ```
 
 ### Security Before Every Commit
@@ -356,6 +364,7 @@ When you add or change features, update documentation **in the same commit**:
 | New env var | `AGENTS.md` env var tables, `README.md`, `.env.example` |
 | Architecture change | `AGENTS.md` architecture diagram, `README.md`, `CONTRIBUTING.md` |
 | Security change | `SECURITY.md`, `.env.example` |
+| Version bump | `CHANGELOG.md` (Keep a Changelog), `npm run version:bump`, lockstep `package.json` / `server.json` |
 
 ### Testing
 

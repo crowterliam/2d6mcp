@@ -19,6 +19,15 @@ jobs:
       - name: Guard against vendored PDFs and closed-content dumps
         run: node scripts/license-firewall.mjs
 
+  version-lockstep:
+    name: Version Lockstep
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Workspace versions match root
+        run: node scripts/bump-version.mjs check
+
   build:
     name: Build & Type Check
     runs-on: ubuntu-latest
