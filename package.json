@@ -1,6 +1,6 @@
 {
   "name": "2d6mcp",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "bin": {
     "2d6mcp": "./packages/server/dist/index.js",
     "crowterliam-2d6mcp": "./packages/server/dist/index.js"
@@ -28,6 +28,8 @@
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --build",
     "lint": "echo 'lint not configured'",
+    "version:check": "node scripts/bump-version.mjs check",
+    "version:bump": "node scripts/bump-version.mjs bump",
     "postinstall": "npm rebuild better-sqlite3 && node -e \"require('fs').writeFileSync(require('path').join(__dirname,'node_modules/better-sqlite3/build/Release/.node-abi'), process.versions.modules)\""
   },
   "license": "AGPL-3.0-only",

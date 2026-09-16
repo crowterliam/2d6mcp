@@ -91,6 +91,27 @@ fix(byod): handle PDF parse errors gracefully
 docs(readme): update monorepo architecture
 ```
 
+Those prefixes drive the **lockstep SemVer** bump (see [VERSIONING.md](VERSIONING.md)):
+
+| Prefix | Bump |
+|--------|------|
+| `fix:`, `docs:`, `chore:`, `test:`, `refactor:` | patch |
+| `feat:` | minor |
+| `BREAKING CHANGE` / `!` | minor while on **0.x** (unstable API); major only at/after 1.0.0 |
+
+Do not edit package versions by hand. After merging the work:
+
+```bash
+npm run version:check
+npm run version:bump -- patch    # or minor / major
+```
+
+Then move `[Unreleased]` notes in [CHANGELOG.md](CHANGELOG.md) into a dated section, commit `chore(release): bump lockstep version to X.Y.Z`, and open a PR. After merge, tag `vX.Y.Z`. Do **not** npm publish or create a GitHub Release that auto-publishes.
+
+## Versioning
+
+Product version is SemVer 2.0, lockstep across root + `packages/*`. MCP `server.version` comes from root `package.json` (`getServerVersion()`). Full operator rules: [VERSIONING.md](VERSIONING.md).
+
 ## Questions
 
 Open an issue or contact the lead maintainer at [liam@evaunit.one](mailto:liam@evaunit.one).
