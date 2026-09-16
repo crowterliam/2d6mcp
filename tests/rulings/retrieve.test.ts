@@ -145,6 +145,6 @@ describe("retrieveRulesContext", () => {
       rulesSystem: "auto",
     });
     expect(auto.searchCalls).toBeLessThan(40);
-    expect(auto.systemsSearched).toHaveLength(5);
+    expect(auto.systemsSearched).toHaveLength(6);
   });
 });
