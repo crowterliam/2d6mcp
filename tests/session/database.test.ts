@@ -18,6 +18,8 @@ import {
   getTranscript,
   getRecentTranscript,
   searchTranscript,
+  searchTranscriptByLabel,
+  getLatestSessionByLabel,
   getRecentContext,
   storeRuling,
   getRecentRulings,
@@ -42,6 +44,43 @@ afterEach(() => {
 });
 
 describe("session database", () => {
+  it("creates a session with a table_label", () => {
+    const db = openSessionDb(DB_PATH);
+    const session = createSession(db, "osr", "table-a session", "osr", "table-a");
+    expect(session.table_label).toBe("table-a");
+    expect(session.rules_system).toBe("osr");
+    const retrieved = getSession(db, session.id);
+    expect(retrieved!.table_label).toBe("table-a");
+  });
+
+  it("lists and searches sessions by table_label", () => {
+    const db = openSessionDb(DB_PATH);
+    const tableA = createSession(db, "osr", "table-a", "osr", "table-a");
+    createSession(db, "ogl", "sci-fi table", undefined, "table-b");
+    logTranscript(db, tableA.id, "The hireling refuses the offer");
+
+    const listed = listSessions(db, 10, "table-a");
+    expect(listed).toHaveLength(1);
+    expect(listed[0].id).toBe(tableA.id);
+
+    const hits = searchTranscriptByLabel(db, "table-a", "hireling");
+    expect(hits).toHaveLength(1);
+    expect(hits[0].session_id).toBe(tableA.id);
+
+    const otherHits = searchTranscriptByLabel(db, "table-b", "hireling");
+    expect(otherHits).toHaveLength(0);
+  });
+
+  it("getLatestSessionByLabel prefers an open session", () => {
+    const db = openSessionDb(DB_PATH);
+    const first = createSession(db, "brp", "campaign A", undefined, "campaign-label");
+    endSession(db, first.id);
+    const second = createSession(db, "brp", "campaign B", undefined, "campaign-label");
+    const latest = getLatestSessionByLabel(db, "campaign-label");
+    expect(latest).not.toBeNull();
+    expect(latest!.id).toBe(second.id);
+  });
+
   it("creates and retrieves a session", () => {
     const db = openSessionDb(DB_PATH);
     const session = createSession(db, "ogl", "Test Session");

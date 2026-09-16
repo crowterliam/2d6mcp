@@ -71,7 +71,7 @@ export function getPromptDefinitions(): Prompt[] {
       title: "Look up rules",
       description: "Search a licensed rules database, then cite the matching entries.",
       arguments: [
-        { name: "system", description: "ogl, dw, brp, 5ecompatible, or orcus", required: true },
+        { name: "system", description: "ogl, dw, brp, 5ecompatible, orcus, or osr", required: true },
         { name: "query", description: "Rules question or search terms", required: true },
         { name: "category", description: "Optional category filter; use categories to list filters", required: false },
       ],
@@ -81,7 +81,7 @@ export function getPromptDefinitions(): Prompt[] {
       title: "Create a character",
       description: "Walk through character creation for the chosen rules system using roll and query_rules.",
       arguments: [
-        { name: "system", description: "ogl, dw, brp, 5ecompatible, or orcus", required: true },
+        { name: "system", description: "ogl, dw, brp, 5ecompatible, orcus, or osr", required: true },
         { name: "concept", description: "Character concept or career/class preference", required: false },
       ],
     },
@@ -91,7 +91,8 @@ export function getPromptDefinitions(): Prompt[] {
       description: "Start a session, confirm the rules system, and outline table logging.",
       arguments: [
         { name: "name", description: "Session name", required: false },
-        { name: "rules_system", description: "ogl, dw, brp, 5ecompatible, or orcus (default ogl)", required: false },
+        { name: "rules_system", description: "ogl, dw, brp, 5ecompatible, orcus, or osr (default ogl)", required: false },
+        { name: "table_label", description: "Campaign tag: table-b, table-a, campaign-label", required: false },
       ],
     },
     {
@@ -100,7 +101,7 @@ export function getPromptDefinitions(): Prompt[] {
       description: "Look up licensed rules (and BYOD when enabled) and synthesize a cited ruling.",
       arguments: [
         { name: "question", description: "The rules question to resolve", required: true },
-        { name: "rules_system", description: "ogl, dw, brp, 5ecompatible, orcus, or auto", required: false },
+        { name: "rules_system", description: "ogl, dw, brp, 5ecompatible, orcus, osr, or auto", required: false },
         { name: "session_id", description: "Optional session to scope lookup and log the ruling", required: false },
       ],
     },
@@ -166,6 +167,7 @@ function renderPrompt(name: PromptName, args?: Record<string, string>): GetPromp
           `Resolve a roll-under check for ${skill}.`,
           `Call the roll tool with mechanic "percentile"${target ? ` and target ${target}` : " and the provided target percentile"}.`,
           "Report tens/ones, total, success or failure, critical success (at or below 5% of the target), and fumble (96–100).",
+          "For CoC 7e Hard/Extreme, bonus/penalty dice, SAN loss, or opposed POW, call roll with mechanic \"coc\" and bonus_dice, penalty_dice, san_success, san_fail, and/or opposed_target.",
         ].join("\n")
       );
     }
@@ -200,11 +202,13 @@ function renderPrompt(name: PromptName, args?: Record<string, string>): GetPromp
     case "start-session": {
       const sessionName = arg(args, "name", "Tonight's game");
       const rulesSystem = arg(args, "rules_system", "ogl");
+      const tableLabel = arg(args, "table_label");
       return userPrompt(
         "Start a game session",
         [
-          `Start a session named "${sessionName}" using rules_system "${rulesSystem}".`,
-          'Call session with action "start", the name, and rules_system.',
+          `Start a session named "${sessionName}" using rules_system "${rulesSystem}"${tableLabel ? ` and table_label "${tableLabel}"` : ""}.`,
+          'Call session with action "start", the name, rules_system, and table_label if provided.',
+          "Optional table_label examples: table-a, campaign-label. Combine with rules_system (ogl, osr, brp, …) and byod_system when the table uses a local shelf.",
           "Return the session id. Offer to log_transcript as play proceeds and to synthesize_ruling when a rules question comes up.",
         ].join("\n")
       );

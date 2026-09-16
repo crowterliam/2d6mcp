@@ -13,9 +13,9 @@ import { getActiveSession, openSessionDb } from "./session/database.js";
 const MIME_JSON = "application/json";
 const MIME_MARKDOWN = "text/markdown";
 
-type RulesSystem = "ogl" | "dw" | "brp" | "5ecompatible" | "orcus";
+type RulesSystem = "ogl" | "dw" | "brp" | "5ecompatible" | "orcus" | "osr";
 
-const RULES_SYSTEMS: readonly RulesSystem[] = ["ogl", "dw", "brp", "5ecompatible", "orcus"];
+const RULES_SYSTEMS: readonly RulesSystem[] = ["ogl", "dw", "brp", "5ecompatible", "orcus", "osr"];
 
 const SAFE_TABLE = /^[A-Za-z0-9_]+$/;
 
@@ -33,6 +33,7 @@ export const RESOURCE_URIS = [
   "2d6mcp://rules/brp",
   "2d6mcp://rules/5ecompatible",
   "2d6mcp://rules/orcus",
+  "2d6mcp://rules/osr",
 ] as const;
 
 export type ResourceUri = (typeof RESOURCE_URIS)[number];
@@ -113,7 +114,7 @@ export function getResourceTemplates(): ResourceTemplate[] {
       uriTemplate: "2d6mcp://rules/{system}",
       name: "Rules database index",
       title: "Rules system index",
-      description: "Table listing for ogl, dw, brp, 5ecompatible, or orcus",
+      description: "Table listing for ogl, dw, brp, 5ecompatible, orcus, or osr",
       mimeType: MIME_JSON,
     },
   ];
@@ -176,6 +177,7 @@ function renderResource(uri: ResourceUri): string {
             { id: "brp", label: "Percentile SRD", license: "BRP OGL v1.0" },
             { id: "5ecompatible", label: "d20 fantasy SRD", license: "CC-BY-4.0" },
             { id: "orcus", label: "d20 compatible SRD", license: "OGL v1.0a" },
+            { id: "osr", label: "B/X-style procedures (OSR / B/X-compatible)", license: "Original summaries; full books via BYOD" },
           ],
         },
         null,
@@ -220,6 +222,7 @@ function renderResource(uri: ResourceUri): string {
         "| BRP_DB_PATH | data/brp/basic-roleplaying.db | Percentile database |",
         "| SR5E_DB_PATH | data/5ecompatible/5ecompatible-srd.db | d20 fantasy database |",
         "| ORCUS_DB_PATH | data/orcus/orcus.db | d20 compatible database |",
+        "| OSR_DB_PATH | data/osr/osr-procedures.db | OSR / B/X-compatible procedures database |",
         "| STT_BACKEND | mlx | mlx or whispercpp |",
         "| LLM_BACKEND | mlx | mlx or llamacpp |",
         "",
@@ -237,6 +240,7 @@ function renderResource(uri: ResourceUri): string {
         "- `data/brp/`: BRP OGL v1.0",
         "- `data/5ecompatible/`: CC-BY-4.0",
         "- `data/orcus/`: OGL v1.0a",
+        "- `data/osr/`: original 2d6mcp procedure summaries (AGPL); commercial books via BYOD",
         "",
       ].join("\n");
     case "2d6mcp://session/current":
@@ -245,7 +249,8 @@ function renderResource(uri: ResourceUri): string {
     case "2d6mcp://rules/dw":
     case "2d6mcp://rules/brp":
     case "2d6mcp://rules/5ecompatible":
-    case "2d6mcp://rules/orcus": {
+    case "2d6mcp://rules/orcus":
+    case "2d6mcp://rules/osr": {
       const system = uri.slice("2d6mcp://rules/".length) as RulesSystem;
       return JSON.stringify(describeRulesDb(system), null, 2);
     }
@@ -272,6 +277,7 @@ function readCurrentSession(): string {
       id: active.id,
       name: active.name,
       rules_system: active.rules_system,
+      table_label: active.table_label,
       started_at: active.started_at,
     },
     null,
@@ -292,6 +298,8 @@ function dbPathFor(system: RulesSystem): string {
       return config.sr5eDbPath;
     case "orcus":
       return config.orcusDbPath;
+    case "osr":
+      return config.osrDbPath;
     default: {
       const _never: never = system;
       return _never;

@@ -33,6 +33,8 @@ npm run populate-ogl   # generate the OGL rules database
 npm run populate-dw    # generate the Dungeon World rules database
 npm run populate-brp   # generate the Basic Roleplaying rules database
 npm run populate-5ecompatible  # generate the 5E-compatible rules database
+npm run populate-orcus      # generate the Orcus database
+npm run populate-osr        # generate OSR / B/X-compatible procedures (original summaries, not book text)
 npm run start          # run the MCP server (stdio transport)
 ```
 
@@ -99,8 +101,8 @@ BYOD (Bring Your Own Documents) mode enables local file ingestion for personal, 
 
 | Tool | Description |
 |------|-------------|
-| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`). Infers mechanic from notation when omitted. |
-| `roll_table` | Roll on a named table. `source`: `ogl` or `byod`. Omit `table_name` with `source=byod` to list tables. |
+| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`, `coc`). Infers mechanic from notation when omitted. |
+| `roll_table` | Roll on a named table. `source`: `ogl`, `osr`, or `byod`. Omit `table_name` with `source=byod` or `source=osr` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
 | `query_local_byod` | Search personal files. Indexes matching top-level game folders on demand, then searches. Optional `include_full`. |
 | `sync_byod` | On-demand index. No args lists folders. `query` indexes matching collections. Optional `relative_path` for one file. |
@@ -110,10 +112,10 @@ BYOD (Bring Your Own Documents) mode enables local file ingestion for personal, 
 | `parse_character` | Parse a character sheet into structured JSON |
 | `discord_post` | Post messages to Discord webhooks with smart routing |
 | `discord_webhook` | Manage webhooks: `action` add, remove, list, or test |
-| `session` | Manage sessions: `action` start, end, list, delete, or summarize |
+| `session` | Manage sessions: `action` start, end, list, delete, or summarize. Optional `table_label` on start/list. |
 | `log_transcript` | Log a transcript segment to a session |
-| `get_session_context` | Get recent transcript segments and rulings |
-| `search_transcript` | Search session transcripts with SQL LIKE |
+| `get_session_context` | Get recent transcript segments and rulings (`session_id` or `table_label`) |
+| `search_transcript` | Search transcripts by `session_id` or `table_label` |
 | `synthesize_ruling` | Cited rules ruling. Optional `from_context` uses recent transcript |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. Last chunk sets `complete: true` |
 
@@ -145,7 +147,8 @@ Attachable context at `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d
 │   ├── dw/              # @2d6mcp/dw — DW rules database + queries
 │   ├── brp/             # @2d6mcp/brp — BRP rules database + queries
 │   ├── 5ecompatible/    # @2d6mcp/5ecompatible — 5E-compatible rules database + queries
-│   └── orcus/           # @2d6mcp/orcus — Orcus d20-compatible rules database + queries
+│   ├── orcus/           # @2d6mcp/orcus — Orcus d20-compatible rules database + queries
+│   └── osr/             # @2d6mcp/osr — B/X-style procedures (original summaries; books via BYOD)
 ├── data/                # SQLite databases (shared)
 ├── tests/               # Vitest test suite
 ├── tsconfig.base.json
@@ -195,11 +198,47 @@ npm run sync-byod     # list BYOD collections; pass a query to index matches
 | `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Path to custom BRP SQLite database |
 | `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Path to custom 5E-compatible SQLite database |
 | `ORCUS_DB_PATH` | `data/orcus/orcus.db` | Path to custom Orcus SQLite database |
+| `OSR_DB_PATH` | `data/osr/osr-procedures.db` | Path to OSR / B/X-compatible procedures database |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LLM model |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
 | `STT_BACKEND` | `mlx` | STT backend: `mlx` or `whispercpp` |
 | `LLM_BACKEND` | `mlx` | LLM backend: `mlx` or `llamacpp` |
+
+## Session labels
+
+`query_rules(system=ogl)` is Cepheus/2d6 sci-fi SRD — not old-school fantasy. For B/X-style procedures use `system=osr` plus BYOD for the operator's local OSR/B/X shelf PDFs.
+
+Set an optional durable `table_label` on `session` start so `get_session_context`, `search_transcript`, and `session list` can filter one table without mixing transcripts.
+
+| Example | `rules_system` | `table_label` | Notes |
+|---------|-----------------|---------------|-------|
+| Sci-fi table | `ogl` | `table-b` | Trade/encounter ticks via `roll_table(source=ogl)` — see recipes below |
+| B/X-style table | `osr` | `table-a` | `byod_system=osr`; full books via BYOD |
+| Percentile table | `brp` | `campaign-label` | `roll(mechanic="coc", …)` for Hard/Extreme, bonus/penalty, SAN, opposed POW |
+
+### OSR lookup vs commercial books
+
+- Mid-session procedures: `query_rules(system=osr)` and `roll_table(source=osr)` (Monster Reaction, Morale Check, Hireling Reaction, Wandering Encounter Tick). Bundled text is original 2d6mcp wording, not a book dump.
+- Operator's local OSR/B/X shelf PDFs: index with BYOD. Example path (docs only): `/path/to/rpg-shelf`. Set `AGREE_BYOD_USE=true` and `BYOD_PATH` to the shelf (or a parent that contains that folder). `sync_byod(query="old-school")` then `query_local_byod`.
+- Optional: `npm run populate-osr -- --source-dir <notes>` imports operator `.md`/`.txt` into the local DB. PDFs stay in BYOD. Never commit book PDFs.
+
+### Multi-shelf BYOD
+
+Consent (`AGREE_BYOD_USE` or `npm run setup`) is required. Point `BYOD_PATH` at the parent of game folders so each top-level directory is a collection. `sync_byod` with no args lists those folders; `query` or `system` indexes matches only. High-latency mounts: `BYOD_NETWORK=true`. After merging this change, rebuild and restart the local MCP process so `osr` and `table_label` exist.
+
+### Sci-fi trade and encounter recipes (`source=ogl`)
+
+Do not paste commercial core-book text. Use the bundled OGL tables and these agent recipes:
+
+1. List tables: `query_rules(system=ogl, category=list_tables)` or `roll_table(source=ogl)` with a known name.
+2. Passage / patrons / random persons: `roll_table(table_name="Patron Encounter")`, `roll_table(table_name="Personal Encounter")`.
+3. Wilderness or starship encounter ticks: `query_rules(system=ogl, search_term="encounter", category=worlds)` and `category=starships`.
+4. Freight/trade: `query_rules(system=ogl, search_term="trade", category=rules)` then roll 2d6 with `roll` for broker/effect checks. Exact commercial freight matrices stay in BYOD if the operator indexed that shelf.
+
+### Percentile (CoC 7e-style) helpers
+
+`roll(mechanic="coc", target=50, bonus_dice=1, penalty_dice=0, san_success="1", san_fail="1d6", opposed_target=40)` reports Hard (`floor(skill/2)`), Extreme (`floor(skill/5)`), success level, optional SAN loss, and opposed winner. Bonus and penalty dice cancel. Discord posting remains draft-only / operator-yes.
 
 ## License
 
@@ -210,6 +249,7 @@ This project uses a multi-license architecture:
 - **Dungeon World data** (`data/dw/**`): [CC-BY-3.0](data/dw/CC-BY-3.0.txt)
 - **Basic Roleplaying data** (`data/brp/**`): [BRP Open Game License v1.0](data/brp/BRP-OGL-1.0.txt)
 - **5E-compatible SRD data** (`data/5ecompatible/**`): [CC-BY-4.0](data/5ecompatible/SRD-NOTICE.txt)
+- **OSR / B/X-compatible procedures** (`data/osr/**`): original 2d6mcp summaries ([NOTICE](data/osr/NOTICE.txt)); commercial books via BYOD only
 
 The BRP logo (`BRP.png` in the project root and `data/brp/BRP.png`) is a trademark of Chaosium Inc., displayed in compliance with Section 15 of the BRP Open Game License v1.0.
 

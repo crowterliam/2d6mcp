@@ -31,6 +31,7 @@ packages/
   brp/       @2d6mcp/brp     — BRP rules database (Basic Roleplaying SRD, BRP OGL v1.0)
   5ecompatible/ @2d6mcp/5ecompatible — 5E-compatible rules database (CC-BY-4.0)
   orcus/     @2d6mcp/orcus   — Orcus d20-compatible rules database (OGL v1.0a)
+  osr/       @2d6mcp/osr     — B/X-style procedures (original summaries; books via BYOD)
   server/    @2d6mcp/server  — MCP server (depends on shared and rules packages)
 ```
 
@@ -53,6 +54,8 @@ This project is system-agnostic. Avoid all third-party trademarks. Use generic d
 All `.ts` source files contributed to this repository are licensed AGPL-3.0-only. By submitting a pull request, you agree to license your contribution under the same terms. See `LICENSE.md` for the full multi-license architecture.
 
 Do not contribute content that would violate the Open Game License firewall or CC-BY-3.0 license terms.
+
+**Licensing Firewall:** never commit commercial book PDFs or book text. Bundled OSR / B/X-compatible rows must be original 2d6mcp wording. Full books stay on the operator's local shelf and are indexed with BYOD. CI runs `scripts/license-firewall.mjs` on every PR.
 
 ## Adding MCP Tools
 

@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
-import { roll2d6, rollCustom, rollD20, rollPercentile, rollDamage, parseDiceNotation } from "@2d6mcp/shared/dice";
+import { roll2d6, rollCustom, rollD20, rollPercentile, rollPercentileCoc, rollDamage, parseDiceNotation } from "@2d6mcp/shared/dice";
 import { rollOnTable, normalizeDiceType } from "@2d6mcp/shared/tables";
 import { getDatabase } from "@2d6mcp/ogl/database";
 import { searchOglTables } from "@2d6mcp/ogl";
-import { ensureOglDb } from "../helpers.js";
+import { ensureOsrSchema } from "@2d6mcp/osr/database";
+import { searchOsrTables, listOsrTables } from "@2d6mcp/osr";
+import { ensureOglDb, ensureOsrDb } from "../helpers.js";
 import { handleRollByodTable, handleListByodTables } from "./byod-table.js";
 
-export type RollMechanic = "2d6" | "d20" | "percentile" | "damage" | "raw";
+export type RollMechanic = "2d6" | "d20" | "percentile" | "damage" | "raw" | "coc";
 
 const DAMAGE_TYPE = /\b(fire|cold|lightning|thunder|acid|poison|necrotic|radiant|psychic|force|piercing|slashing|bludgeoning|heat|laser)\b/i;
 
@@ -38,7 +40,12 @@ export async function handleRoll(args: Record<string, unknown> | undefined): Pro
   const notation = typeof args?.notation === "string" ? args.notation : undefined;
   const mechanicArg = typeof args?.mechanic === "string" ? args.mechanic : undefined;
   const mechanic: RollMechanic =
-    mechanicArg === "2d6" || mechanicArg === "d20" || mechanicArg === "percentile" || mechanicArg === "damage" || mechanicArg === "raw"
+    mechanicArg === "2d6" ||
+    mechanicArg === "d20" ||
+    mechanicArg === "percentile" ||
+    mechanicArg === "damage" ||
+    mechanicArg === "raw" ||
+    mechanicArg === "coc"
       ? mechanicArg
       : inferMechanic(notation);
 
@@ -50,6 +57,18 @@ export async function handleRoll(args: Record<string, unknown> | undefined): Pro
       : null;
   const advantage = args?.advantage === true;
   const disadvantage = args?.disadvantage === true;
+  const bonusDice = typeof args?.bonus_dice === "number" ? args.bonus_dice : 0;
+  const penaltyDice = typeof args?.penalty_dice === "number" ? args.penalty_dice : 0;
+  const sanSuccess = typeof args?.san_success === "string" ? args.san_success : undefined;
+  const sanFail = typeof args?.san_fail === "string" ? args.san_fail : undefined;
+  const opposedTarget = typeof args?.opposed_target === "number" ? args.opposed_target : null;
+  const usesCoc =
+    mechanic === "coc" ||
+    bonusDice > 0 ||
+    penaltyDice > 0 ||
+    Boolean(sanSuccess) ||
+    Boolean(sanFail) ||
+    opposedTarget !== null;
 
   try {
     if (mechanic === "2d6") {
@@ -76,6 +95,19 @@ export async function handleRoll(args: Record<string, unknown> | undefined): Pro
       return jsonResult(rollD20(mod, target, advantage, disadvantage));
     }
 
+    if (mechanic === "coc" || (mechanic === "percentile" && usesCoc)) {
+      return jsonResult(
+        rollPercentileCoc({
+          target,
+          bonusDice,
+          penaltyDice,
+          sanSuccess,
+          sanFail,
+          opposedTarget,
+        })
+      );
+    }
+
     if (mechanic === "percentile") {
       return jsonResult(rollPercentile(target));
     }
@@ -97,7 +129,8 @@ export async function handleRollTable(args: Record<string, unknown> | undefined)
   content: Array<{ type: "text"; text: string }>;
   isError?: boolean;
 }> {
-  const source = typeof args?.source === "string" && args.source === "byod" ? "byod" : "ogl";
+  const sourceArg = typeof args?.source === "string" ? args.source.toLowerCase() : "ogl";
+  const source = sourceArg === "byod" || sourceArg === "osr" ? sourceArg : "ogl";
   const tableName = typeof args?.table_name === "string" ? args.table_name : "";
   const diceType =
     typeof args?.dice_type === "string"
@@ -109,6 +142,33 @@ export async function handleRollTable(args: Record<string, unknown> | undefined)
       return handleListByodTables(args);
     }
     return handleRollByodTable(args);
+  }
+
+  if (source === "osr") {
+    const db = ensureOsrSchema(ensureOsrDb().dbPath);
+    if (!tableName) {
+      return jsonResult({ source: "osr", tables: listOsrTables(db) });
+    }
+    const table = searchOsrTables(db, tableName);
+    if (table && table.entries.length > 0) {
+      const result = rollOnTable({
+        name: table.name,
+        description: table.description || undefined,
+        diceType: table.diceType as "1d6" | "2d6" | "d66" | "1d3" | "2d3" | "d4" | "d8" | "d10" | "d12" | "d20" | "d100",
+        entries: table.entries,
+      });
+      return jsonResult({ ...result, source: "osr" });
+    }
+    const result = rollOnTable({
+      name: tableName,
+      diceType,
+      entries: [],
+    });
+    return jsonResult({
+      ...result,
+      source,
+      warning: `Table "${tableName}" not found in the OSR procedures database. Rolled raw ${diceType}: ${result.rollValue}. Known packs: Monster Reaction, Morale Check, Hireling Reaction, Wandering Encounter Tick.`,
+    });
   }
 
   const { dbPath } = ensureOglDb();

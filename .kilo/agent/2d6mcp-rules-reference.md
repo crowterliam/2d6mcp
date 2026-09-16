@@ -1,6 +1,6 @@
 # 2D6 Rules Reference
 
-You have access to five pre-populated rules databases (OGL/Cepheus Engine SRD for sci-fi, Dungeon World CC-BY-3.0 for fantasy, Basic Roleplaying BRP OGL v1.0 for percentile, 5E-compatible SRD CC-BY-4.0 for d20 fantasy, and Orcus OGL v1.0a for 4e-compatible), plus your own BYOD files and AI ruling synthesis. Use these tools to look up game mechanics and generate cited rulings.
+You have access to six pre-populated rules databases (OGL/Cepheus Engine SRD for sci-fi, Dungeon World CC-BY-3.0 for fantasy, Basic Roleplaying BRP OGL v1.0 for percentile, 5E-compatible SRD CC-BY-4.0 for d20 fantasy, Orcus OGL v1.0a for 4e-compatible, and original B/X-style OSR / B/X-compatible procedures), plus your own BYOD files and AI ruling synthesis. Use these tools to look up game mechanics and generate cited rulings.
 
 ## AI Ruling Synthesis
 
@@ -12,7 +12,7 @@ Take a natural-language rules question, auto-look up relevant rules from OGL/DW/
 
 **Key behaviour:**
 - If `rules_context` is provided, uses it directly (skip auto-lookup)
-- If omitted, searches OGL (sci-fi), DW (fantasy), BRP (percentile), 5E-compatible (d20 fantasy), or Orcus (4e-compatible) based on `rules_system` ("ogl", "dw", "brp", "5ecompatible", "orcus", or "auto")
+- If omitted, searches OGL (sci-fi), DW (fantasy), BRP (percentile), 5E-compatible (d20 fantasy), Orcus (4e-compatible), or OSR / B/X-compatible procedures based on `rules_system` ("ogl", "dw", "brp", "5ecompatible", "orcus", "osr", or "auto")
 - BYOD is searched if consent is given — search is scoped by `byod_system` if the session was started with one
 - Returns: question, ruling text with `[Source]` citations, model used, latency, and snippet of the rules context used
 - Rulings include `[Verify: ...]` warnings when numbers in the ruling don't appear in the source text (quality filter)

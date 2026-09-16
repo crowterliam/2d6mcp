@@ -10,6 +10,7 @@ import { populateDwDatabase } from "@2d6mcp/dw/populate";
 import { populateBrpDatabase } from "@2d6mcp/brp/populate";
 import { populate5ecompatibleDatabase } from "@2d6mcp/5ecompatible/populate";
 import { populateOrcusDatabase } from "@2d6mcp/orcus/populate";
+import { populateOsrDatabase } from "@2d6mcp/osr/populate";
 import { syncByodIndex } from "./tools/helpers.js";
 
 function cmdSetup(): void {
@@ -73,6 +74,9 @@ Usage:
   2d6mcp populate-5ecompatible --force  Force regeneration of 5E database
   2d6mcp populate-orcus  Generate or regenerate the Orcus d20-compatible database
   2d6mcp populate-orcus --force  Force regeneration of Orcus database
+  2d6mcp populate-osr   Generate OSR / B/X-compatible procedures DB (original summaries, not book text)
+  2d6mcp populate-osr --force  Force regeneration of OSR procedures database
+  2d6mcp populate-osr --source-dir <path>  Also import operator .md/.txt notes (never PDFs)
   2d6mcp sync-byod     List top-level BYOD collections (no full-library crawl)
   2d6mcp sync-byod <query>  Index matching collections until complete (e.g. traveller)
   2d6mcp help          Show this help
@@ -85,7 +89,8 @@ Usage:
     DW_DB_PATH=/path/to/db         Custom DW database path (optional)
     BRP_DB_PATH=/path/to/db        Custom BRP database path (optional)
     SR5E_DB_PATH=/path/to/db       Custom 5E-compatible database path (optional)
-  ORCUS_DB_PATH=/path/to/db       Custom Orcus database path (optional)
+    ORCUS_DB_PATH=/path/to/db       Custom Orcus database path (optional)
+    OSR_DB_PATH=/path/to/db        Custom OSR / B/X-compatible procedures database path (optional)
 `);
 }
 
@@ -157,6 +162,35 @@ function cmdPopulateOrcus(): void {
   console.log(result.message);
 }
 
+function parseSourceDir(): string | undefined {
+  const idx = process.argv.indexOf("--source-dir");
+  if (idx === -1) return undefined;
+  const value = process.argv[idx + 1];
+  if (!value || value.startsWith("-")) {
+    console.error("populate-osr --source-dir requires a path");
+    process.exit(1);
+  }
+  return resolve(value);
+}
+
+function cmdPopulateOsr(): void {
+  const dbPath = resolve(PROJECT_ROOT, "data", "osr", "osr-procedures.db");
+  const force = process.argv.includes("--force");
+  const sourceDir = parseSourceDir();
+
+  if (existsSync(dbPath) && !force && !sourceDir) {
+    console.log("OSR procedures database already exists. Use --force to overwrite, or --source-dir to import notes.");
+    return;
+  }
+
+  if (force && existsSync(dbPath)) {
+    unlinkSync(dbPath);
+  }
+
+  const result = populateOsrDatabase(dbPath, { sourceDir });
+  console.log(result.message);
+}
+
 async function cmdSyncByod(): Promise<void> {
   if (!isByodEnabled()) {
     console.error("BYOD is not enabled. Run `npm run setup` and set BYOD_PATH to an existing directory.");
@@ -220,6 +254,9 @@ switch (command) {
     break;
   case "populate-orcus":
     cmdPopulateOrcus();
+    break;
+  case "populate-osr":
+    cmdPopulateOsr();
     break;
   case "sync-byod":
     cmdSyncByod().catch((err: unknown) => {

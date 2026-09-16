@@ -166,3 +166,10 @@ software to the OGL or CC-BY-3.0, and incorporating OGL data does not subject it
 the AGPL-3.0 or CC-BY-3.0, and incorporating CC-BY-3.0 data does not subject it to
 the AGPL-3.0 or OGL. This firewall is intentional and designed to prevent license
 contamination between the code and the game content.
+
+## OSR / B/X-compatible procedures (`data/osr/`)
+
+Rows generated into `data/osr/osr-procedures.db` are original mechanical summaries
+authored for 2d6mcp (AGPL-3.0-only). They are not derived from commercial old-school
+rulebooks. See `data/osr/NOTICE.txt`. Licensed book PDFs must be indexed locally via
+BYOD and must never be committed to this repository.

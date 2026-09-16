@@ -18,4 +18,7 @@
 - [ ] New tools use Zod schemas for input validation
 - [ ] New tools are offline-first (no network calls)
 - [ ] License-compatible (see `LICENSE.md` for multi-license rules)
+- [ ] Licensing Firewall: no commercial book PDFs or book text in git
+- [ ] Licensing Firewall: no third-party product titles this repo is not licensed to name
+- [ ] Licensing Firewall: session labels in docs are abstract (`table-a`, `campaign-label`)
 - [ ] Tested against an MCP client

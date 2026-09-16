@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { dispatchToolCall } from "../../packages/server/src/tools/index.js";
 
-const SYSTEMS = ["ogl", "dw", "brp", "5ecompatible", "orcus"] as const;
+const SYSTEMS = ["ogl", "dw", "brp", "5ecompatible", "orcus", "osr"] as const;
 
 function parsePayload(result: { content: Array<{ text: string }>; isError?: boolean }): Record<string, unknown> {
   expect(result.isError).toBeUndefined();
@@ -53,6 +53,11 @@ describe("query_rules", () => {
     expect(orcus).toHaveProperty("rules");
     expect(orcus).not.toHaveProperty("classes");
     expect(orcus).not.toHaveProperty("feats");
+
+    const osr = parsePayload(await dispatchToolCall("query_rules", { system: "osr", search_term: "morale" }));
+    expect(osr).toHaveProperty("rules");
+    expect(osr).not.toHaveProperty("procedures");
+    expect(osr).not.toHaveProperty("tables");
   });
 
   it("category=categories lists filters without requiring a search term", async () => {
@@ -62,6 +67,16 @@ describe("query_rules", () => {
     expect(Array.isArray(payload.categories)).toBe(true);
     expect(payload.categories).toContain("skills");
     expect(payload.categories).toContain("rules");
+  });
+
+  it("osr category=categories lists mid-session filters", async () => {
+    const payload = parsePayload(
+      await dispatchToolCall("query_rules", { system: "osr", category: "categories" })
+    );
+    expect(payload.categories).toContain("saves");
+    expect(payload.categories).toContain("reaction");
+    expect(payload.categories).toContain("morale");
+    expect(payload.categories).toContain("hirelings");
   });
 
   it("category filter returns that family only", async () => {

@@ -7,7 +7,7 @@ Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
 This project provides a self-hosted MCP server (`packages/server/`) — stdio transport, local MLX/llama.cpp, BYOD, session DB, and Discord webhook posting.
 
-It shares rules databases (OGL/Cepheus Engine SRD for sci-fi, Dungeon World CC-BY-3.0 for fantasy, Basic Roleplaying SRD for percentile RPGs, 5E-compatible SRD CC-BY-4.0 for d20 fantasy, Orcus OGL v1.0a for 4e-compatible), dice engine, prompt templates, and quality filters via `packages/shared/`.
+It shares rules databases (OGL/Cepheus Engine SRD for sci-fi, Dungeon World CC-BY-3.0 for fantasy, Basic Roleplaying SRD for percentile RPGs, 5E-compatible SRD CC-BY-4.0 for d20 fantasy, Orcus OGL v1.0a for 4e-compatible, original B/X-style OSR / B/X-compatible procedures), dice engine, prompt templates, and quality filters via `packages/shared/`.
 
 The project is system-agnostic and avoids all third-party trademarks.
 
@@ -22,13 +22,15 @@ The project is system-agnostic and avoids all third-party trademarks.
 │   ├── dw/                      # @2d6mcp/dw — DW SQLite queries
 │   ├── brp/                     # @2d6mcp/brp — BRP SQLite queries
 │   ├── 5ecompatible/            # @2d6mcp/5ecompatible — 5E-compatible SQLite queries
-│   └── orcus/                   # @2d6mcp/orcus — Orcus d20-compatible SQLite queries
+│   ├── orcus/                   # @2d6mcp/orcus — Orcus d20-compatible SQLite queries
+│   └── osr/                     # @2d6mcp/osr — B/X-style procedures (original summaries)
 ├── data/
 │   ├── ogl/cepheus.db           # Bundled OGL database
 │   ├── dw/dungeon-world.db      # Bundled DW database
 │   ├── brp/basic-roleplaying.db # Bundled BRP database
 │   ├── 5ecompatible/5ecompatible-srd.db  # Bundled 5E-compatible database
-│   └── orcus/orcus.db           # Bundled Orcus database
+│   ├── orcus/orcus.db           # Bundled Orcus database
+│   └── osr/osr-procedures.db   # Generated OSR / B/X-compatible procedures (gitignored *.db)
 └── tests/                       # Vitest test suite
 ```
 
@@ -47,6 +49,7 @@ npm run populate-dw      # regenerate DW SQLite database
 npm run populate-brp     # regenerate BRP SQLite database
 npm run populate-5ecompatible  # regenerate 5E-compatible SQLite database
 npm run populate-orcus     # regenerate Orcus SQLite database
+npm run populate-osr      # regenerate OSR / B/X-compatible procedures database
 npm run sync-byod          # list BYOD collections; pass a query to index matches
 ```
 
@@ -131,6 +134,9 @@ packages/server/src/
   orcus/
     database.ts     # Orcus SQLite connection + schema setup (IMPORTS from @2d6mcp/orcus)
     queries.ts      # Orcus rule search queries
+  osr/
+    database.ts     # OSR procedures SQLite (IMPORTS from @2d6mcp/osr)
+    queries.ts      # OSR procedure search queries
   byod/
     gate.ts         # Consent gate check
     ingest.ts       # File walking, PDF/text/md parsing
@@ -164,7 +170,7 @@ packages/server/src/
 
 packages/shared/src/
   index.ts             # Re-exports all modules
-  dice.ts              # parseDiceNotation, roll2d6, rollD20, rollPercentile, rollDamage, rollCustom
+  dice.ts              # parseDiceNotation, roll2d6, rollD20, rollPercentile, rollPercentileCoc, rollDamage, rollCustom
   tables.ts            # rollOnTable, normalizeDiceType, rollD66
   keywords.ts          # extractKeywords, fuzzyAlternatives, fuzzyKeywordList, STOPWORDS, FTS5/LIKE fuzzy query builders (sanitizeFts5Query, buildPrefixFtsQuery, buildFuzzyFtsQuery, fts5QueryStrategy, fuzzyLikeVariants, searchWithFuzzyFallback, levenshtein/OSA)
   prompts.ts           # DEFAULT_SYSTEM_PROMPT, SYSTEM_PROMPT_LARGE, quality filter
@@ -175,9 +181,9 @@ packages/shared/src/
 
 | Tool | Purpose |
 |------|---------|
-| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`). Infers mechanic from notation when omitted. |
-| `roll_table` | Roll on a named table. `source`: `ogl` or `byod`. Omit `table_name` with `source=byod` to list tables. |
-| `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
+| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`, `coc`). Infers mechanic from notation when omitted. |
+| `roll_table` | Roll on a named table. `source`: `ogl`, `osr`, or `byod`. Omit `table_name` with `source=byod` or `source=osr` to list tables. |
+| `query_rules` | Search a licensed rules DB. `system` required (`ogl`, `dw`, `brp`, `5ecompatible`, `orcus`, `osr`). Default category is core FTS only. `category=categories` lists filters. |
 | `query_local_byod` | Search personal files. Indexes matching top-level game folders on demand, then searches. Optional `include_full`. |
 | `sync_byod` | On-demand index. No args lists folders. `query` indexes matching collections. Optional `relative_path` for one file. |
 | `clear_byod` | Delete the BYOD index. |
@@ -186,10 +192,10 @@ packages/shared/src/
 | `parse_character` | Parse a character sheet into structured data. |
 | `discord_post` | Post to Discord webhooks with smart routing and embeds. |
 | `discord_webhook` | Manage webhooks: `action` add, remove, list, or test. |
-| `session` | Manage sessions: `action` start, end, list, delete, or summarize. |
+| `session` | Manage sessions: `action` start, end, list, delete, or summarize. Optional `table_label` on start/list. |
 | `log_transcript` | Log a transcript segment to a session. |
-| `get_session_context` | Get recent transcript and rulings. |
-| `search_transcript` | Search session transcripts with SQL LIKE (not FTS5). |
+| `get_session_context` | Get recent transcript and rulings (`session_id` or `table_label`). |
+| `search_transcript` | Search session transcripts with SQL LIKE (not FTS5). `session_id` or `table_label`. |
 | `synthesize_ruling` | Cited rules ruling. Optional `from_context` uses recent transcript. Default `rules_system` from the session when `session_id` is set. BYOD runs whenever consent is on. |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. `action`: transcribe, list, or clear. Last chunk sets `complete: true`. |
 
@@ -202,6 +208,8 @@ MCP resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://
 ## Session Management & Ruling Synthesis
 
 - **Session lifecycle**: Start with `session` `action: start`, log with `log_transcript`, end with `session` `action: end`.
+- **Table labels**: Pass optional `table_label` on start (examples: `table-a`, `campaign-label`) so list/context/search stay per-table.
+- **OSR vs OGL**: `query_rules(system=ogl)` is 2d6 sci-fi SRD. B/X-style procedures use `system=osr`. Full commercial books are BYOD (`AGREE_BYOD_USE` + `BYOD_PATH`, for example `/path/to/rpg-shelf` for the operator's local OSR/B/X shelf PDFs).
 - **BYOD system scoping**: Pass `byod_system` on session start to filter BYOD searches.
 - **Ruling synthesis**: `synthesize_ruling` auto-looks up licensed rules and BYOD (when consent is on). BYOD indexes matching top-level collections on demand from the question or session `byod_system`. Default `rules_system` comes from the session when `session_id` is set.
 - **Audio transcription**: `transcribe_audio` processes files longer than 180 seconds in 2-minute chunks. Call repeatedly until `complete: true`. The last chunk sets `complete` itself.
@@ -221,6 +229,7 @@ MCP resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://
 - All files under `data/brp/`: BRP OGL v1.0
 - All files under `data/5ecompatible/`: CC-BY-4.0
 - All files under `data/orcus/`: OGL v1.0a
+- All files under `data/osr/`: original 2d6mcp procedure summaries (AGPL); see `data/osr/NOTICE.txt`
 - `LICENSE` contains the AGPL-3.0 text
 - `LICENSE.md` describes the firewall in detail
 - `OGL-1.0a.txt` contains the full OGL text with Cepheus SRD copyright attributions
@@ -228,6 +237,7 @@ MCP resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://
 - `data/dw/ATTRIBUTION` contains Dungeon World derivation and attribution details
 - `data/5ecompatible/SRD-NOTICE.txt` contains 5E-compatible SRD attribution details
 - `data/orcus/ATTRIBUTION` contains Orcus 4e-compatible derivation and attribution details
+- `data/osr/NOTICE.txt` explains that bundled OSR / B/X-compatible rows are original summaries, not commercial book text
 
 ## BYOD Consent Gate
 
@@ -257,6 +267,7 @@ Never reference any third-party game system or trademarked terms. Use generic de
 | `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Custom BRP database path |
 | `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Custom 5E-compatible database path |
 | `ORCUS_DB_PATH` | `data/orcus/orcus.db` | Custom Orcus database path |
+| `OSR_DB_PATH` | `data/osr/osr-procedures.db` | OSR / B/X-compatible procedures database path |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
