@@ -133,10 +133,7 @@ This Product is **not** affiliated with, endorsed by, or sponsored by:
 - Wizards of the Coast, Inc.
 - Sage LaTorra or Adam Koebel
 - agude (Dungeon World Markdown contributor)
-- third-party publishers or the owners of commercial old-school rulebooks, commercial supplements, or commercial supplements
-- the owners of commercial supplements
-- Chaosium Inc. for commercial campaign books
-- Mongoose Publishing for commercial Traveller core rulebooks (commercial core rulebooks) beyond Open Game Content already designated above
+- publishers of commercial rulebooks that operators may keep on a licensed shelf
 
 The use of the Traveller System Reference Document, the Cepheus Engine System
 Reference Document, and Dungeon World does not convey the endorsement of this Product
@@ -188,28 +185,15 @@ committed to git.
 
 This repository does **not** contain, and contributors must not add:
 
-- PDFs or extracted dumps of commercial old-school or closed-content books
-- text copied from commercial old-school rulebooks, commercial supplements, commercial supplements,
-  commercial supplements, Masks, commercial core rulebooks, or other proprietary corpora
+- PDFs or extracted dumps of commercial rulebooks or closed-content corpora
+- text copied from commercial old-school books or other proprietary works
 - screenshots of copyrighted book pages, OCR dumps, or seed files derived from them
 
 `npm run populate-osr` seeds only the original short helpers. Optional
 `--source-dir` imports the operator's own `.md`/`.txt` notes into a local database
 and never vendors PDFs.
 
-### OSR Product Identity (exclusion / attribution only)
-
-The following names are **Product Identity or trademarks of their respective owners**.
-They are listed here solely to identify works this project does **not** ship, and
-do not grant any licence to copy those works:
-
-- "commercial old-school rulebooks" (trademark of third-party publishers)
-- "third-party publishers"
-- "commercial supplements" / "commercial supplements"
-- "commercial supplements"
-- titles of commercial campaign books
-- "commercial core rulebooks" and other closed Mongoose Traveller core-book text (distinct from
-  Open Game Content already designated under `data/ogl/`)
-
-These marks are used for attribution and exclusion only. No challenge to ownership
-is intended. Operators who own licensed copies may index them locally with BYOD.
+Commercial rulebooks and third-party publisher trademarks are **not** bundled.
+Full books are BYOD-only on the operator's licensed shelf (`AGREE_BYOD_USE` +
+`BYOD_PATH`): local, consent-gated, never uploaded, never committed. Do not add
+trademark lists for products this repository does not ship.

@@ -42,9 +42,9 @@ This project is guided by the principles of free and open source software. All o
 | Orcus | OGL v1.0a | See `data/orcus/ATTRIBUTION` |
 | OSR / B/X-compatible (`osr`) | AGPL-3.0-only (original short mechanical helpers) | 2d6mcp maintainers |
 
-`osr` is not a commercial product dump. It is original short procedure text (saves, combat, reaction, morale, hirelings, encumbrance, exploration). Full commercial books — including commercial old-school rulebooks, works of third-party publishers, commercial supplements, commercial supplements, commercial supplements, Masks, and commercial core rulebooks — are **not** natively bundled. Operators who own licensed copies index them with BYOD: local-only, consent-gated (`AGREE_BYOD_USE`), never uploaded, never committed.
+`osr` is not a commercial product dump. It is original short procedure text (saves, combat, reaction, morale, hirelings, encumbrance, exploration). Commercial rulebooks and third-party publisher trademarks are **not** natively bundled. Operators who own licensed copies index them with BYOD: local-only, consent-gated (`AGREE_BYOD_USE`), never uploaded, never committed.
 
-Trademarks named in `LICENSE.md` are used solely for attribution and to identify works we exclude. If you hold rights to material included in this project and have a concern about its use, please contact the lead maintainer immediately. We will work with you to address any reasonable request.
+Where identifying marks or trademarks appear, they are used solely for attribution of open content we actually ship. If you hold rights to material included in this project and have a concern about its use, please contact the lead maintainer immediately. We will work with you to address any reasonable request.
 
 ## A Brief Word on "Open" in Tabletop Gaming
 

@@ -55,7 +55,7 @@ All `.ts` source files contributed to this repository are licensed AGPL-3.0-only
 
 Do not contribute content that would violate the Open Game License firewall or CC-BY-3.0 license terms.
 
-**Licensing Firewall:** never commit commercial book PDFs or book text. Bundled OSR / B/X-compatible rows must be original 2d6mcp wording. Full books stay on the operator's local shelf (BYOD: local-only, consent-gated, never uploaded). Product Identity exclusions live in `LICENSE.md`. CI runs `scripts/license-firewall.mjs` on every PR.
+**Licensing Firewall:** never commit commercial book PDFs or book text. Bundled OSR / B/X-compatible rows must be original 2d6mcp wording. Full books stay on the operator's licensed shelf (BYOD: local-only, consent-gated, never uploaded). Do not add trademark lists for products this repository does not ship. CI runs `scripts/license-firewall.mjs` on every PR.
 
 ## Adding MCP Tools
 

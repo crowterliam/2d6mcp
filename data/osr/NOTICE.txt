@@ -9,7 +9,7 @@ Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
 The bundled rows are **original short mechanical summaries** authored for 2d6mcp. They describe common B/X-style procedures (saving throws, combat, reaction, morale, hirelings, encumbrance, exploration) and original-wording 2d6/1d6 packs for reaction, morale, hireling offers, and wandering ticks.
 
-They are **not** a reprint of any commercial old-school rulebook. Product Identity and trademark exclusions are listed in `LICENSE.md` (attribution only). Do not copy book text into this directory or into `packages/osr/src/populate.ts`.
+They are **not** a reprint of any commercial old-school rulebook. Commercial rulebooks and publisher trademarks are not bundled; full books stay on the operator's licensed shelf (BYOD only). Do not copy book text into this directory or into `packages/osr/src/populate.ts`.
 
 ## Full book text (operator-local)
 
