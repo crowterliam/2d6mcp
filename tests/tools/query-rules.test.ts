@@ -161,6 +161,8 @@ describe("query_rules", () => {
       await dispatchToolCall("query_rules", { system: "ogl", category: "list_tables" })
     );
     const tables = payload.tables_list as Array<{ name: string }>;
+    expect(Array.isArray(tables)).toBe(true);
+    expect(tables.length).toBeGreaterThan(0);
     expect(tables.some((t) => /freight/i.test(t.name))).toBe(false);
   });
 });

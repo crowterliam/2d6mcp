@@ -61,7 +61,7 @@ export function searchOglRules(
   const section = options?.section;
   const ftsQuery = section
     ? db.prepare(`
-        SELECT section, subsection, snippet(core_rules_fts, 1, '<mark>', '</mark>', '...', 40) AS snippet
+        SELECT section, subsection, snippet(core_rules_fts, 2, '<mark>', '</mark>', '...', 40) AS snippet
         FROM core_rules_fts
         WHERE core_rules_fts MATCH ?
           AND section = ?
@@ -69,7 +69,7 @@ export function searchOglRules(
         LIMIT 20
       `)
     : db.prepare(`
-        SELECT section, subsection, snippet(core_rules_fts, 1, '<mark>', '</mark>', '...', 40) AS snippet
+        SELECT section, subsection, snippet(core_rules_fts, 2, '<mark>', '</mark>', '...', 40) AS snippet
         FROM core_rules_fts
         WHERE core_rules_fts MATCH ?
         ORDER BY bm25(core_rules_fts, 5.0, 15.0, 1.0)
@@ -109,10 +109,8 @@ function collectTradeExtras(db: Database.Database, like: string): RuleSearchResu
        WHERE (
          category IN ('Trade & Commerce', 'Passage', 'Economy')
          OR topic LIKE '%Trade%'
-         OR topic LIKE '%Freight%'
          OR topic LIKE '%Passenger%'
          OR topic LIKE '%Mail%'
-         OR topic LIKE '%Cargo%'
        )
        AND (topic LIKE ? OR content LIKE ? OR category LIKE ?)
        ORDER BY category, topic
@@ -124,7 +122,7 @@ function collectTradeExtras(db: Database.Database, like: string): RuleSearchResu
     .prepare(
       `SELECT topic, content, category
        FROM world_building
-       WHERE (topic LIKE '%Trade%' OR topic LIKE '%Freight%' OR topic LIKE '%Cargo%')
+       WHERE (topic LIKE '%Trade%' OR topic LIKE '%Freight%' OR topic LIKE '%Cargo%' OR topic LIKE '%Route%')
          AND (topic LIKE ? OR content LIKE ? OR category LIKE ?)
        ORDER BY topic
        LIMIT 20`

@@ -214,6 +214,7 @@ describe("OGL queries against bundled database", () => {
       ).toBe(true);
       expect(results[0].section.toLowerCase()).not.toBe("game themes");
       expect(results[0].title.toLowerCase()).not.toBe("overview");
+      expect(results.some((r) => /merchant freighter/i.test(r.title))).toBe(false);
     });
 
     it("finds Broker procedure under Trade & Commerce", () => {

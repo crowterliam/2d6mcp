@@ -128,16 +128,16 @@ function jsonResult(data: unknown, isError = false) {
 
 /** Map display names from rules_categories onto query_rules filter keys. */
 function aliasOglCategory(category: string): string {
-  const compact = category.replace(/[&/_-]+/g, " ").replace(/\s+/g, " ").trim();
+  const collapsed = category.replace(/[&/_-]+/g, " ").replace(/\s+/g, " ").trim();
   if (
-    compact === "trade" ||
-    compact === "commerce" ||
-    compact === "trade commerce" ||
-    compact === "trade and commerce"
+    collapsed === "trade" ||
+    collapsed === "commerce" ||
+    collapsed === "trade commerce" ||
+    collapsed === "trade and commerce"
   ) {
     return "trade";
   }
-  return compact;
+  return category;
 }
 
 function queryOgl(searchTerm: string, category: string): Record<string, unknown> {
