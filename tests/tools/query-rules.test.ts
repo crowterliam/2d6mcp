@@ -1,11 +1,36 @@
 import { describe, it, expect } from "vitest";
 import { dispatchToolCall } from "../../packages/server/src/tools/index.js";
+import { aliasOglCategory } from "../../packages/server/src/tools/handlers/rules.js";
 
 const SYSTEMS = ["ogl", "dw", "brp", "5ecompatible", "orcus", "osr"] as const;
 
 function parsePayload(result: { content: Array<{ text: string }>; isError?: boolean }): Record<string, unknown> {
   expect(result.isError).toBeUndefined();
   return JSON.parse(result.content[0].text) as Record<string, unknown>;
+}
+
+function assertTradeFilterFreight(payload: Record<string, unknown>) {
+  // Trade filter (not core FTS fallthrough) attaches related_filters and the Open SRD note.
+  expect(payload.related_filters).toEqual(["skills", "worlds", "starships", "list_tables"]);
+  expect(typeof payload.note).toBe("string");
+  expect(payload.note as string).toMatch(/Open SRD/i);
+  expect(payload.note as string).toMatch(/Cr1,000/);
+
+  expect(payload).toHaveProperty("rules");
+  const rules = payload.rules as Array<{ section: string; title: string; snippet: string }>;
+  expect(rules.length).toBeGreaterThan(0);
+  expect(rules[0].section).toBe("Trade & Commerce");
+  expect(/freight/i.test(`${rules[0].title} ${rules[0].snippet}`)).toBe(true);
+  expect(rules[0].section.toLowerCase()).not.toBe("game themes");
+  expect(rules[0].title.toLowerCase()).not.toBe("overview");
+  expect(
+    rules.some(
+      (r) => /trade/i.test(r.section) && /freight/i.test(`${r.title} ${r.snippet}`)
+    )
+  ).toBe(true);
+  expect(
+    rules.some((r) => /game themes/i.test(r.section) && /overview/i.test(r.title))
+  ).toBe(false);
 }
 
 describe("query_rules", () => {
@@ -89,27 +114,33 @@ describe("query_rules", () => {
     expect(payload).not.toHaveProperty("careers");
   });
 
-  it("Trade & Commerce freight does not return Game Themes Overview", async () => {
+  it.each(["trade", "commerce", "Trade & Commerce", "TRADE & COMMERCE", "trade and commerce"])(
+    "aliasOglCategory(%s) maps to the trade filter key",
+    (category) => {
+      expect(aliasOglCategory(category)).toBe("trade");
+    }
+  );
+
+  it.each(["Trade & Commerce", "TRADE & COMMERCE", "trade", "commerce"])(
+    "query_rules category=%s freight uses the trade filter, not core FTS",
+    async (category) => {
+      const payload = parsePayload(
+        await dispatchToolCall("query_rules", {
+          system: "ogl",
+          category,
+          search_term: "freight",
+        })
+      );
+      assertTradeFilterFreight(payload);
+    }
+  );
+
+  it("core FTS freight does not attach the trade-filter note", async () => {
     const payload = parsePayload(
-      await dispatchToolCall("query_rules", {
-        system: "ogl",
-        category: "Trade & Commerce",
-        search_term: "freight",
-      })
+      await dispatchToolCall("query_rules", { system: "ogl", search_term: "freight" })
     );
-    expect(payload).toHaveProperty("rules");
-    const rules = payload.rules as Array<{ section: string; title: string; snippet: string }>;
-    expect(rules.length).toBeGreaterThan(0);
-    expect(rules[0].section.toLowerCase()).not.toBe("game themes");
-    expect(rules[0].title.toLowerCase()).not.toBe("overview");
-    expect(
-      rules.some(
-        (r) => /trade/i.test(r.section) && /freight/i.test(`${r.title} ${r.snippet}`)
-      )
-    ).toBe(true);
-    expect(
-      rules.some((r) => /game themes/i.test(r.section) && /overview/i.test(r.title))
-    ).toBe(false);
+    expect(payload).not.toHaveProperty("related_filters");
+    expect(payload).not.toHaveProperty("note");
   });
 
   it("category=trade finds Broker and trade-route content", async () => {

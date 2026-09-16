@@ -11,6 +11,10 @@ with **lockstep** versions across the npm workspaces (see [VERSIONING.md](VERSIO
 
 ## [Unreleased]
 
+### Fixed
+
+- OGL `query_rules` category aliases are case-insensitive, so display names such as `Trade & Commerce` and `TRADE & COMMERCE` route through the trade filter instead of core FTS.
+
 ## [0.8.0] - 2026-09-16
 
 ### Added
