@@ -14,8 +14,8 @@ It shares rules databases, dice engine, prompt templates, and quality filters vi
 
 | Tool | Purpose |
 |------|---------|
-| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`). Infers mechanic from notation when omitted. |
-| `roll_table` | Roll on a named table. `source`: `ogl` or `byod`. Omit `table_name` with `source=byod` to list tables. |
+| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`, `coc`). Infers mechanic from notation when omitted. |
+| `roll_table` | Roll on a named table. `source`: `ogl`, `osr`, or `byod`. Omit `table_name` with `source=byod` or `source=osr` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
 | `query_local_byod` | Search personal files. Indexes matching top-level game folders on demand, then searches. Optional `include_full`. |
 | `sync_byod` | On-demand index. No args lists folders. `query` indexes matching collections. Optional `relative_path` for one file. |
@@ -62,8 +62,9 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 3. Call `query_rules(system: "brp", "search term", category: "category_name")` for percentile RPG content
 4. Call `query_rules(system: "5ecompatible", "search term", category: "category_name")` for d20 fantasy content
 5. Call `query_rules(system: "orcus", "search term", category: "category_name")` for 4e-compatible content
-6. Narrow with category if results are broad
-7. For tables, use `roll_table(table_name: "Table Name", source: "ogl")`
+6. Call `query_rules(system: "osr", "search term", category: "category_name")` for B/X-style procedures. Full commercial books via BYOD (`byod_system=osr`).
+7. Narrow with category if results are broad
+8. For tables, use `roll_table(table_name: "Table Name", source: "ogl")` or `source: "osr"` for reaction/morale/hireling
 
 ### Character Creation
 1. Roll six characteristics: `roll(notation: "2d6", mechanic: "raw")` × 6
@@ -82,11 +83,11 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 8. Start fresh: `clear_byod`
 
 ### Session Management
-1. Start session: `session(action: "start", "Session Name")` — returns session ID
+1. Start session: `session(action: "start", name, rules_system, table_label)` — examples: table-b+ogl, table-a+osr, campaign-label+brp
 2. Log table talk: `log_transcript(session_id, text, speaker, source, intent)`
-3. Get recent context: `get_session_context(session_id, minutes)` — returns transcripts and rulings
-4. Search history: `search_transcript(session_id, "query")` — find past mentions
-5. List sessions: `session(action: "list", limit)`
+3. Get recent context: `get_session_context(session_id or table_label, minutes)` — returns transcripts and rulings
+4. Search history: `search_transcript(session_id or table_label, "query")` — find past mentions
+5. List sessions: `session(action: "list", limit, table_label)`
 6. End session: `session(action: "end", session_id)`
 7. Summarize: `session(action: "summarize", session_id)` (requires MLX LLM)
 
@@ -119,6 +120,7 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 | `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Custom BRP database path |
 | `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Custom 5E-compatible database path |
 | `ORCUS_DB_PATH` | `data/orcus/orcus.db` | Custom Orcus database path |
+| `OSR_DB_PATH` | `data/osr/osr-procedures.db` | OSR / B/X-compatible procedures database path |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |

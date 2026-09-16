@@ -10,6 +10,7 @@ import { populateDwDatabase } from "@2d6mcp/dw/populate";
 import { populateBrpDatabase } from "@2d6mcp/brp/populate";
 import { populate5ecompatibleDatabase } from "@2d6mcp/5ecompatible/populate";
 import { populateOrcusDatabase } from "@2d6mcp/orcus/populate";
+import { populateOsrDatabase } from "@2d6mcp/osr/populate";
 import { checkByodConsent, getByodPath } from "../byod/gate.js";
 import { ingestFile, scanByodDirectory, SLOW_FS_READDIR_MS, type IngestedChunk, type IngestedFile } from "../byod/ingest.js";
 import { isPathInside } from "../byod/paths.js";
@@ -834,6 +835,17 @@ export function ensureOrcusDb(): { dbPath: string; initialized: boolean } {
   }
 
   return { dbPath: orcusDbPath, initialized: false };
+}
+
+export function ensureOsrDb(): { dbPath: string; initialized: boolean } {
+  const { osrDbPath } = loadConfig();
+
+  if (!existsSync(osrDbPath)) {
+    populateOsrDatabase(osrDbPath);
+    return { dbPath: osrDbPath, initialized: true };
+  }
+
+  return { dbPath: osrDbPath, initialized: false };
 }
 
 // Fuzzy matching (fuzzyAlternatives, fuzzyKeywordList) is provided by

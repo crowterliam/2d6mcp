@@ -13,6 +13,10 @@ import {
   getTranscript,
   getRecentTranscript,
   searchTranscript,
+  searchTranscriptByLabel,
+  getRecentTranscriptByLabel,
+  getRecentRulingsByLabel,
+  getLatestSessionByLabel,
   storeRuling,
   getRecentRulings,
   getRecentContext,
@@ -54,10 +58,11 @@ export async function handleSessionStart(args: Record<string, unknown> | undefin
   const name = typeof args?.name === "string" ? args.name : undefined;
   const rulesSystem = typeof args?.rules_system === "string" ? args.rules_system : "ogl";
   const byodSystem = typeof args?.byod_system === "string" ? args.byod_system : undefined;
+  const tableLabel = typeof args?.table_label === "string" ? args.table_label : undefined;
 
   const config = loadConfig();
   const db = openSessionDb(config.sessionDbPath);
-  const session = createSession(db, rulesSystem, name, byodSystem);
+  const session = createSession(db, rulesSystem, name, byodSystem, tableLabel);
 
   return {
     content: [{ type: "text", text: JSON.stringify(session, null, 2) }],
@@ -94,10 +99,11 @@ export async function handleSessionList(args: Record<string, unknown> | undefine
   isError?: boolean;
 }> {
   const limit = typeof args?.limit === "number" ? args.limit : 20;
+  const tableLabel = typeof args?.table_label === "string" ? args.table_label : undefined;
 
   const config = loadConfig();
   const db = openSessionDb(config.sessionDbPath);
-  const sessions = listSessions(db, limit);
+  const sessions = listSessions(db, limit, tableLabel);
 
   return {
     content: [{ type: "text", text: JSON.stringify({ sessions, count: sessions.length }, null, 2) }],
@@ -247,23 +253,52 @@ export async function handleGetSessionContext(args: Record<string, unknown> | un
   isError?: boolean;
 }> {
   const sessionId = typeof args?.session_id === "string" ? args.session_id : "";
+  const tableLabel = typeof args?.table_label === "string" ? args.table_label : "";
   const minutes = typeof args?.minutes === "number" ? args.minutes : 5;
   const includeRulings = args?.include_rulings !== false;
 
-  if (!sessionId) {
-    return { content: [{ type: "text", text: "Error: session_id is required" }], isError: true };
+  if (!sessionId && !tableLabel) {
+    return { content: [{ type: "text", text: "Error: session_id or table_label is required" }], isError: true };
   }
 
   const config = loadConfig();
   const db = openSessionDb(config.sessionDbPath);
 
-  const segmentList = getRecentTranscript(db, sessionId, minutes);
-  const rulingList = includeRulings ? getRecentRulings(db, sessionId, 5) : [];
+  if (sessionId) {
+    const session = getSession(db, sessionId);
+    const segmentList = getRecentTranscript(db, sessionId, minutes);
+    const rulingList = includeRulings ? getRecentRulings(db, sessionId, 5) : [];
+
+    return {
+      content: [{ type: "text", text: JSON.stringify({
+        session_id: sessionId,
+        table_label: session?.table_label ?? null,
+        minutes,
+        transcript_count: segmentList.length,
+        rulings_count: rulingList.length,
+        transcripts: segmentList,
+        rulings: rulingList,
+      }, null, 2) }],
+    };
+  }
+
+  const latest = getLatestSessionByLabel(db, tableLabel);
+  if (!latest) {
+    return {
+      content: [{ type: "text", text: `No sessions found with table_label "${tableLabel}"` }],
+      isError: true,
+    };
+  }
+
+  const segmentList = getRecentTranscriptByLabel(db, tableLabel, minutes);
+  const rulingList = includeRulings ? getRecentRulingsByLabel(db, tableLabel, 5) : [];
 
   return {
     content: [{ type: "text", text: JSON.stringify({
-      session_id: sessionId,
+      session_id: latest.id,
+      table_label: latest.table_label,
       minutes,
+      scoped_by: "table_label",
       transcript_count: segmentList.length,
       rulings_count: rulingList.length,
       transcripts: segmentList,
@@ -277,19 +312,26 @@ export async function handleSearchTranscript(args: Record<string, unknown> | und
   isError?: boolean;
 }> {
   const sessionId = typeof args?.session_id === "string" ? args.session_id : "";
+  const tableLabel = typeof args?.table_label === "string" ? args.table_label : "";
   const query = typeof args?.query === "string" ? args.query : "";
 
-  if (!sessionId || !query) {
-    return { content: [{ type: "text", text: "Error: session_id and query are required" }], isError: true };
+  if (!query) {
+    return { content: [{ type: "text", text: "Error: query is required" }], isError: true };
+  }
+  if (!sessionId && !tableLabel) {
+    return { content: [{ type: "text", text: "Error: session_id or table_label is required" }], isError: true };
   }
 
   const config = loadConfig();
   const db = openSessionDb(config.sessionDbPath);
-  const results = searchTranscript(db, sessionId, query);
+  const results = sessionId
+    ? searchTranscript(db, sessionId, query)
+    : searchTranscriptByLabel(db, tableLabel, query);
 
   return {
     content: [{ type: "text", text: JSON.stringify({
-      session_id: sessionId,
+      session_id: sessionId || null,
+      table_label: tableLabel || null,
       query,
       count: results.length,
       results,

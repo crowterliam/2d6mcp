@@ -12,6 +12,7 @@
     { "path": "../dw" },
     { "path": "../brp" },
     { "path": "../5ecompatible" },
-    { "path": "../orcus" }
+    { "path": "../orcus" },
+    { "path": "../osr" }
   ]
 }

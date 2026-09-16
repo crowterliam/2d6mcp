@@ -97,4 +97,39 @@ describe("collapsed MCP catalog", () => {
     expect(parsed.dice).toHaveLength(2);
     expect(parsed.total).toBeGreaterThanOrEqual(2);
   });
+
+  it("dispatches CoC percentile with Hard/Extreme thresholds", async () => {
+    const result = await dispatchToolCall("roll", {
+      mechanic: "coc",
+      target: 50,
+      bonus_dice: 0,
+      penalty_dice: 0,
+    });
+    expect(result.isError).toBeUndefined();
+    const parsed = JSON.parse(result.content[0].text) as {
+      hardThreshold: number;
+      extremeThreshold: number;
+      successLevel: string;
+    };
+    expect(parsed.hardThreshold).toBe(25);
+    expect(parsed.extremeThreshold).toBe(10);
+    expect(parsed.successLevel).toBeTruthy();
+  });
+
+  it("rolls an OSR reaction table", async () => {
+    const result = await dispatchToolCall("roll_table", {
+      source: "osr",
+      table_name: "Monster Reaction",
+    });
+    expect(result.isError).toBeUndefined();
+    const parsed = JSON.parse(result.content[0].text) as {
+      tableName: string;
+      rollValue: number;
+      source: string;
+    };
+    expect(parsed.source).toBe("osr");
+    expect(parsed.tableName).toBe("Monster Reaction");
+    expect(parsed.rollValue).toBeGreaterThanOrEqual(2);
+    expect(parsed.rollValue).toBeLessThanOrEqual(12);
+  });
 });

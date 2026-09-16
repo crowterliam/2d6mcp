@@ -22,6 +22,9 @@ coverage/
 # Generated seed files
 **/seed.sql
 
+# Never vendor commercial book PDFs (BYOD stays on the operator's machine)
+*.pdf
+
 # Audio fixtures — generated for local MLX testing
 tests/audio/fixtures/
 

@@ -1,0 +1,32 @@
+# OSR / B/X-compatible procedures data
+
+SPDX-License-Identifier: AGPL-3.0-only
+Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
+
+## What ships in git
+
+`data/osr/` holds a generated SQLite database (`osr-procedures.db`, gitignored like other `*.db` files) filled by `npm run populate-osr`.
+
+The bundled rows are **original short mechanical summaries** authored for 2d6mcp. They describe common B/X-style procedures (saving throws, combat, reaction, morale, hirelings, encumbrance, exploration) and original-wording 2d6/1d6 packs for reaction, morale, hireling offers, and wandering ticks.
+
+They are **not** a reprint of any commercial old-school rulebook. Product Identity and trademark exclusions are listed in `LICENSE.md` (attribution only). Do not copy book text into this directory or into `packages/osr/src/populate.ts`.
+
+## Full book text (operator-local)
+
+Index licensed books with BYOD. They never belong in this public repository.
+
+1. Set `AGREE_BYOD_USE="true"` (or run `npm run setup`).
+2. Point `BYOD_PATH` at the parent of game folders, or at the operator's local OSR/B/X shelf PDFs directory. Example (docs only):
+
+   `/path/to/rpg-shelf`
+
+3. Start the session with `rules_system=osr`, an optional `table_label` such as `table-a`, and `byod_system=osr` (or the folder name that matches the collection).
+4. `sync_byod` / `query_local_byod` indexes matching top-level folders on demand.
+
+Optional: `npm run populate-osr -- --source-dir <path>` imports the operator's own `.md`/`.txt` notes into the local DB. PDFs are not imported here — use BYOD for PDFs.
+
+## Query path
+
+- Mid-session procedures: `query_rules(system=osr)`
+- Named packs: `roll_table(source=osr, table_name="Monster Reaction"|"Morale Check"|"Hireling Reaction"|"Wandering Encounter Tick")`
+- Book text: BYOD tools, not `query_rules`

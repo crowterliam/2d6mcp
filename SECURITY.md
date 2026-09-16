@@ -38,8 +38,9 @@ You should receive an acknowledgment within 72 hours. The maintainer will work w
 - `.mcp-byod-consent-accepted` — gitignored
 - `.mcp-discord-webhooks.json` — gitignored. Contains webhook URLs
 - `*.tsbuildinfo` — gitignored. TypeScript incremental build cache
+- `*.pdf` — gitignored. Commercial book PDFs and extracted dumps must never be committed. Index them locally with BYOD only.
 
-The MCP server reads secrets from environment variables only — never from committed files.
+The MCP server reads secrets from environment variables only — never from committed files. BYOD file contents stay on the operator's machine (consent-gated, never uploaded).
 
 ## Out of Scope
 

@@ -111,7 +111,7 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
     {
       name: "roll",
       description:
-        "Roll dice. Pass notation (e.g. 2d6+1, 1d20, 3d6, 2d6+3 fire). Optional mechanic: 2d6, d20, percentile, damage, or raw. When mechanic is omitted it is inferred from notation.",
+        "Roll dice. Pass notation (e.g. 2d6+1, 1d20, 3d6, 2d6+3 fire). Optional mechanic: 2d6, d20, percentile, damage, raw, or coc. When mechanic is omitted it is inferred from notation.",
       inputSchema: {
         type: "object",
         properties: {
@@ -121,8 +121,8 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
           },
           mechanic: {
             type: "string",
-            enum: ["2d6", "d20", "percentile", "damage", "raw"],
-            description: "Resolution mechanic. Inferred from notation when omitted.",
+            enum: ["2d6", "d20", "percentile", "damage", "raw", "coc"],
+            description: "Resolution mechanic. Inferred from notation when omitted. Use coc for percentile with Hard/Extreme, bonus/penalty dice, SAN loss, or opposed POW.",
           },
           modifier: {
             type: "integer",
@@ -143,25 +143,47 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
             description: "d20 only: roll twice, take the lower. Cancels with advantage. Default false.",
             default: false,
           },
+          bonus_dice: {
+            type: "integer",
+            description: "CoC 7e: extra tens dice, keep the lowest d100 result. Cancels with penalty_dice.",
+            default: 0,
+          },
+          penalty_dice: {
+            type: "integer",
+            description: "CoC 7e: extra tens dice, keep the highest d100 result. Cancels with bonus_dice.",
+            default: 0,
+          },
+          san_success: {
+            type: "string",
+            description: "CoC 7e SAN loss dice if the roll succeeds (e.g. 1 or 1d4).",
+          },
+          san_fail: {
+            type: "string",
+            description: "CoC 7e SAN loss dice if the roll fails (e.g. 1d6 or 1d10+1).",
+          },
+          opposed_target: {
+            type: "integer",
+            description: "CoC 7e opposed roll (e.g. POW vs POW). Second party roll-under target. Winner by success level, then higher roll.",
+          },
         },
       },
     },
     {
       name: "roll_table",
       description:
-        "Roll on a named table from the OGL database or from indexed personal files. With source=byod and no table_name, lists discovered tables.",
+        "Roll on a named table from the OGL database, OSR / B/X-compatible packs, or indexed personal files. With source=byod or source=osr and no table_name, lists discovered tables.",
       inputSchema: {
         type: "object",
         properties: {
           source: {
             type: "string",
-            enum: ["ogl", "byod"],
-            description: "Where to look up the table. Default: ogl.",
+            enum: ["ogl", "osr", "byod"],
+            description: "Where to look up the table. Default: ogl. Use osr for reaction/morale/hireling packs.",
             default: "ogl",
           },
           table_name: {
             type: "string",
-            description: "Name of the table. Optional when source=byod to list tables instead of rolling.",
+            description: "Name of the table. Optional when source=byod or source=osr to list tables instead of rolling.",
           },
           dice_type: {
             type: "string",
@@ -181,7 +203,7 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
         properties: {
           system: {
             type: "string",
-            enum: ["ogl", "dw", "brp", "5ecompatible", "orcus"],
+            enum: ["ogl", "dw", "brp", "5ecompatible", "orcus", "osr"],
             description: "Rules database to search",
           },
           search_term: {
@@ -342,7 +364,7 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
     {
       name: "session",
       description:
-        "Manage game sessions. action: start, end, list, delete, or summarize.",
+        "Manage game sessions. action: start, end, list, delete, or summarize. Set table_label on start (e.g. table-b, table-a, campaign-label) to isolate tables.",
       inputSchema: {
         type: "object",
         properties: {
@@ -359,9 +381,14 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
             type: "string",
             description: "Optional session name (start)",
           },
+          table_label: {
+            type: "string",
+            description:
+              "Optional durable table or campaign tag (start or list filter). Examples: table-a, campaign-label.",
+          },
           rules_system: {
             type: "string",
-            enum: ["ogl", "dw", "brp", "5ecompatible", "orcus"],
+            enum: ["ogl", "dw", "brp", "5ecompatible", "orcus", "osr"],
             description: "Rules system for this session. Default: ogl.",
             default: "ogl",
           },
@@ -411,13 +438,18 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
     },
     {
       name: "get_session_context",
-      description: "Get recent transcript segments and rulings from a session — the last N minutes of game context.",
+      description:
+        "Get recent transcript segments and rulings. Pass session_id, or table_label to use the latest session with that campaign tag.",
       inputSchema: {
         type: "object",
         properties: {
           session_id: {
             type: "string",
-            description: "The session ID from session start",
+            description: "The session ID from session start. Optional when table_label is set.",
+          },
+          table_label: {
+            type: "string",
+            description: "Campaign/table tag (e.g. table-b, table-a, campaign-label). Used when session_id is omitted.",
           },
           minutes: {
             type: "integer",
@@ -430,26 +462,29 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
             default: true,
           },
         },
-        required: ["session_id"],
       },
     },
     {
       name: "search_transcript",
       description:
-        "Search session transcripts with SQL LIKE (not FTS5). Find what was said about a topic.",
+        "Search session transcripts with SQL LIKE (not FTS5). Pass session_id for one session, or table_label to search every session with that campaign tag.",
       inputSchema: {
         type: "object",
         properties: {
           session_id: {
             type: "string",
-            description: "The session ID from session start",
+            description: "The session ID from session start. Optional when table_label is set.",
+          },
+          table_label: {
+            type: "string",
+            description: "Campaign/table tag. Searches all sessions with this label when session_id is omitted.",
           },
           query: {
             type: "string",
             description: "Search term",
           },
         },
-        required: ["session_id", "query"],
+        required: ["query"],
       },
     },
     {
@@ -465,7 +500,7 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
           },
           rules_system: {
             type: "string",
-            enum: ["ogl", "dw", "brp", "5ecompatible", "orcus", "auto"],
+            enum: ["ogl", "dw", "brp", "5ecompatible", "orcus", "osr", "auto"],
             description: "Which rules DB to search. Default: session rules_system when session_id is set, otherwise auto.",
           },
           session_id: {

@@ -65,7 +65,7 @@ When circumstances are unusually favourable or unfavourable, roll 3d6 and keep t
 
 Note: You'll need to inspect individual dice from the custom roll to apply boon/bane logic manually.
 
-## d20 Resolution (5E-Compatible, Orcus, OSE)
+## d20 Resolution (5E-Compatible, Orcus, OSR)
 
 Use the **d20 + modifier vs. target number** mechanic. The target is typically Armor Class (AC) or Difficulty Class (DC).
 

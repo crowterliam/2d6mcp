@@ -6,6 +6,7 @@ import { ensureDwSchema } from "@2d6mcp/dw/database";
 import { ensureBrpSchema } from "@2d6mcp/brp/database";
 import { ensure5ecompatibleSchema } from "@2d6mcp/5ecompatible/database";
 import { ensureOrcusSchema } from "@2d6mcp/orcus/database";
+import { ensureOsrSchema } from "@2d6mcp/osr/database";
 import {
   searchOglRules,
   searchOglSkills,
@@ -42,6 +43,10 @@ import {
   searchOrcusMonsters,
   searchOrcusFeats,
 } from "@2d6mcp/orcus";
+import {
+  searchOsrRules,
+  searchOsrProcedures,
+} from "@2d6mcp/osr";
 import { extractKeywordList, fuzzyKeywordList } from "@2d6mcp/shared";
 import { loadConfig } from "../config.js";
 import { openSessionDb, getSession } from "../session/database.js";
@@ -53,10 +58,11 @@ import {
   ensureBrpDb,
   ensure5ecompatibleDb,
   ensureOrcusDb,
+  ensureOsrDb,
   ensureByodForQuery,
 } from "../tools/helpers.js";
 
-export const RULES_SYSTEMS = ["ogl", "dw", "brp", "5ecompatible", "orcus"] as const;
+export const RULES_SYSTEMS = ["ogl", "dw", "brp", "5ecompatible", "orcus", "osr"] as const;
 export type NamedRulesSystem = (typeof RULES_SYSTEMS)[number];
 export type RulesSystem = NamedRulesSystem | "auto";
 
@@ -255,6 +261,18 @@ export async function retrieveRulesContext(options: RetrieveOptions): Promise<Re
     }
     for (const f of searchOrcusFeats(orcusDb, searchTerm)) {
       chunks.push(`[Orcus Feat: ${f.name} (${f.category})]\n${f.description}`);
+    }
+  }
+
+  if (systemsSearched.includes("osr")) {
+    const osrDb = ensureOsrSchema(ensureOsrDb().dbPath);
+    searchCalls += 1;
+    for (const r of searchOsrRules(osrDb, searchTerm)) {
+      chunks.push(`[OSR: ${r.section} > ${r.title}]\n${stripMarks(r.snippet)}`);
+    }
+    searchCalls += 1;
+    for (const p of searchOsrProcedures(osrDb, searchTerm)) {
+      chunks.push(`[OSR Procedure: ${p.category} > ${p.topic}]\n${p.content}`);
     }
   }
 

@@ -60,7 +60,7 @@ When circumstances are unusually favourable or unfavourable, roll 3d6 and keep t
 
 Inspect individual dice from the custom roll to apply boon/bane logic manually.
 
-## d20 Resolution (5E-Compatible, Orcus, OSE)
+## d20 Resolution (5E-Compatible, Orcus, OSR)
 
 Use the **d20 + modifier vs. target number** mechanic. The target is typically Armor Class (AC) or Difficulty Class (DC).
 
@@ -116,6 +116,16 @@ The tool returns:
 - **Critical**: Roll ≤ floor(target × 0.05). Example: 50% skill → 01-02 is critical.
 - **Fumble**: Roll 96-100 on a failed check.
 - Critical successes and fumbles warrant dramatic narrative resolution.
+
+### CoC 7e-style extras
+```
+roll(mechanic: "coc", target, bonus_dice, penalty_dice, san_success, san_fail, opposed_target)
+```
+- Hard = floor(skill/2), Extreme = floor(skill/5), critical is 01, fumble 100 (or 96–100 if skill < 50)
+- Bonus dice: extra tens dice, keep the lowest d100. Penalty dice keep the highest. They cancel.
+- `san_success` / `san_fail`: integer or dice notation for SAN loss on success/fail
+- `opposed_target`: second independent roll (e.g. POW); winner by success level, then higher roll; both fail is a tie
+
 
 ## Damage Rolls
 

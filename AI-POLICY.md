@@ -19,7 +19,7 @@ If you are sceptical of AI in any capacity, we invite you to consider the follow
 
 This project can be used entirely on your own machine, inside a self-contained environment, without any network access beyond what is needed to download or install the tooling. The MCP server runs over stdio. The speech recognition and language model backends use local models via MLX, whisper.cpp, or llama.cpp. No data leaves your machine unless you explicitly configure it to.
 
-The BYOD file ingestion system processes documents entirely on your local filesystem. No file contents are uploaded, transmitted, or shared externally. This also means your reference material is never exposed to external models that might retain or train on submitted data.
+The BYOD file ingestion system processes documents entirely on your local filesystem. BYOD is local-only, consent-gated, and never uploaded. No file contents are transmitted or shared externally. This also means your reference material is never exposed to external models that might retain or train on submitted data.
 
 When a search result is passed to a local language model for a ruling, only short snippets are included, not full documents. This snippet-based approach uses minimal extracts consistent with fair use and the terms of open content licences, ensuring that the system aids reference without redistributing works in full.
 
@@ -31,7 +31,7 @@ This makes the tools useful as an accessibility aid. Someone who struggles to re
 
 ## Real Open Source, Clear Licensing
 
-This project is guided by the principles of free and open source software. All original source code is licensed under AGPL-3.0. We only include game content natively that has been released under substantially open terms:
+This project is guided by the principles of free and open source software. All original source code is licensed under AGPL-3.0. We only include game content natively that has been released under substantially open terms (or original wording we authored):
 
 | System | Content License | Source |
 |--------|----------------|--------|
@@ -39,8 +39,12 @@ This project is guided by the principles of free and open source software. All o
 | Dungeon World | Creative Commons Attribution 3.0 | Sage LaTorra and Adam Koebel |
 | Basic Roleplaying | BRP Open Game License v1.0 | Chaosium Inc. |
 | 5E-Compatible SRD | Creative Commons Attribution 4.0 | Wizards of the Coast LLC |
+| Orcus | OGL v1.0a | See `data/orcus/ATTRIBUTION` |
+| OSR / B/X-compatible (`osr`) | AGPL-3.0-only (original short mechanical helpers) | 2d6mcp maintainers |
 
-Where identifying marks or trademarks appear, they are used solely for attribution and to indicate the rights granted to us by the content providers. If you hold rights to material included in this project and have a concern about its use, please contact the lead maintainer immediately. We will work with you to address any reasonable request.
+`osr` is not a commercial product dump. It is original short procedure text (saves, combat, reaction, morale, hirelings, encumbrance, exploration). Full commercial books — including Old-School Essentials, works of Necrotic Gnome, Advanced Fantasy Tomes, AF Tomes, Black Streams, Masks, and Mongoose CRB — are **not** natively bundled. Operators who own licensed copies index them with BYOD: local-only, consent-gated (`AGREE_BYOD_USE`), never uploaded, never committed.
+
+Trademarks named in `LICENSE.md` are used solely for attribution and to identify works we exclude. If you hold rights to material included in this project and have a concern about its use, please contact the lead maintainer immediately. We will work with you to address any reasonable request.
 
 ## A Brief Word on "Open" in Tabletop Gaming
 

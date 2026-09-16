@@ -19,8 +19,8 @@ It shares rules databases, dice engine, prompt templates, and quality filters vi
 
 | Tool | Purpose |
 |------|---------|
-| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`). Infers mechanic from notation when omitted. |
-| `roll_table` | Roll on a named table. `source`: `ogl` or `byod`. Omit `table_name` with `source=byod` to list tables. |
+| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`, `coc`). Infers mechanic from notation when omitted. |
+| `roll_table` | Roll on a named table. `source`: `ogl`, `osr`, or `byod`. Omit `table_name` with `source=byod` or `source=osr` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
 | `query_local_byod` | Search ingested personal files. Returns `chunkIndex`. Optional `include_full`. |
 | `sync_byod` | Index BYOD files. Optional `relative_path` for a single file. |
@@ -61,7 +61,7 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 
 ### Dice Rolling
 - Use `roll` with mechanic `2d6` for standard 2d6 task resolution (skill checks, attack rolls, characteristic checks)
-- Use `roll` with mechanic `d20` for d20-based fantasy RPG resolution (5E, 4E, Orcus, OSE) — supports advantage/disadvantage, AC comparison, critical hits/fumbles
+- Use `roll` with mechanic `d20` for d20-based fantasy RPG resolution (5E, 4E, Orcus, OSR) — supports advantage/disadvantage, AC comparison, critical hits/fumbles
 - Use `roll` with mechanic `percentile` for BRP/percentile RPG resolution (Call of Cthulhu, Basic Roleplaying, Against the Darkmaster, Pendragon) — supports roll-under with critical success/fumble
 - Use `roll` with mechanic `damage` for damage dice with optional type labels (`"2d6+3 fire"`, `"1d8 piercing"`, `"4d6"`)
 - Use `roll` with mechanic `raw` for non-standard dice (damage dice, 1d6 tables, character creation 2d6 across six characteristics)
@@ -148,6 +148,7 @@ When starting a session, ensure knowledge is available:
 | `BRP_DB_PATH` | `data/brp/basic-roleplaying.db` | Custom BRP database path |
 | `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Custom 5E-compatible database path |
 | `ORCUS_DB_PATH` | `data/orcus/orcus.db` | Custom Orcus database path |
+| `OSR_DB_PATH` | `data/osr/osr-procedures.db` | OSR / B/X-compatible procedures database path |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |

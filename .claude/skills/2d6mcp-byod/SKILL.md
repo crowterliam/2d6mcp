@@ -77,6 +77,19 @@ Deletes the entire index. Recreated on next `sync_byod`. Source files untouched.
 
 Each `BYOD_PATH` gets its own isolated database. A shared content cache deduplicates identical files across workspaces — if two workspaces contain the same file, the content is stored only once.
 
+## Multi-shelf setup
+
+Point `BYOD_PATH` at the parent of game folders (not a single PDF). `sync_byod` with no args lists top-level collections; pass `query` to index matches only.
+
+Example (docs only — never commit books):
+
+```
+AGREE_BYOD_USE=true
+BYOD_PATH=/path/to/rpg-shelf
+```
+
+Then `sync_byod(query="old-school")` for the local OSR/B/X shelf collection, or the matching folder name for other shelves. Session start: `byod_system=osr` with `rules_system=osr` and `table_label=table-a`. High-latency mounts: `BYOD_NETWORK=true`. Rebuild/restart the MCP server after pulling code that adds `osr`.
+
 - **Disabled**: Set `AGREE_BYOD_USE="true"` or run `npm run setup`
 - **No path**: Set `BYOD_PATH` to your RPG files directory
 - **Sync times out**: Re-call `sync_byod` — it continues from where it left off
