@@ -3,8 +3,9 @@
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 //
 // Scan git-tracked files and data/packages trees for vendored PDFs, oversized
-// dumps, and closed-content product titles outside attribution files.
-// Phrase parts are split so this scanner does not itself contain those titles.
+// dumps, ISBN/copyright dump markers, legacy system-id paths, and closed-content
+// product titles. Title detectors stay split so this scanner never contains
+// those names concatenated, and public docs must not contain them either.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -28,21 +29,21 @@ const SKIP_TEXT_EXT = new Set([
   ".wasm",
 ]);
 
-const ATTRIBUTION_FILES = new Set(["LICENSE.md", "AI-POLICY.md"]);
-
 const MAX_OSR_SOURCE_BYTES = 80 * 1024;
 const MAX_TREE_TEXT_BYTES = 200 * 1024;
 
 const legacyId = ["o", "s", "e"].join("");
 
-const PRODUCT_IDENTITY_PHRASES = [
+// Split so concatenated commercial titles never appear in this file.
+const CLOSED_TITLE_FRAGMENTS = [
   ["Old-School", " Essentials"],
   ["Necrotic", " Gnome"],
   ["AF", " Tomes"],
   ["Advanced Fantasy", " Tomes"],
   ["Black", " Streams"],
   ["Mongoose", " CRB"],
-].map((parts) => parts.join(""));
+  ["Masks of", " Nyar"],
+];
 
 const FLEET_PHRASES = [
   ["Salt", "mere"],
@@ -66,6 +67,12 @@ const LEGACY_ID_PATTERNS = [
   new RegExp(`${["O", "S", "E"].join("")}_DB_PATH`),
   new RegExp(`\\b${["seed", "O", "se"].join("")}\\b`),
 ];
+
+const OSR_DUMP_MARKERS = [/\bISBN\b/i, /©/];
+
+function closedTitles() {
+  return CLOSED_TITLE_FRAGMENTS.map((parts) => parts.join(""));
+}
 
 function listedGitFiles() {
   const tracked = execFileSync("git", ["ls-files", "-z"], { encoding: "buffer" });
@@ -105,9 +112,14 @@ function posixRel(filePath) {
   return relative(process.cwd(), filePath).replace(/\\/g, "/");
 }
 
+function isSkippedText(file) {
+  return SKIP_TEXT_EXT.has(extname(file).toLowerCase());
+}
+
 function main() {
   const problems = [];
   const gitFiles = listedGitFiles();
+  const titles = closedTitles();
 
   const trackedPdfs = gitFiles.filter((f) => extname(f).toLowerCase() === ".pdf");
   if (trackedPdfs.length > 0) {
@@ -145,12 +157,23 @@ function main() {
       if (st.size > MAX_TREE_TEXT_BYTES) {
         problems.push(`${posixRel(filePath)} is ${st.size} bytes — possible book dump`);
       }
+      let text;
+      try {
+        text = readFileSync(filePath, "utf8");
+      } catch {
+        continue;
+      }
+      for (const marker of OSR_DUMP_MARKERS) {
+        if (marker.test(text)) {
+          problems.push(`${posixRel(filePath)}: closed-content dump marker is not allowed in osr helpers`);
+        }
+      }
     }
   }
 
   for (const file of gitFiles) {
     if (extname(file).toLowerCase() === ".pdf") continue;
-    if (SKIP_TEXT_EXT.has(extname(file).toLowerCase())) continue;
+    if (isSkippedText(file)) continue;
     let text;
     try {
       text = readFileSync(file, "utf8");
@@ -158,13 +181,9 @@ function main() {
       continue;
     }
 
-    const allowProductNames = ATTRIBUTION_FILES.has(file);
-
-    if (!allowProductNames) {
-      for (const phrase of PRODUCT_IDENTITY_PHRASES) {
-        if (text.includes(phrase) || text.toLowerCase().includes(phrase.toLowerCase())) {
-          problems.push(`${file}: closed-content product title "${phrase}" must stay out of code and data`);
-        }
+    for (const phrase of titles) {
+      if (text.includes(phrase) || text.toLowerCase().includes(phrase.toLowerCase())) {
+        problems.push(`${file}: closed-content product title must stay out of public docs, comments, and code`);
       }
     }
 
@@ -176,19 +195,17 @@ function main() {
 
     for (const pattern of LEGACY_ID_PATTERNS) {
       if (pattern.test(text)) {
-        problems.push(`${file}: forbidden legacy system id pattern ${pattern}`);
+        problems.push(`${file}: forbidden legacy system id pattern`);
       }
     }
   }
 
   const license = existsSync("LICENSE.md") ? readFileSync("LICENSE.md", "utf8") : "";
-  for (const phrase of PRODUCT_IDENTITY_PHRASES) {
-    if (!license.includes(phrase)) {
-      problems.push(`LICENSE.md must list Product Identity exclusion for "${phrase}"`);
-    }
-  }
   if (!/BYOD/.test(license) || !/osr/.test(license)) {
     problems.push("LICENSE.md must document osr helpers as AGPL plus full books via BYOD only");
+  }
+  if (!/commercial rulebooks/i.test(license)) {
+    problems.push("LICENSE.md must state commercial rulebooks are not bundled");
   }
 
   const policy = existsSync("AI-POLICY.md") ? readFileSync("AI-POLICY.md", "utf8") : "";
@@ -197,6 +214,9 @@ function main() {
   }
   if (!/osr/.test(policy)) {
     problems.push("AI-POLICY.md must document osr as original mechanical helpers, not commercial books");
+  }
+  if (!/commercial rulebooks/i.test(policy)) {
+    problems.push("AI-POLICY.md must state commercial rulebooks are not bundled");
   }
 
   if (problems.length > 0) {
