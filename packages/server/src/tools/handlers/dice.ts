@@ -56,7 +56,7 @@ export async function handleRoll(args: Record<string, unknown> | undefined): Pro
   if (difficultyRaw && !difficultyPreset) {
     return jsonResult(
       {
-        error: `Unknown difficulty preset "${difficultyRaw}". Operator presets: ${PRINTED_TARGET_LABELS.join(", ")}. These are printed target numbers, not open-srd DMs.`,
+        error: `Unknown difficulty preset "${difficultyRaw}". Operator target presets: ${PRINTED_TARGET_LABELS.join(", ")} (8/10/12/16). Ignored when target is set.`,
       },
       true
     );

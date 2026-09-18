@@ -9,15 +9,15 @@ import {
 } from "../../packages/shared/src/difficulty-presets.js";
 import { dispatchToolCall } from "../../packages/server/src/tools/index.js";
 
-describe("printed target presets", () => {
-  it("maps operator labels to commercial-style printed numbers", () => {
+describe("operator target presets", () => {
+  it("maps operator labels to generic target numbers", () => {
     expect(PRINTED_TARGET_PRESETS.average).toBe(8);
     expect(PRINTED_TARGET_PRESETS.difficult).toBe(10);
     expect(PRINTED_TARGET_PRESETS.very_difficult).toBe(12);
     expect(PRINTED_TARGET_PRESETS.impossible).toBe(16);
     expect(resolvePrintedTarget("Very Difficult")?.target).toBe(12);
     expect(resolvePrintedTarget("difficult")?.note).toBe(PRINTED_TARGET_PRESET_NOTE);
-    expect(PRINTED_TARGET_PRESET_NOTE.toLowerCase()).toContain("not an open-srd");
+    expect(PRINTED_TARGET_PRESET_NOTE).toContain("Operator target preset");
     expect(resolvePrintedTarget("formidable")).toBeNull();
   });
 

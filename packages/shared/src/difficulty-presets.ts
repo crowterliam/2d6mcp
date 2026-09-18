@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 //
-// Operator presets for commercial-style printed 2d6 target numbers.
-// These are NOT open-srd (system=ogl) difficulty DM tables.
+// Generic operator target-number presets for 2d6 rolls.
 
 export const PRINTED_TARGET_PRESETS = {
   average: 8,
@@ -21,7 +20,7 @@ export const PRINTED_TARGET_LABELS: PrintedTargetLabel[] = [
 ];
 
 export const PRINTED_TARGET_PRESET_NOTE =
-  "Operator preset for commercial-style printed targets (skill + characteristic vs the printed number). Not an open-srd (system=ogl) difficulty DM table. Do not apply open-srd DMs on top of this target.";
+  "Operator target preset (average=8, difficult=10, very_difficult=12, impossible=16). Ignored when target is set.";
 
 const LABEL_ALIASES: Record<string, PrintedTargetLabel> = {
   average: "average",

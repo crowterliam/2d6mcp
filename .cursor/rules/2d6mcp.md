@@ -44,7 +44,7 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
   - **d100 (BRP/CoC)**: Roll under target. ≤5% = critical, 96-100 = fumble. Use `roll` with mechanic `percentile`.
   - **Damage**: Use `roll(notation: "2d6+3 fire", mechanic: "damage")` for weapon damage.
 - **d66 tables**: Two d6s as tens and ones (11–66). Use `roll_table` with `"dice_type": "d66"`.
-- **Difficulty (2d6)**: Open-srd (`system=ogl`) uses DMs vs 8+. Commercial shelf tables use printed targets (Difficult 10+, Very Difficult 12+) with skill+characteristic only — operator presets on `roll` (`difficulty=difficult` → 10). A natural 9 fails Difficult 10+ and passes open-srd Average 8+. Do not mix.
+- **Difficulty (2d6)**: Typical target is 8+. Optional `roll` `difficulty` presets are generic operator targets (`average=8`, `difficult=10`, `very_difficult=12`, `impossible=16`) and are ignored when `target` is set.
 - **OGL for sci-fi, DW for fantasy, BRP for percentile, 5E-compatible for d20 fantasy, Orcus for 4e-compatible, BYOD for personal content**: The OGL database covers sci-fi core rules. The DW database covers fantasy rules. The BRP database covers percentile RPG rules. The 5E-compatible database covers d20 fantasy rules. The Orcus database covers 4e-compatible rules. Fall back to BYOD for supplements and house rules.
 - **BYOD requires consent**: Set `AGREE_BYOD_USE="true"` and configure `BYOD_PATH`. Search indexes matching game folders on demand; do not crawl the whole library.
 
@@ -83,7 +83,7 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 8. Start fresh: `clear_byod`
 
 ### Session Management
-1. Start session: `session(action: "start", name, rules_system, table_label, byod_system)` — commercial 2d6 sci-fi shelf uses `rules_system=byod`, not `ogl`
+1. Start session: `session(action: "start", name, rules_system, table_label, byod_system)` — `rules_system=byod` (or omit it) when `byod_system` is set so rulings prefer indexed personal files
 2. Log table talk: `log_transcript(session_id, text, speaker, source, intent)`
 3. Get recent context: `get_session_context(session_id or table_label, minutes)` — returns transcripts and rulings
 4. Search history: `search_transcript(session_id or table_label, "query")` — unquoted tokens are AND; quotes are exact phrases
@@ -92,7 +92,7 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 7. Summarize: `session(action: "summarize", session_id)` (requires MLX LLM)
 
 ### Ruling Synthesis
-1. Ask a question: `synthesize_ruling("question", session_id)` — when `byod_system` is set, retrieval prefers BYOD. Pass `rules_context` from `get_byod_chunk`. Do not mix open-srd difficulty DMs.
+1. Ask a question: `synthesize_ruling("question", session_id)` — when `byod_system` is set, retrieval prefers indexed personal files. Pass `rules_context` from `get_byod_chunk` when you already have chunks.
 2. Context resolution: `synthesize_ruling(from_context: true, session_id)` — auto-detect question from recent transcript
 3. Audio: `transcribe_audio(file_path)` — voice-to-text (requires `mlx_whisper`)
 

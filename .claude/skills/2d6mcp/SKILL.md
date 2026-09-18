@@ -19,7 +19,7 @@ It shares rules databases, dice engine, prompt templates, and quality filters vi
 
 | Tool | Purpose |
 |------|---------|
-| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`, `coc`). Infers mechanic from notation when omitted. Optional `difficulty` printed-target presets. |
+| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`, `coc`). Infers mechanic from notation when omitted. Optional `difficulty` operator target presets (`average=8`, `difficult=10`, `very_difficult=12`, `impossible=16`). |
 | `roll_table` | Roll on a named table. `source`: `ogl`, `osr`, or `byod`. Omit `table_name` with `source=byod` or `source=osr` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
 | `query_local_byod` | Search ingested personal files. Returns `chunkIndex`. Optional `include_full`. Optional `relative_path` / `root` pin. |
@@ -97,7 +97,7 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 - Use `session` summarize to generate an AI summary of the full session transcript (requires MLX LLM)
 
 ### Ruling Synthesis
-- Use `synthesize_ruling` to ask a rules question. When `byod_system` is set, retrieval prefers BYOD and does not silently use open-srd (`system=ogl`) difficulty. Pass `rules_context` from `get_byod_chunk`. If the local LLM is missing, retrieved context is still returned.
+- Use `synthesize_ruling` to ask a rules question. When `byod_system` is set, retrieval prefers indexed personal files. Pass `rules_context` from `get_byod_chunk` when you already have chunks. If the local LLM is missing, retrieved context is still returned.
 - Use `synthesize_ruling` with `from_context` to run the full producer pipeline: take recent transcript, detect rules question, look up rules, synthesize ruling, and log it to the session
 - Use `transcribe_audio` to convert recorded audio to text using local MLX Whisper (requires `mlx_whisper`)
 
@@ -112,14 +112,12 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 
 ### Resolving a Task
 1. Determine the appropriate characteristic or skill modifier
-2. For **open-srd (`system=ogl`)** only, apply difficulty DMs vs 8+ (easy +4, routine +2, difficult −2, …). For a **commercial 2d6 sci-fi shelf**, do not apply those DMs — roll vs the printed target (Difficult 10+, Very Difficult 12+) or `difficulty` operator presets.
-3. Call `roll` with mechanic `2d6`, `modifier`, and `target`
-4. Report the total, individual dice, and effect margin
-5. Interpret vs the target you used. A natural 9 fails Difficult 10+ (Effect −1) and passes open-srd Average 8+.
+2. Call `roll` with mechanic `2d6`, `modifier`, and `target`. Optional `difficulty` presets are generic operator targets (`average=8`, `difficult=10`, `very_difficult=12`, `impossible=16`) and are ignored when `target` is set.
+3. Report the total, individual dice, and effect margin
 
-### Commercial 2d6 sci-fi shelf (BYOD)
+### Personal files (BYOD)
 
-There is no bundled commercial-2d6-scifi DB. Start the session with `rules_system=byod` and `byod_system` set to the collection folder. Pin `query_local_byod` with `root`/`relative_path` (`parent/line`) so sibling editions are not indexed. Pass BYOD chunks as `rules_context` into `synthesize_ruling`. Task-chain assists from a prior Effect 1–5 giving DM+2 live in the licensed book (BYOD), not in open-srd tables.
+BYOD tooling is system-agnostic. Start the session with `rules_system=byod` (or omit `rules_system` when `byod_system` is set) so rulings prefer indexed personal files. Pin `query_local_byod` with `root`/`relative_path` (`parent/line`) so sibling collections are not indexed. Pass BYOD chunks as `rules_context` into `synthesize_ruling` when you already have them.
 
 ### Looking Up Rules
 1. Call `query_rules` with `system: "ogl"` with a descriptive `search_term` for sci-fi content

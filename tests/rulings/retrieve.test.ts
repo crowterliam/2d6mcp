@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { retrieveRulesContext, questionFromTranscript } from "../../packages/server/src/rulings/retrieve.js";
+import { retrieveRulesContext, questionFromTranscript, BYOD_PREFERRED_WARNING } from "../../packages/server/src/rulings/retrieve.js";
 import { openSessionDb, createSession, closeSessionDb } from "../../packages/server/src/session/database.js";
 import {
   getByodDatabase,
@@ -148,17 +148,17 @@ describe("retrieveRulesContext", () => {
     expect(auto.systemsSearched).toHaveLength(6);
   });
 
-  it("prefers BYOD and skips open-srd when byod_system is set and rules_system is omitted", async () => {
+  it("prefers BYOD and skips licensed databases when byod_system is set and rules_system is omitted", async () => {
     const byodPath = join(tmpdir(), `2d6mcp-retrieve-byod-pref-${Date.now()}`);
-    mkdirSync(join(byodPath, "commercial-2d6-scifi"), { recursive: true });
+    mkdirSync(join(byodPath, "collection-a"), { recursive: true });
     process.env.AGREE_BYOD_USE = "true";
     process.env.BYOD_PATH = byodPath;
 
     const byodDb = getByodDatabase(byodPath);
-    indexChunks(byodDb, "commercial-2d6-scifi/core.md", "core.md", ".md", 80, "h1", null, [
+    indexChunks(byodDb, "collection-a/core.md", "core.md", ".md", 80, "h1", null, [
       {
-        title: "Printed targets",
-        content: "Qzzvprinted: Difficult checks use a printed target of 10 with skill and characteristic only.",
+        title: "Collection rules",
+        content: "Qzzvprinted: Indexed personal files describe the local collection rules.",
         chunkIndex: 0,
       },
     ]);
@@ -168,28 +168,28 @@ describe("retrieveRulesContext", () => {
     process.env.SESSION_DB_PATH = sessionPath;
     closeSessionDb();
     const sessionDb = openSessionDb(sessionPath);
-    const session = createSession(sessionDb, "ogl", "shelf-run", "commercial-2d6-scifi");
+    const session = createSession(sessionDb, "ogl", "byod-run", "collection-a");
 
     const result = await retrieveRulesContext({
-      question: "qzzvprinted difficult check",
+      question: "qzzvprinted collection rules",
       sessionId: session.id,
     });
     expect(result.resolvedSystem).toBe("byod");
     expect(result.systemsSearched).toEqual([]);
-    expect(result.warnings.some((w) => w.includes("natural 9"))).toBe(true);
-    expect(result.context).toMatch(/printed target of 10/i);
+    expect(result.warnings).toContain(BYOD_PREFERRED_WARNING);
+    expect(result.context).toMatch(/indexed personal files/i);
     expect(result.context).not.toMatch(/\[OGL/i);
 
     closeByodDatabase(byodPath);
     rmSync(byodPath, { recursive: true, force: true });
   });
 
-  it("warns when open-srd is searched explicitly beside a byod_system filter", async () => {
+  it("still searches a licensed database when rules_system is set explicitly beside a byod_system filter", async () => {
     const sessionPath = join(tmpdir(), `2d6mcp-retrieve-mix-warn-${Date.now()}.db`);
     process.env.SESSION_DB_PATH = sessionPath;
     closeSessionDb();
     const sessionDb = openSessionDb(sessionPath);
-    const session = createSession(sessionDb, "ogl", "mix", "commercial-2d6-scifi");
+    const session = createSession(sessionDb, "ogl", "mix", "collection-a");
 
     const result = await retrieveRulesContext({
       question: "cover in combat",
@@ -198,6 +198,6 @@ describe("retrieveRulesContext", () => {
     });
     expect(result.resolvedSystem).toBe("ogl");
     expect(result.systemsSearched).toEqual(["ogl"]);
-    expect(result.warnings.some((w) => w.includes("natural 9"))).toBe(true);
+    expect(result.warnings).toContain(BYOD_PREFERRED_WARNING);
   });
 });

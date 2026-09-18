@@ -90,7 +90,7 @@ AGREE_BYOD_USE=true
 BYOD_PATH=/path/to/rpg-shelf
 ```
 
-Then `sync_byod(query="collection-a")` or `sync_byod(root="parent/line")`. Session start for a commercial 2d6 sci-fi shelf: `rules_system=byod`, `byod_system` = the collection folder, `table_label=table-b`. Do not tag that session `ogl`. High-latency mounts: `BYOD_NETWORK=true`.
+Then `sync_byod(query="collection-a")` or `sync_byod(root="parent/line")`. Session start when using personal files: `rules_system=byod`, `byod_system` = the collection folder, `table_label=table-b`. High-latency mounts: `BYOD_NETWORK=true`.
 
 - **Disabled**: Set `AGREE_BYOD_USE="true"` or run `npm run setup`
 - **No path**: Set `BYOD_PATH` to your RPG files directory

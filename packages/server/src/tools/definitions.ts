@@ -136,7 +136,7 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
           difficulty: {
             type: "string",
             description:
-              "Optional operator preset for commercial-style printed 2d6 targets: average=8, difficult=10, very_difficult=12, impossible=16. Not an open-srd (system=ogl) difficulty DM table. Ignored when target is set.",
+              "Optional generic operator target preset for 2d6 rolls: average=8, difficult=10, very_difficult=12, impossible=16. Ignored when target is set.",
           },
           advantage: {
             type: "boolean",
@@ -414,12 +414,12 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
             type: "string",
             enum: ["ogl", "dw", "brp", "5ecompatible", "orcus", "osr", "byod"],
             description:
-              "Rules system for this session. Use byod for a commercial shelf (do not default to ogl). Default: byod when byod_system is set, otherwise ogl.",
+              "Rules system for this session. Use byod to prefer indexed personal files. Default: byod when byod_system is set, otherwise ogl.",
           },
           byod_system: {
             type: "string",
             description:
-              "Optional collection name to filter BYOD. Prefer a nested root/relative_path on search so a family name does not index edition-5-sibling folders.",
+              "Optional collection name to filter BYOD. Prefer a nested root/relative_path on search so a family name does not index sibling folders.",
           },
           limit: {
             type: "integer",
@@ -516,7 +516,7 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
     {
       name: "synthesize_ruling",
       description:
-        "Synthesize a cited rules ruling with the local LLM. When byod_system is set (arg or session), retrieval prefers BYOD and does not silently answer from open-srd (system=ogl) difficulty. Pass rules_context from get_byod_chunk. If the local LLM is unavailable, retrieved context and warnings are still returned. Set from_context to derive the question from recent transcript.",
+        "Synthesize a cited rules ruling with the local LLM. When byod_system is set (arg or session), retrieval prefers indexed personal files and skips licensed databases unless rules_system is set explicitly. Pass rules_context from get_byod_chunk when you already have chunks. If the local LLM is unavailable, retrieved context and warnings are still returned. Set from_context to derive the question from recent transcript.",
       inputSchema: {
         type: "object",
         properties: {
@@ -528,7 +528,7 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
             type: "string",
             enum: ["ogl", "dw", "brp", "5ecompatible", "orcus", "osr", "auto", "byod"],
             description:
-              "Which rules DB to search. Omit when byod_system is set so retrieval stays on the commercial shelf. Explicit ogl still searches open-srd and emits a mix warning.",
+              "Which rules DB to search. Omit when byod_system is set so retrieval prefers indexed personal files. Explicit ogl/dw/brp/etc. still searches that licensed database.",
           },
           session_id: {
             type: "string",
@@ -549,7 +549,7 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
           rules_context: {
             type: "string",
             description:
-              "Optional explicit rules text (prefer BYOD chunks). Use this for commercial printed targets instead of open-srd difficulty.",
+              "Optional explicit rules text (prefer BYOD chunks from get_byod_chunk when you already have them).",
           },
           from_context: {
             type: "boolean",

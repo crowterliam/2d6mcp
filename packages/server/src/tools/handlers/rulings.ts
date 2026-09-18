@@ -18,7 +18,7 @@ import {
 } from "../../session/database.js";
 import { transcribeAudioBuffer } from "../../audio/mlx-transcribe.js";
 import { synthesizeRuling as mlxSynthesizeRuling } from "../../rulings/mlx-synthesize.js";
-import { questionFromTranscript, retrieveRulesContext, OPEN_SRD_DIFFICULTY_MIX_WARNING } from "../../rulings/retrieve.js";
+import { questionFromTranscript, retrieveRulesContext, BYOD_PREFERRED_WARNING } from "../../rulings/retrieve.js";
 import { resolveSafePath } from "../helpers.js";
 import { isAudioLong, chunkAudio, transcribeChunk, cleanupChunks, getChunkFiles } from "../../audio/chunker.js";
 import { handleListTranscriptions, handleClearTranscription } from "./session.js";
@@ -102,7 +102,7 @@ export async function handleSynthesizeRuling(args: Record<string, unknown> | und
       byodHits: retrieved.byodHits,
     };
   } else if (byodSystem || sessionId) {
-    retrievedWarnings = [OPEN_SRD_DIFFICULTY_MIX_WARNING];
+    retrievedWarnings = [BYOD_PREFERRED_WARNING];
   }
 
   let sessionHistory = "";

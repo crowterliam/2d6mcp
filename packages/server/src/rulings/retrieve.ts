@@ -66,8 +66,8 @@ export const RULES_SYSTEMS = ["ogl", "dw", "brp", "5ecompatible", "orcus", "osr"
 export type NamedRulesSystem = (typeof RULES_SYSTEMS)[number];
 export type RulesSystem = NamedRulesSystem | "auto" | "byod";
 
-export const OPEN_SRD_DIFFICULTY_MIX_WARNING =
-  "Do not mix open-srd (system=ogl) difficulty DMs with commercial printed targets. Open-srd often uses DM adjustments vs a fixed 8+. Commercial 2d6 sci-fi tables often use printed targets (Difficult 10+, Very Difficult 12+) with skill+characteristic only. A natural 9 fails Difficult 10+ (Effect -1) and passes open-srd Average 8+.";
+export const BYOD_PREFERRED_WARNING =
+  "byod_system is set, so retrieval prefers indexed personal files. Pass rules_context from get_byod_chunk when you already have chunks. Licensed databases are skipped unless rules_system is set explicitly.";
 
 export interface RetrieveOptions {
   question: string;
@@ -179,12 +179,7 @@ export async function retrieveRulesContext(options: RetrieveOptions): Promise<Re
     resolvedSystem === "auto" ? [...RULES_SYSTEMS] : resolvedSystem === "byod" ? [] : [resolvedSystem];
 
   if (byodSystem) {
-    warnings.push(OPEN_SRD_DIFFICULTY_MIX_WARNING);
-    if (resolvedSystem === "byod") {
-      warnings.push(
-        "Preferred BYOD retrieval because byod_system is set. Pass rules_context from get_byod_chunk. Do not apply open-srd (system=ogl) difficulty DMs."
-      );
-    }
+    warnings.push(BYOD_PREFERRED_WARNING);
   }
 
   const chunks: string[] = [];
@@ -340,14 +335,14 @@ export async function retrieveRulesContext(options: RetrieveOptions): Promise<Re
     }
   } else if (byodSystem) {
     warnings.push(
-      "BYOD consent is off, so commercial shelf text was not searched. Enable AGREE_BYOD_USE or pass rules_context from the operator's licensed files."
+      "BYOD consent is off, so personal files were not searched. Enable AGREE_BYOD_USE or pass rules_context."
     );
   }
 
   const context =
     scoreAndTakeTop(chunks, originalKeywords, fuzzyKeywords, maxChunks).join("\n\n") ||
     (resolvedSystem === "byod"
-      ? "No matching BYOD chunks. Pin query_local_byod with root/relative_path, then pass rules_context from get_byod_chunk. Open-srd difficulty was not searched."
+      ? "No matching BYOD chunks. Pin query_local_byod with root/relative_path, then pass rules_context from get_byod_chunk. Licensed databases were not searched."
       : "No matching rules found in the selected rules databases or BYOD index.");
 
   return {

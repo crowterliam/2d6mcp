@@ -101,7 +101,7 @@ BYOD (Bring Your Own Documents) mode enables local file ingestion for personal, 
 
 | Tool | Description |
 |------|-------------|
-| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`, `coc`). Infers mechanic from notation when omitted. Optional `difficulty` presets for commercial printed targets (not open-srd DMs). |
+| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`, `coc`). Infers mechanic from notation when omitted. Optional `difficulty` operator target presets (`average=8`, `difficult=10`, `very_difficult=12`, `impossible=16`). |
 | `roll_table` | Roll on a named table. `source`: `ogl`, `osr`, or `byod`. Omit `table_name` with `source=byod` or `source=osr` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
 | `query_local_byod` | Search personal files. Indexes matching top-level game folders on demand, then searches. Optional `include_full`. Optional `relative_path` / `root` pin. |
@@ -210,24 +210,24 @@ Versioning is **SemVer 2.0 lockstep** (root + every `packages/*` share one versi
 
 ## Session labels
 
-`query_rules(system=ogl)` is 2d6 sci-fi open-srd — not old-school fantasy. For B/X-style procedures use `system=osr` plus BYOD for the operator's local OSR/B/X shelf PDFs.
+`query_rules(system=ogl)` is 2d6 sci-fi SRD — not old-school fantasy. For B/X-style procedures use `system=osr` plus BYOD for the operator's local OSR/B/X shelf PDFs.
 
 Set an optional durable `table_label` on `session` start so `get_session_context`, `search_transcript`, and `session list` can filter one table without mixing transcripts.
 
 | Example | `rules_system` | `table_label` | Notes |
 |---------|-----------------|---------------|-------|
-| Sci-fi open-srd table | `ogl` | `table-b` | Trade/encounter ticks via `roll_table(source=ogl)` — see recipes below |
-| Commercial 2d6 sci-fi shelf | `byod` | `table-b` | `byod_system` = collection folder; pin `root=parent/line`; roll printed targets |
+| Sci-fi SRD table | `ogl` | `table-b` | Trade/encounter ticks via `roll_table(source=ogl)` — see recipes below |
+| Personal files (BYOD) | `byod` | `table-b` | `byod_system` = collection folder; pin `root=parent/line` |
 | B/X-style table | `osr` | `table-a` | `byod_system=osr`; full books via BYOD |
 | Percentile table | `brp` | `campaign-label` | `roll(mechanic="coc", …)` for Hard/Extreme, bonus/penalty, SAN, opposed POW |
 
-### Commercial 2d6 sci-fi vs open-srd difficulty
+### Personal files (BYOD)
 
-Open-srd (`system=ogl`) often uses DM adjustments vs a fixed 8+. A commercial 2d6 sci-fi shelf often prints higher targets (Difficult 10+, Very Difficult 12+) with skill+characteristic only. A natural 9 **fails** Difficult 10+ (Effect −1) and **passes** open-srd Average 8+. Do not mix those DMs into a BYOD table.
+BYOD tooling is system-agnostic. `sync_byod` / `query_local_byod` / `root` / `relative_path` / `byod_system` work for any operator shelf folder. Pin with `root`/`relative_path` to stay inside one nested folder and avoid sibling collections.
 
-Start with `rules_system=byod` (not `ogl`). Call `roll` with the printed target or operator presets `difficulty=average|difficult|very_difficult` (8/10/12) — these are presets, not an open-srd DM table. Task-chain assists from a prior Effect 1–5 giving DM+2 belong in BYOD lookups, not invented SRD tables.
+`rules_system=byod` (or a session with `byod_system` set) means rulings prefer indexed personal files. Pass `rules_context` from `get_byod_chunk` into `synthesize_ruling` when you already have chunks.
 
-Pin BYOD with `relative_path` / `root` so a family name does not index `edition-5-sibling`. Pass `rules_context` from `get_byod_chunk` into `synthesize_ruling`. `parse_character` needs `file_path` under the project or `BYOD_PATH`, or pasted `sheet_text`. `search_transcript` treats unquoted tokens as AND.
+Optional `roll` `difficulty` presets are generic operator targets (`average=8`, `difficult=10`, `very_difficult=12`, `impossible=16`). Ignored when `target` is set. `parse_character` needs `file_path` under the project or `BYOD_PATH`, or pasted `sheet_text`. `search_transcript` treats unquoted tokens as AND.
 
 ### OSR lookup vs commercial books
 

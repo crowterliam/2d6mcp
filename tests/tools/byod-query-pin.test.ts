@@ -28,7 +28,7 @@ describe("query_local_byod path pin", () => {
     const byodPath = join(TMP, "shelf");
     mkdirSync(join(byodPath, "parent", "line"), { recursive: true });
     mkdirSync(join(byodPath, "parent", "edition-5-sibling"), { recursive: true });
-    writeFileSync(join(byodPath, "parent", "line", "core.txt"), "qzzvlinecore printed target ten");
+    writeFileSync(join(byodPath, "parent", "line", "core.txt"), "qzzvlinecore nested folder text");
     writeFileSync(
       join(byodPath, "parent", "edition-5-sibling", "zine.txt"),
       "qzzvsiblingzine sibling edition text"

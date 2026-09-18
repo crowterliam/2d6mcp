@@ -15,8 +15,8 @@ with **lockstep** versions across the npm workspaces (see [VERSIONING.md](VERSIO
 
 - BYOD sync can target a nested directory via `relative_path` or `root`. The walk stays inside that folder and rejects paths that escape `BYOD_PATH`.
 - `query_local_byod` accepts the same `relative_path` / `root` pin so a search does not walk sibling editions.
-- Session `rules_system=byod` (default when `byod_system` is set) for commercial shelf runs that must not inherit open-srd difficulty.
-- `roll` operator presets `difficulty=average|difficult|very_difficult|impossible` map to printed targets 8/10/12/16. These are not open-srd DM tables.
+- Session `rules_system=byod` (default when `byod_system` is set) so rulings prefer indexed personal files.
+- `roll` operator target presets `difficulty=average|difficult|very_difficult|impossible` map to 8/10/12/16. Ignored when `target` is set.
 - `parse_character` accepts pasted `sheet_text` when no local `file_path` is available.
 - Sync results include `failedPaths` (relative paths that failed to ingest), not only a failed count.
 - CLI `sync-byod <query>` (and `--root`) loops until `complete`, with a round cap. The MCP tool stays time-budgeted.
@@ -28,7 +28,7 @@ with **lockstep** versions across the npm workspaces (see [VERSIONING.md](VERSIO
 - `loadConfig` logs the BYOD_PATH banner at most once per process.
 - OGL `query_rules` category aliases are case-insensitive, so display names such as `Trade & Commerce` and `TRADE & COMMERCE` route through the trade filter instead of core FTS.
 - `search_transcript` matches unquoted tokens with AND (all terms present, not necessarily adjacent). Quoted queries stay exact phrases.
-- `synthesize_ruling` prefers BYOD when `byod_system` is set and no longer silently answers from open-srd difficulty. Missing local LLM still returns retrieved context instead of a hard block.
+- `synthesize_ruling` prefers indexed personal files when `byod_system` is set and no longer silently ignores BYOD. Missing local LLM still returns retrieved context instead of a hard block.
 
 ### Changed
 

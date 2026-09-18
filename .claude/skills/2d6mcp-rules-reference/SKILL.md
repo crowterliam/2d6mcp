@@ -164,8 +164,8 @@ Retrieves the full chunk content for a specific file and chunk index. Use after 
 1. **Match the system**: Use the appropriate tool — `query_rules` with `system: "ogl"` (sci-fi), `query_rules` with `system: "dw"` (fantasy), `query_rules` with `system: "brp"` (percentile), `query_rules` with `system: "5ecompatible"` (d20 fantasy), or `query_rules` with `system: "orcus"` (4e-compatible)
 2. **Be specific**: Search for the exact mechanic name or equipment item
 3. **Try categories**: If a broad search returns too much, narrow with a `category`
-4. **Fall back to BYOD**: If core rules don't have what you need, try `query_local_byod`. Pin with `root`/`relative_path` so sibling editions are not indexed.
-5. **Combine searches**: For a complete picture, query both the system database and BYOD — except on a commercial 2d6 sci-fi shelf, do not mix open-srd difficulty DMs with printed targets
+4. **Fall back to BYOD**: If core rules don't have what you need, try `query_local_byod`. Pin with `root`/`relative_path` so sibling collections are not indexed.
+5. **Combine searches**: Query both a licensed database and BYOD when needed. When `rules_system=byod` or `byod_system` is set, retrieval prefers indexed personal files.
 6. **Get full content**: `query_local_byod` returns snippets. Use `get_byod_chunk(file_path, chunk_index)` to retrieve the full chunk for inference. Pass that text as `rules_context` to `synthesize_ruling`.
 
 ## Content Coverage
@@ -185,9 +185,9 @@ Spells, monsters, classes, feats, and core rules for d20 fantasy RPGs.
 ### 4E-compatible (Orcus OGL v1.0a)
 Classes, monsters, feats, and core rules for 4e-compatible RPGs. Includes character classes with traditions and roles, full monster stat blocks with AC/Fort/Ref/Will defenses, and feat-driven character progression.
 
-### Commercial 2d6 sci-fi shelf (BYOD)
+### Personal files (BYOD)
 
-There is no bundled commercial-2d6-scifi DB. Open-srd is `system=ogl` and often uses DM adjustments vs 8+. Commercial tables often print Difficult 10+ / Very Difficult 12+ with skill+characteristic only. A natural 9 fails Difficult 10+ and passes open-srd Average 8+. Start with `rules_system=byod`, pin `query_local_byod` to `parent/line`, and pass `rules_context` from BYOD chunks into `synthesize_ruling`. Do not apply open-srd difficulty DMs.
+BYOD tooling is system-agnostic. `sync_byod` / `query_local_byod` / `root` / `relative_path` / `byod_system` work for any operator shelf folder. Pin `query_local_byod` to `parent/line` so sibling collections are not indexed. Start with `rules_system=byod` and pass `rules_context` from BYOD chunks into `synthesize_ruling` when you already have them.
 
 ## Environment Variables
 

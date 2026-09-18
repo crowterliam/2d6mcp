@@ -30,8 +30,8 @@ describe("mid-session tool hardening", () => {
   it("defaults rules_system to byod when byod_system is set", async () => {
     const started = await dispatchToolCall("session", {
       action: "start",
-      name: "commercial shelf",
-      byod_system: "commercial-2d6-scifi",
+      name: "byod session",
+      byod_system: "collection-a",
     });
     expect(started.isError).toBeUndefined();
     const session = JSON.parse(started.content[0].text) as {
@@ -39,7 +39,7 @@ describe("mid-session tool hardening", () => {
       byod_system: string;
     };
     expect(session.rules_system).toBe("byod");
-    expect(session.byod_system).toBe("commercial-2d6-scifi");
+    expect(session.byod_system).toBe("collection-a");
   });
 
   it("AND-matches transcript tokens that are not adjacent", async () => {
