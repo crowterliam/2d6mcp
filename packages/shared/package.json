@@ -13,6 +13,7 @@
     "./prompts": "./dist/prompts.js",
     "./keywords": "./dist/keywords.js",
     "./types": "./dist/types.js",
+    "./difficulty-presets": "./dist/difficulty-presets.js",
     "./helpers": "./dist/index.js"
   },
   "scripts": {

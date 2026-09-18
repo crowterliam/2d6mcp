@@ -567,14 +567,59 @@ export interface EnsureByodResult {
   matchedRoots: string[];
   catalog: CatalogEntry[];
   sync: SyncResult;
+  error?: string;
+}
+
+export interface EnsureByodOptions {
+  /** Directory or file relative to BYOD_PATH. Walk and search stay inside this path. */
+  root?: string;
 }
 
 export async function ensureByodForQuery(
   config: Config,
   query: string,
-  systemHint?: string
+  systemHint?: string,
+  options: EnsureByodOptions = {}
 ): Promise<EnsureByodResult> {
   const byodPath = getByodPath();
+  const scopedRoot = options.root?.trim() ?? "";
+  if (scopedRoot) {
+    const target = resolveSyncTarget(byodPath, scopedRoot);
+    switch (target.kind) {
+      case "denied":
+        return {
+          matchedRoots: [],
+          catalog: [],
+          sync: idleSyncResult("Access denied. Path must be within the BYOD path.", {
+            byodPath,
+            matchedRoots: [],
+          }),
+          error: "Access denied. Path must be within the BYOD path.",
+        };
+      case "missing":
+        return {
+          matchedRoots: [],
+          catalog: [],
+          sync: idleSyncResult(`Path not found: ${scopedRoot}`, {
+            byodPath,
+            matchedRoots: [],
+          }),
+          error: `Path not found: ${scopedRoot}`,
+        };
+      case "file":
+      case "dir": {
+        const catalog = await listByodCatalog(byodPath);
+        const matchedRoots = [target.relativePath];
+        const sync = await syncByodIndex(config, { roots: matchedRoots, skipCompleted: true });
+        return { matchedRoots, catalog, sync };
+      }
+      default: {
+        const _never: never = target;
+        return _never;
+      }
+    }
+  }
+
   const catalog = await listByodCatalog(byodPath);
   const hint = systemHint?.trim() ?? "";
   let matched = hint ? matchCatalogEntries(catalog, hint) : [];

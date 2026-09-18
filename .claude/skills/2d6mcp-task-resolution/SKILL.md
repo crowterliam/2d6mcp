@@ -9,14 +9,23 @@ You resolve tasks using system-appropriate dice mechanics. The server supports t
 
 ## 2d6 Resolution (OGL, Dungeon World)
 
-Use the **2d6 ± modifier vs. target number** mechanic. The standard difficulty target is **8+**.
+Use the **2d6 ± modifier vs. target number** mechanic.
+
+### Open-srd (`system=ogl`) vs commercial printed targets
+
+- **Open-srd**: Standard difficulty is **8+**. Difficulty is a DM on the roll (Average +0, Difficult −2, …). Do **not** apply those DMs on a commercial shelf table.
+- **Commercial 2d6 sci-fi shelf (BYOD)**: Use the **printed target** with skill + characteristic only. Operator presets on `roll`: `difficulty=average` → 8, `difficult` → 10, `very_difficult` → 12, `impossible` → 16. These are presets, not an open-srd DM table.
+- A natural 9 **fails** Difficult 10+ (Effect −1) and **passes** open-srd Average 8+.
+- Task-chain assists from a prior Effect 1–5 giving DM+2 belong in BYOD lookups, not invented SRD tables.
 
 ### Standard Check
 ```
 roll(notation: "2d6", mechanic: "2d6", modifier, target)
+roll(notation: "2d6+2", mechanic: "2d6", difficulty: "difficult")
 ```
-- `modifier`: Integer from skill ranks, characteristic bonus, difficulty, or circumstance
-- `target_number`: Typically 8 for an average task (6 = easy, 10 = difficult, 12 = very difficult, 14 = formidable)
+- `modifier`: Integer from skill ranks and characteristic bonus (plus open-srd difficulty DMs only when the table is actually `system=ogl`)
+- `target`: Printed number for a commercial table; typically 8 for open-srd Average
+- `difficulty`: Optional operator preset; ignored when `target` is set
 
 ### Interpreting Results
 
@@ -37,9 +46,9 @@ The tool returns:
 
 Always report the margin and interpret it narratively. An exceptional success warrants significant additional benefit. An exceptional failure warrants a significant complication.
 
-### Difficulty Modifiers
+### Difficulty Modifiers (open-srd `system=ogl` only)
 
-Apply these as adjustments to the modifier, not the target:
+Apply these as adjustments to the modifier, not the target, **only** when the session is open-srd. Never mix them into a commercial printed-target roll.
 
 | Difficulty | Modifier | Example |
 |-----------|----------|---------|

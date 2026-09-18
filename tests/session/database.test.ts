@@ -186,6 +186,25 @@ describe("session database", () => {
     expect(results[0].text).toContain("key");
   });
 
+  it("matches unquoted tokens with AND even when they are not adjacent", () => {
+    const db = openSessionDb(DB_PATH);
+    const session = createSession(db);
+    logTranscript(db, session.id, "Pilot check at Difficult target");
+    logTranscript(db, session.id, "Smoke test of transcript search");
+
+    const adjacentMiss = searchTranscript(db, session.id, '"Pilot Difficult"');
+    expect(adjacentMiss).toHaveLength(0);
+
+    const andHit = searchTranscript(db, session.id, "Pilot Difficult");
+    expect(andHit).toHaveLength(1);
+    expect(andHit[0].text).toContain("Pilot");
+    expect(andHit[0].text).toContain("Difficult");
+
+    const phraseHit = searchTranscript(db, session.id, '"Smoke test"');
+    expect(phraseHit).toHaveLength(1);
+    expect(phraseHit[0].text).toContain("Smoke test");
+  });
+
   it("stores and retrieves rulings", () => {
     const db = openSessionDb(DB_PATH);
     const session = createSession(db);

@@ -178,6 +178,7 @@ function renderResource(uri: ResourceUri): string {
             { id: "5ecompatible", label: "d20 fantasy SRD", license: "CC-BY-4.0" },
             { id: "orcus", label: "d20 compatible SRD", license: "OGL v1.0a" },
             { id: "osr", label: "B/X-style procedures (OSR / B/X-compatible)", license: "Original summaries; full books via BYOD" },
+            { id: "byod", label: "Commercial shelf via BYOD (session tag)", license: "Operator licensed files; not a bundled DB" },
           ],
         },
         null,

@@ -56,6 +56,19 @@ describe("MCP prompts", () => {
     expect(queriedText.text).toContain('query "collection-a"');
   });
 
+  it("renders start-session commercial shelf guidance", () => {
+    const result = getPrompt("start-session", {
+      name: "shelf run",
+      byod_system: "commercial-2d6-scifi",
+    });
+    const text = result.messages[0].content;
+    expect(text.type).toBe("text");
+    if (text.type !== "text") return;
+    expect(text.text).toContain('rules_system "byod"');
+    expect(text.text).toContain("commercial-2d6-scifi");
+    expect(text.text).toContain("open-srd");
+  });
+
   it("rejects unknown prompts", () => {
     expect(isPromptName("skill-check")).toBe(true);
     expect(isPromptName("not-a-prompt")).toBe(false);

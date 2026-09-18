@@ -30,8 +30,9 @@ Shows how a file was chunked: metadata plus each chunk's `title`, `size`, `chunk
 ### Searching
 ```
 query_local_byod(search_term)
+query_local_byod(search_term, root)
 ```
-Full-text search across all indexed files. 20 results max. AND-first with OR fallback for broad queries.
+Full-text search. 20 results max. AND-first with OR fallback for broad queries. Pass `root` or `relative_path` to pin a nested folder such as `parent/line` so a family name does not index `edition-5-sibling`.
 
 ### Single File or Directory Syncing
 ```
@@ -80,7 +81,7 @@ Each `BYOD_PATH` gets its own isolated database. A shared content cache deduplic
 
 ## Multi-shelf setup
 
-Point `BYOD_PATH` at the parent of game folders (not a single PDF). `sync_byod` with no args lists top-level collections; pass `query` to index matching collections, or `relative_path` / `root` for a nested folder. High-latency mounts: `BYOD_NETWORK=true`. The CLI (`npm run sync-byod -- <query>`) loops until `complete`; the MCP tool stays time-budgeted.
+Point `BYOD_PATH` at the parent of game folders (not a single PDF). `sync_byod` with no args lists top-level collections; pass `query` to index matching collections, or `relative_path` / `root` for a nested folder. The same pin works on `query_local_byod`. High-latency mounts: `BYOD_NETWORK=true`. The CLI (`npm run sync-byod -- <query>`) loops until `complete`; the MCP tool stays time-budgeted.
 
 Example (docs only — never commit books):
 
@@ -89,7 +90,7 @@ AGREE_BYOD_USE=true
 BYOD_PATH=/path/to/rpg-shelf
 ```
 
-Then `sync_byod(query="old-school")` for the local OSR/B/X shelf collection, or the matching folder name for other shelves. Session start: `byod_system=osr` with `rules_system=osr` and `table_label=table-a`. High-latency mounts: `BYOD_NETWORK=true`. Rebuild/restart the MCP server after pulling code that adds `osr`.
+Then `sync_byod(query="collection-a")` or `sync_byod(root="parent/line")`. Session start for a commercial 2d6 sci-fi shelf: `rules_system=byod`, `byod_system` = the collection folder, `table_label=table-b`. Do not tag that session `ogl`. High-latency mounts: `BYOD_NETWORK=true`.
 
 - **Disabled**: Set `AGREE_BYOD_USE="true"` or run `npm run setup`
 - **No path**: Set `BYOD_PATH` to your RPG files directory

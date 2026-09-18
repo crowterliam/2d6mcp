@@ -91,8 +91,9 @@ export function getPromptDefinitions(): Prompt[] {
       description: "Start a session, confirm the rules system, and outline table logging.",
       arguments: [
         { name: "name", description: "Session name", required: false },
-        { name: "rules_system", description: "ogl, dw, brp, 5ecompatible, orcus, or osr (default ogl)", required: false },
+        { name: "rules_system", description: "ogl, dw, brp, 5ecompatible, orcus, osr, or byod (default byod when byod_system is set)", required: false },
         { name: "table_label", description: "Campaign tag: table-b, table-a, campaign-label", required: false },
+        { name: "byod_system", description: "Optional commercial shelf collection name", required: false },
       ],
     },
     {
@@ -101,7 +102,7 @@ export function getPromptDefinitions(): Prompt[] {
       description: "Look up licensed rules (and BYOD when enabled) and synthesize a cited ruling.",
       arguments: [
         { name: "question", description: "The rules question to resolve", required: true },
-        { name: "rules_system", description: "ogl, dw, brp, 5ecompatible, orcus, osr, or auto", required: false },
+        { name: "rules_system", description: "ogl, dw, brp, 5ecompatible, orcus, osr, auto, or byod", required: false },
         { name: "session_id", description: "Optional session to scope lookup and log the ruling", required: false },
       ],
     },
@@ -136,6 +137,7 @@ function renderPrompt(name: PromptName, args?: Record<string, string>): GetPromp
           `Resolve ${task} as a 2d6 task check.`,
           `Call the roll tool with mechanic "2d6", modifier ${modifier}, and target ${target}.`,
           "Report individual dice, total, success or failure, and effect margin.",
+          "For a commercial 2d6 sci-fi shelf, use the printed target (or roll difficulty presets: average=8, difficult=10, very_difficult=12). Do not apply open-srd (system=ogl) difficulty DMs. A natural 9 fails Difficult 10+ and passes open-srd Average 8+.",
           "Use system-agnostic language (characteristic, skill, target number). Do not invent numbers that the tool did not return.",
         ].join("\n")
       );
@@ -194,22 +196,25 @@ function renderPrompt(name: PromptName, args?: Record<string, string>): GetPromp
           `Create ${concept} for rules system "${system}".`,
           "1. Call query_rules with that system and category=categories, then look up careers, classes, or professions as appropriate.",
           "2. Generate characteristics with the roll tool (2d6 for 2d6 systems; follow the system's own method otherwise).",
-          "3. If the user provided a character sheet file, call parse_character instead of inventing stats.",
+          "3. If the user provided a character sheet file, call parse_character with file_path (project or BYOD_PATH) or paste sheet_text. Do not invent stats.",
           "Stay system-agnostic in naming. Do not invent table results that were not rolled.",
         ].join("\n")
       );
     }
     case "start-session": {
       const sessionName = arg(args, "name", "Tonight's game");
-      const rulesSystem = arg(args, "rules_system", "ogl");
+      const rulesSystem = arg(args, "rules_system");
       const tableLabel = arg(args, "table_label");
+      const byodSystem = arg(args, "byod_system");
+      const resolvedRules = rulesSystem || (byodSystem ? "byod" : "ogl");
       return userPrompt(
         "Start a game session",
         [
-          `Start a session named "${sessionName}" using rules_system "${rulesSystem}"${tableLabel ? ` and table_label "${tableLabel}"` : ""}.`,
+          `Start a session named "${sessionName}" using rules_system "${resolvedRules}"${tableLabel ? ` and table_label "${tableLabel}"` : ""}${byodSystem ? ` and byod_system "${byodSystem}"` : ""}.`,
           'Call session with action "start", the name, rules_system, and table_label if provided.',
-          "Optional table_label examples: table-a, campaign-label. Combine with rules_system (ogl, osr, brp, …) and byod_system when the table uses a local shelf.",
-          "Return the session id. Offer to log_transcript as play proceeds and to synthesize_ruling when a rules question comes up.",
+          "For a commercial 2d6 sci-fi shelf, set rules_system to byod (not ogl) and byod_system to the collection folder. Pin later BYOD searches with root/relative_path (for example parent/line) so sibling editions are not indexed.",
+          "Optional table_label examples: table-a, campaign-label.",
+          "Return the session id. Offer to log_transcript as play proceeds. For rulings, pass rules_context from BYOD chunks; do not apply open-srd difficulty DMs.",
         ].join("\n")
       );
     }
@@ -222,6 +227,7 @@ function renderPrompt(name: PromptName, args?: Record<string, string>): GetPromp
         [
           `Question: ${question}`,
           `Call synthesize_ruling with rules_system "${rulesSystem}"${sessionId ? ` and session_id "${sessionId}"` : ""}.`,
+          "If the session has byod_system set, omit rules_system or set byod so retrieval prefers the commercial shelf. Pass rules_context from get_byod_chunk. Do not mix open-srd (system=ogl) difficulty DMs with printed targets.",
           "If the user wants the question taken from table talk, set from_context true instead of inventing a question.",
           "Present the cited ruling. Do not add numbers that are not in the tool output or source text.",
         ].join("\n")

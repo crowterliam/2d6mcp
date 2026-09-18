@@ -243,16 +243,64 @@ export function getRecentTranscript(
     .all(sessionId, cutoff) as TranscriptSegment[];
 }
 
+export type TranscriptSearchMode = "phrase" | "and";
+
+export interface ParsedTranscriptQuery {
+  mode: TranscriptSearchMode;
+  terms: string[];
+}
+
+function escapeLikeTerm(term: string): string {
+  return term.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+}
+
+function likeContains(term: string): string {
+  return `%${escapeLikeTerm(term)}%`;
+}
+
+function unwrapQuoted(text: string): string | null {
+  if (text.length < 2) return null;
+  const start = text[0];
+  const end = text[text.length - 1];
+  if ((start === '"' && end === '"') || (start === "'" && end === "'")) {
+    return text.slice(1, -1);
+  }
+  return null;
+}
+
+export function parseTranscriptSearchQuery(query: string): ParsedTranscriptQuery {
+  const trimmed = query.trim();
+  const quoted = unwrapQuoted(trimmed);
+  if (quoted !== null) {
+    const phrase = quoted.trim();
+    return { mode: "phrase", terms: phrase ? [phrase] : [] };
+  }
+  const terms = trimmed.split(/\s+/).filter(Boolean);
+  if (terms.length <= 1) {
+    return { mode: "phrase", terms };
+  }
+  return { mode: "and", terms };
+}
+
+function transcriptLikeFilter(column: string, query: string): { sql: string; params: string[] } | null {
+  const parsed = parseTranscriptSearchQuery(query);
+  if (parsed.terms.length === 0) return null;
+  const sql = parsed.terms.map(() => `${column} LIKE ? ESCAPE '\\'`).join(" AND ");
+  return { sql, params: parsed.terms.map(likeContains) };
+}
+
 export function searchTranscript(
   database: Database.Database,
   sessionId: string,
   query: string
 ): TranscriptSegment[] {
+  const filter = transcriptLikeFilter("text", query);
+  if (!filter) return [];
   return database
     .prepare(
-      "SELECT * FROM transcript_segments WHERE session_id = ? AND text LIKE ? ORDER BY timestamp DESC LIMIT 30"
+      `SELECT * FROM transcript_segments WHERE session_id = ? AND ${filter.sql} ORDER BY timestamp DESC LIMIT 30`
     )
-    .all(sessionId, `%${query}%`) as TranscriptSegment[];
+    .all(sessionId, ...filter.params) as TranscriptSegment[];
 }
 
 export function searchTranscriptByLabel(
@@ -262,14 +310,16 @@ export function searchTranscriptByLabel(
 ): TranscriptSegment[] {
   const label = normalizeTableLabel(tableLabel);
   if (!label) return [];
+  const filter = transcriptLikeFilter("t.text", query);
+  if (!filter) return [];
   return database
     .prepare(
       `SELECT t.* FROM transcript_segments t
        INNER JOIN sessions s ON s.id = t.session_id
-       WHERE s.table_label = ? COLLATE NOCASE AND t.text LIKE ?
+       WHERE s.table_label = ? COLLATE NOCASE AND ${filter.sql}
        ORDER BY t.timestamp DESC LIMIT 30`
     )
-    .all(label, `%${query}%`) as TranscriptSegment[];
+    .all(label, ...filter.params) as TranscriptSegment[];
 }
 
 export function getRecentTranscriptByLabel(

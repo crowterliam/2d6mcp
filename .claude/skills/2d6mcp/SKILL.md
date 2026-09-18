@@ -19,22 +19,22 @@ It shares rules databases, dice engine, prompt templates, and quality filters vi
 
 | Tool | Purpose |
 |------|---------|
-| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`, `coc`). Infers mechanic from notation when omitted. |
+| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`, `coc`). Infers mechanic from notation when omitted. Optional `difficulty` printed-target presets. |
 | `roll_table` | Roll on a named table. `source`: `ogl`, `osr`, or `byod`. Omit `table_name` with `source=byod` or `source=osr` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
-| `query_local_byod` | Search ingested personal files. Returns `chunkIndex`. Optional `include_full`. |
+| `query_local_byod` | Search ingested personal files. Returns `chunkIndex`. Optional `include_full`. Optional `relative_path` / `root` pin. |
 | `sync_byod` | No args lists collections. `query` indexes matching folders. `relative_path` or `root` indexes a file or nested directory. |
 | `clear_byod` | Delete the BYOD index. |
 | `list_byod_files` | List indexed files. Optional `relative_path` inspects one file. |
 | `get_byod_chunk` | Retrieve full chunk content by path + chunk index. |
-| `parse_character` | Parse a character sheet into structured data. |
+| `parse_character` | Parse a character sheet (`file_path` under project/`BYOD_PATH`, or `sheet_text`). |
 | `discord_post` | Post to Discord webhooks with smart routing and embeds. |
 | `discord_webhook` | Manage webhooks: `action` add, remove, list, or test. |
 | `session` | Manage sessions: `action` start, end, list, delete, or summarize. |
 | `log_transcript` | Log a transcript segment to a session. |
 | `get_session_context` | Get recent transcript and rulings. |
-| `search_transcript` | Search session transcripts with SQL LIKE (not FTS5). |
-| `synthesize_ruling` | Cited rules ruling. Optional `from_context` uses recent transcript. Default `rules_system` from the session when `session_id` is set. |
+| `search_transcript` | Search session transcripts. Unquoted tokens are AND; quoted queries are exact phrases. |
+| `synthesize_ruling` | Cited rules ruling. When `byod_system` is set, prefers BYOD. Pass `rules_context` from BYOD chunks. |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. `action`: transcribe, list, or clear. Last chunk sets `complete: true`. |
 
 Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create-character`, `start-session`, `ask-ruling`, `index-documents`. Resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://systems`, `2d6mcp://docs/*`, `2d6mcp://license`, `2d6mcp://session/current`, `2d6mcp://rules/{system}`.
@@ -73,11 +73,11 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 - Use `query_rules` with `system: "brp"` for percentile RPG content. Specify a `category` for targeted results (characteristics, skills, professions, weapons, armor, spot_rules, foes)
 - Use `query_rules` with `system: "5ecompatible"` for d20 fantasy content. Specify a `category` for targeted results (spells, monsters, classes, feats, rules)
 - Use `query_rules` with `system: "orcus"` for 4e-compatible content. Specify a `category` for targeted results (classes, monsters, feats, rules)
-- Use `query_local_byod` when you need content from your personal files (supplements, house rules, campaign notes)
+- Use `query_local_byod` when you need content from your personal files (supplements, house rules, campaign notes). Pass `root` / `relative_path` to pin a nested folder such as `parent/line`.
 - Use `roll_table` with a table name to both roll on it AND see the full table entries. Use `source`: `ogl` or `byod`.
 
 ### Character Handling
-- Use `parse_character` to read a character sheet file and extract UPP, characteristics, skills, name, and career
+- Use `parse_character` with `file_path` (project directory or `BYOD_PATH`) or pasted `sheet_text` to extract UPP, characteristics, skills, name, and career
 
 ### BYOD Management
 - Use `sync_byod` with no arguments to list collections; pass `query` or `relative_path`/`root` to index that scope
@@ -91,13 +91,13 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 - Use `session` start to begin a new game session — logs transcripts, rulings, and context for continuity
 - Use `log_transcript` to record what was said at the table during play (with speaker, source, and intent)
 - Use `get_session_context` to recall the last N minutes of game context (transcripts + rulings)
-- Use `search_transcript` to search what was said about a specific topic across the full session
+- Use `search_transcript` to search what was said about a specific topic. Unquoted tokens are AND; quoted strings are exact phrases.
 - Use `session` list to browse all recorded sessions
 - Use `session` end to close the active session
 - Use `session` summarize to generate an AI summary of the full session transcript (requires MLX LLM)
 
 ### Ruling Synthesis
-- Use `synthesize_ruling` to ask a rules question and get an AI-generated ruling with OGL/DW/BRP/5E-compatible/BYOD citations (requires `mlx_lm.generate`)
+- Use `synthesize_ruling` to ask a rules question. When `byod_system` is set, retrieval prefers BYOD and does not silently use open-srd (`system=ogl`) difficulty. Pass `rules_context` from `get_byod_chunk`. If the local LLM is missing, retrieved context is still returned.
 - Use `synthesize_ruling` with `from_context` to run the full producer pipeline: take recent transcript, detect rules question, look up rules, synthesize ruling, and log it to the session
 - Use `transcribe_audio` to convert recorded audio to text using local MLX Whisper (requires `mlx_whisper`)
 
@@ -112,10 +112,14 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 
 ### Resolving a Task
 1. Determine the appropriate characteristic or skill modifier
-2. Apply any difficulty modifiers (easy +2, routine +1, difficult -2, etc.)
+2. For **open-srd (`system=ogl`)** only, apply difficulty DMs vs 8+ (easy +4, routine +2, difficult −2, …). For a **commercial 2d6 sci-fi shelf**, do not apply those DMs — roll vs the printed target (Difficult 10+, Very Difficult 12+) or `difficulty` operator presets.
 3. Call `roll` with mechanic `2d6`, `modifier`, and `target`
 4. Report the total, individual dice, and effect margin
-5. Interpret: margin 0–5 = marginal success, 6+ = exceptional success; margin -1 to -5 = marginal failure, -6 or worse = exceptional failure
+5. Interpret vs the target you used. A natural 9 fails Difficult 10+ (Effect −1) and passes open-srd Average 8+.
+
+### Commercial 2d6 sci-fi shelf (BYOD)
+
+There is no bundled commercial-2d6-scifi DB. Start the session with `rules_system=byod` and `byod_system` set to the collection folder. Pin `query_local_byod` with `root`/`relative_path` (`parent/line`) so sibling editions are not indexed. Pass BYOD chunks as `rules_context` into `synthesize_ruling`. Task-chain assists from a prior Effect 1–5 giving DM+2 live in the licensed book (BYOD), not in open-srd tables.
 
 ### Looking Up Rules
 1. Call `query_rules` with `system: "ogl"` with a descriptive `search_term` for sci-fi content

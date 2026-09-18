@@ -13,9 +13,10 @@ Character creation and parsing is supported across all game systems. The `parse_
 
 ```
 parse_character(file_path)
+parse_character(sheet_text)
 ```
 
-Parses a character sheet file (text or JSON) and returns structured data: `name`, `career`, `upp`, `characteristics` (strength, dexterity, endurance, intellect, education, social), and `skills` array.
+Parses a character sheet file (text or JSON) **or** pasted `sheet_text`. `file_path` must be inside the project directory or `BYOD_PATH`. Returns structured data: `name`, `career`, `upp`, `characteristics` (strength, dexterity, endurance, intellect, education, social), and `skills` array.
 
 ### UPP Format
 

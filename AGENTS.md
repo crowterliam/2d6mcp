@@ -187,22 +187,22 @@ packages/shared/src/
 
 | Tool | Purpose |
 |------|---------|
-| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`, `coc`). Infers mechanic from notation when omitted. |
+| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`, `coc`). Optional `difficulty` operator presets for commercial printed targets (`average=8`, `difficult=10`, `very_difficult=12`) — not open-srd DMs. |
 | `roll_table` | Roll on a named table. `source`: `ogl`, `osr`, or `byod`. Omit `table_name` with `source=byod` or `source=osr` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required (`ogl`, `dw`, `brp`, `5ecompatible`, `orcus`, `osr`). Default category is core FTS only. `category=categories` lists filters. |
-| `query_local_byod` | Search personal files. Indexes matching top-level game folders on demand, then searches. Optional `include_full`. |
+| `query_local_byod` | Search personal files. Indexes matching top-level game folders on demand, then searches. Optional `include_full`. Optional `relative_path` / `root` pins a nested folder. |
 | `sync_byod` | On-demand index. No args lists folders. `query` indexes matching collections. `relative_path` or `root` indexes a file or a directory under `BYOD_PATH` (walk stays inside that folder). |
 | `clear_byod` | Delete the BYOD index. |
 | `list_byod_files` | List indexed files. Optional `relative_path` inspects one file. |
 | `get_byod_chunk` | Retrieve full chunk content by path + chunk index. |
-| `parse_character` | Parse a character sheet into structured data. |
+| `parse_character` | Parse a character sheet (`file_path` under project/`BYOD_PATH`, or pasted `sheet_text`). |
 | `discord_post` | Post to Discord webhooks with smart routing and embeds. |
 | `discord_webhook` | Manage webhooks: `action` add, remove, list, or test. |
-| `session` | Manage sessions: `action` start, end, list, delete, or summarize. Optional `table_label` on start/list. |
+| `session` | Manage sessions: `action` start, end, list, delete, or summarize. Optional `table_label` on start/list. `rules_system=byod` when `byod_system` is set. |
 | `log_transcript` | Log a transcript segment to a session. |
 | `get_session_context` | Get recent transcript and rulings (`session_id` or `table_label`). |
-| `search_transcript` | Search session transcripts with SQL LIKE (not FTS5). `session_id` or `table_label`. |
-| `synthesize_ruling` | Cited rules ruling. Optional `from_context` uses recent transcript. Default `rules_system` from the session when `session_id` is set. BYOD runs whenever consent is on. |
+| `search_transcript` | Search transcripts. Unquoted tokens are AND; quoted queries are exact LIKE phrases. `session_id` or `table_label`. |
+| `synthesize_ruling` | Cited rules ruling. When `byod_system` is set, prefers BYOD and does not silently use open-srd difficulty. Pass `rules_context` from BYOD chunks. |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. `action`: transcribe, list, or clear. Last chunk sets `complete: true`. |
 
 ## Prompts and Resources
@@ -215,11 +215,24 @@ MCP resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://
 
 - **Session lifecycle**: Start with `session` `action: start`, log with `log_transcript`, end with `session` `action: end`.
 - **Table labels**: Pass optional `table_label` on start (examples: `table-a`, `campaign-label`) so list/context/search stay per-table.
-- **OSR vs OGL**: `query_rules(system=ogl)` is 2d6 sci-fi SRD. B/X-style procedures use `system=osr`. Full commercial books are BYOD (`AGREE_BYOD_USE` + `BYOD_PATH`, for example `/path/to/rpg-shelf` for the operator's local OSR/B/X shelf PDFs).
+- **OSR vs OGL**: `query_rules(system=ogl)` is 2d6 sci-fi open-srd. B/X-style procedures use `system=osr`. Full commercial books are BYOD (`AGREE_BYOD_USE` + `BYOD_PATH`, for example `/path/to/rpg-shelf` for the operator's local OSR/B/X shelf PDFs).
 - **OGL trade**: `query_rules(system=ogl, category=trade)` (alias `Trade & Commerce`) for freight, speculative trade, passengers, and mail. Broker is `category=skills`; Trade Codes/Routes are `category=worlds`. Commercial freight-lot matrices are not bundled (`category=list_tables` has none) — use Population/starport or BYOD.
-- **BYOD system scoping**: Pass `byod_system` on session start to filter BYOD searches.
-- **Ruling synthesis**: `synthesize_ruling` auto-looks up licensed rules and BYOD (when consent is on). BYOD indexes matching top-level collections on demand from the question or session `byod_system`. Default `rules_system` comes from the session when `session_id` is set.
+- **BYOD system scoping**: Pass `byod_system` on session start to filter BYOD searches. Pin nested folders with `root` / `relative_path` so a family name does not index `edition-5-sibling`.
+- **Ruling synthesis**: `synthesize_ruling` auto-looks up licensed rules and BYOD (when consent is on). If `byod_system` is set, retrieval prefers BYOD and does not silently answer from open-srd difficulty. Pass `rules_context` from `get_byod_chunk`. Default licensed `rules_system` comes from the session only when `byod_system` is unset.
 - **Audio transcription**: `transcribe_audio` processes files longer than 180 seconds in 2-minute chunks. Call repeatedly until `complete: true`. The last chunk sets `complete` itself.
+
+### Commercial 2d6 sci-fi shelf (BYOD)
+
+There is no bundled `commercial-2d6-scifi` rules database. Open-srd lives at `system=ogl`. A licensed shelf run uses BYOD.
+
+1. Start with `rules_system=byod` (not `ogl`) and `byod_system` set to the collection folder. Tagging the session `ogl` implies open-srd difficulty DMs.
+2. Call `roll` with the **printed target** (`target=10` for Difficult) or operator presets `difficulty=average|difficult|very_difficult` (8 / 10 / 12). Modifier is skill + characteristic only.
+3. Do not apply open-srd difficulty DMs from `query_rules(system=ogl)`. A natural 9 **fails** a printed Difficult 10+ (Effect −1) and **passes** open-srd Average 8+.
+4. Task-chain assists from a prior Effect 1–5 giving DM+2 belong in the licensed book (BYOD lookup). Do not invent an SRD table.
+5. Pin search: `query_local_byod(search_term, root="parent/line")` so sibling editions are not walked.
+6. `synthesize_ruling`: pass `rules_context` from BYOD chunks. If the local LLM is missing, retrieved context is still returned.
+7. `parse_character` needs `file_path` under the project or `BYOD_PATH`, or pasted `sheet_text`.
+8. `search_transcript`: unquoted tokens are AND; quoted strings are exact phrases.
 
 ## Cross-Platform Backends
 
