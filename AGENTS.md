@@ -50,7 +50,7 @@ npm run populate-brp     # regenerate BRP SQLite database
 npm run populate-5ecompatible  # regenerate 5E-compatible SQLite database
 npm run populate-orcus     # regenerate Orcus SQLite database
 npm run populate-osr      # regenerate OSR / B/X-compatible procedures database
-npm run sync-byod          # list BYOD collections; pass a query to index matches
+npm run sync-byod          # list BYOD collections; pass a query or --root to index that scope
 npm run version:check      # assert lockstep SemVer (root + packages/*)
 npm run version:bump -- patch|minor|major  # write lockstep version (see VERSIONING.md)
 ```
@@ -191,7 +191,7 @@ packages/shared/src/
 | `roll_table` | Roll on a named table. `source`: `ogl`, `osr`, or `byod`. Omit `table_name` with `source=byod` or `source=osr` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required (`ogl`, `dw`, `brp`, `5ecompatible`, `orcus`, `osr`). Default category is core FTS only. `category=categories` lists filters. |
 | `query_local_byod` | Search personal files. Indexes matching top-level game folders on demand, then searches. Optional `include_full`. |
-| `sync_byod` | On-demand index. No args lists folders. `query` indexes matching collections. Optional `relative_path` for one file. |
+| `sync_byod` | On-demand index. No args lists folders. `query` indexes matching collections. `relative_path` or `root` indexes a file or a directory under `BYOD_PATH` (walk stays inside that folder). |
 | `clear_byod` | Delete the BYOD index. |
 | `list_byod_files` | List indexed files. Optional `relative_path` inspects one file. |
 | `get_byod_chunk` | Retrieve full chunk content by path + chunk index. |

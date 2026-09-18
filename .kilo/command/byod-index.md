@@ -5,8 +5,8 @@ Manage your personal RPG file index in 2d6mcp.
 ## Usage
 
 ```
-/byod sync     → sync/index files from BYOD_PATH
-/byod file <path> → index a single file by relative path
+/byod sync     → list collections; with a query, index matching folders
+/byod file <path> → index a file or directory by relative path
 /byod list     → list all indexed files
 /byod inspect <path> → show chunks for a specific file
 /byod get <path> <index> → retrieve full chunk content
@@ -28,8 +28,8 @@ Manage your personal RPG file index in 2d6mcp.
 
 ## Behaviour
 
-- `sync`: Indexes files in time-budgeted batches. Returns `complete: false` if more files remain — re-run.
-- `file`: Calls `sync_byod` with `relative_path`. Useful for large files that timeout during bulk sync.
+- `sync`: With no args, lists collections. With a query, indexes matching folders in time-budgeted batches. Returns `complete: false` if more files remain — re-run.
+- `file`: Calls `sync_byod` with `relative_path`. A directory walk stays inside that folder.
 - `list`: Shows all files with status, chunk counts, and ingestion dates
 - `inspect`: Calls `list_byod_files` with `relative_path` to show how a file was chunked
 - `get`: Retrieves full chunk content (up to 8KB) by file path and chunk index. Use after `search` returns snippets.

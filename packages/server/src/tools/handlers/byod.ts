@@ -4,7 +4,7 @@
 import { checkByodConsent, getByodPath } from "../../byod/gate.js";
 import { loadConfig } from "../../config.js";
 import { getByodDatabase, searchByodIndex, clearByodDatabase, listByodFiles, getFileChunks, getChunkContent } from "../../byod/search.js";
-import { syncByodIndex, syncFile, ensureByodForQuery } from "../helpers.js";
+import { syncByodIndex, syncFile, ensureByodForQuery, resolveSyncTarget } from "../helpers.js";
 
 export async function handleQueryLocalByod(args: Record<string, unknown> | undefined): Promise<{
   content: Array<{ type: "text"; text: string }>;
@@ -76,7 +76,8 @@ export async function handleSyncByod(args: Record<string, unknown> | undefined):
   }
 
   const relativePath =
-    typeof args?.relative_path === "string" ? args.relative_path : "";
+    typeof args?.relative_path === "string" ? args.relative_path.trim() : "";
+  const rootArg = typeof args?.root === "string" ? args.root.trim() : "";
   const query =
     typeof args?.query === "string"
       ? args.query
@@ -84,15 +85,69 @@ export async function handleSyncByod(args: Record<string, unknown> | undefined):
         ? args.system
         : "";
 
-  if (relativePath) {
-    const config = loadConfig();
-    const result = await syncFile(config, relativePath);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+  const config = loadConfig();
+  const scope = relativePath || rootArg;
+
+  if (scope) {
+    const byodPath = getByodPath();
+    const target = resolveSyncTarget(byodPath, scope);
+    switch (target.kind) {
+      case "denied":
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  message: "Access denied. Path must be within the BYOD path.",
+                  relative_path: scope,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+          isError: true,
+        };
+      case "missing":
+        if (relativePath && !rootArg) {
+          const missingFile = await syncFile(config, relativePath);
+          return {
+            content: [{ type: "text", text: JSON.stringify(missingFile, null, 2) }],
+          };
+        }
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                { message: `Path not found: ${scope}`, relative_path: scope },
+                null,
+                2
+              ),
+            },
+          ],
+          isError: true,
+        };
+      case "file": {
+        const fileResult = await syncFile(config, target.relativePath);
+        return {
+          content: [{ type: "text", text: JSON.stringify(fileResult, null, 2) }],
+        };
+      }
+      case "dir": {
+        const dirResult = await syncByodIndex(config, { roots: [target.relativePath] });
+        return {
+          content: [{ type: "text", text: JSON.stringify(dirResult, null, 2) }],
+        };
+      }
+      default: {
+        const _never: never = target;
+        return _never;
+      }
+    }
   }
 
-  const config = loadConfig();
   const result = await syncByodIndex(config, query ? { query } : {});
   return {
     content: [{ type: "text", text: JSON.stringify(result, null, 2) }],

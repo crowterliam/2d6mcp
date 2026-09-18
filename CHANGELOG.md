@@ -11,9 +11,22 @@ with **lockstep** versions across the npm workspaces (see [VERSIONING.md](VERSIO
 
 ## [Unreleased]
 
+### Added
+
+- BYOD sync can target a nested directory via `relative_path` or `root`. The walk stays inside that folder and rejects paths that escape `BYOD_PATH`.
+- Sync results include `failedPaths` (relative paths that failed to ingest), not only a failed count.
+- CLI `sync-byod <query>` (and `--root`) loops until `complete`, with a round cap. The MCP tool stays time-budgeted.
+
 ### Fixed
 
+- Catalog matching no longer extra-indexes a sibling folder whose name merely contains a shorter hit (for example `collection-a-website-dump` next to `collection-a`).
+- On `BYOD_NETWORK=true`, sync does not start another file when remaining budget is below a small floor.
+- `loadConfig` logs the BYOD_PATH banner at most once per process.
 - OGL `query_rules` category aliases are case-insensitive, so display names such as `Trade & Commerce` and `TRADE & COMMERCE` route through the trade filter instead of core FTS.
+
+### Changed
+
+- Bare `sync_byod` / `npm run sync-byod` lists top-level collections. A query or directory root indexes that scope.
 
 ## [0.8.0] - 2026-09-16
 

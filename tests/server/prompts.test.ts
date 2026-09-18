@@ -49,11 +49,11 @@ describe("MCP prompts", () => {
     expect(listedText.text).toContain("list top-level collections");
     expect(listedText.text).not.toContain("Call sync_byod. If complete is false");
 
-    const queried = getPrompt("index-documents", { query: "traveller" });
+    const queried = getPrompt("index-documents", { query: "collection-a" });
     const queriedText = queried.messages[0].content;
     expect(queriedText.type).toBe("text");
     if (queriedText.type !== "text") return;
-    expect(queriedText.text).toContain('query "traveller"');
+    expect(queriedText.text).toContain('query "collection-a"');
   });
 
   it("rejects unknown prompts", () => {

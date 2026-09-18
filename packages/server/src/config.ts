@@ -64,6 +64,20 @@ function parseIntEnv(key: string, fallback: number, min: number, max: number): n
   return Math.max(min, Math.min(max, n));
 }
 
+let byodPathBannerLogged = false;
+
+function logByodPathBanner(lines: string[]): void {
+  if (byodPathBannerLogged) return;
+  byodPathBannerLogged = true;
+  for (const line of lines) {
+    process.stderr.write(line);
+  }
+}
+
+export function resetByodPathLogForTests(): void {
+  byodPathBannerLogged = false;
+}
+
 export function loadConfig(): Config {
   const envAgreed = process.env.AGREE_BYOD_USE === "true";
   const tokenExists = existsSync(BYOD_CONSENT_FILE);
@@ -74,19 +88,22 @@ export function loadConfig(): Config {
   if (rawByodPath) {
     if (isAbsolute(rawByodPath)) {
       byodPath = rawByodPath;
-      process.stderr.write(`2d6mcp: BYOD_PATH is absolute: ${byodPath}\n`);
+      logByodPathBanner([`2d6mcp: BYOD_PATH is absolute: ${byodPath}\n`]);
     } else {
       const cwdResolved = resolve(process.cwd(), rawByodPath);
-      process.stderr.write(`2d6mcp: BYOD_PATH is relative. cwd=${process.cwd()}, cwdResolved=${cwdResolved}, exists=${existsSync(cwdResolved)}\n`);
+      const banner: string[] = [
+        `2d6mcp: BYOD_PATH is relative. cwd=${process.cwd()}, cwdResolved=${cwdResolved}, exists=${existsSync(cwdResolved)}\n`,
+      ];
       if (existsSync(cwdResolved)) {
         byodPath = cwdResolved;
-        process.stderr.write(`2d6mcp: Resolved BYOD_PATH via cwd: ${byodPath}\n`);
+        banner.push(`2d6mcp: Resolved BYOD_PATH via cwd: ${byodPath}\n`);
       } else {
         const rootResolved = resolve(PROJECT_ROOT, rawByodPath);
-        process.stderr.write(`2d6mcp: cwdResolved not found. PROJECT_ROOT=${PROJECT_ROOT}, rootResolved=${rootResolved}, exists=${existsSync(rootResolved)}\n`);
+        banner.push(`2d6mcp: cwdResolved not found. PROJECT_ROOT=${PROJECT_ROOT}, rootResolved=${rootResolved}, exists=${existsSync(rootResolved)}\n`);
         byodPath = existsSync(rootResolved) ? rootResolved : cwdResolved;
-        process.stderr.write(`2d6mcp: Resolved BYOD_PATH via fallback: ${byodPath}\n`);
+        banner.push(`2d6mcp: Resolved BYOD_PATH via fallback: ${byodPath}\n`);
       }
+      logByodPathBanner(banner);
     }
   } else {
     // Auto-discovery: check for .reference directory in project root (skip in test env)
@@ -94,12 +111,14 @@ export function loadConfig(): Config {
       const autoPath = resolve(PROJECT_ROOT, ".reference");
       if (existsSync(autoPath)) {
         byodPath = autoPath;
-        process.stderr.write(`2d6mcp: BYOD_PATH not set — auto-discovered .reference in project root: ${autoPath}\n`);
+        logByodPathBanner([
+          `2d6mcp: BYOD_PATH not set — auto-discovered .reference in project root: ${autoPath}\n`,
+        ]);
       } else {
-        process.stderr.write(`2d6mcp: BYOD_PATH not set\n`);
+        logByodPathBanner(["2d6mcp: BYOD_PATH not set\n"]);
       }
     } else {
-      process.stderr.write(`2d6mcp: BYOD_PATH not set\n`);
+      logByodPathBanner(["2d6mcp: BYOD_PATH not set\n"]);
     }
   }
 

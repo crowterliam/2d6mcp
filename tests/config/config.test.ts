@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { loadConfig, isByodEnabled, BYOD_DISCLAIMER } from "../../packages/server/src/config.js";
+import { loadConfig, isByodEnabled, BYOD_DISCLAIMER, resetByodPathLogForTests } from "../../packages/server/src/config.js";
 
 const originalEnv = { ...process.env };
 const TMP = join(tmpdir(), `2d6mcp-test-config-${Date.now()}`);
@@ -79,6 +79,26 @@ describe("loadConfig", () => {
     expect(loadConfig().byodNetwork).toBe(false);
     process.env.BYOD_NETWORK = "true";
     expect(loadConfig().byodNetwork).toBe(true);
+  });
+
+  it("logs the BYOD_PATH banner only once per process", () => {
+    resetByodPathLogForTests();
+    process.env.BYOD_PATH = "/tmp/test-byod-banner";
+    const chunks: string[] = [];
+    const orig = process.stderr.write.bind(process.stderr);
+    process.stderr.write = ((chunk: string | Uint8Array, ...args: unknown[]) => {
+      chunks.push(String(chunk));
+      return orig(chunk, ...(args as []));
+    }) as typeof process.stderr.write;
+    try {
+      loadConfig();
+      loadConfig();
+      loadConfig();
+    } finally {
+      process.stderr.write = orig;
+    }
+    const hits = chunks.filter((c) => c.includes("BYOD_PATH is absolute"));
+    expect(hits).toHaveLength(1);
   });
 
   it("falls back to defaults for non-numeric env vars", () => {

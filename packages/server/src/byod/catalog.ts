@@ -47,14 +47,7 @@ export function entryMatchesQuery(entry: CatalogEntry, query: string): boolean {
 }
 
 export function matchCatalogEntries(entries: CatalogEntry[], query: string): CatalogEntry[] {
-  const primary = entries.filter((entry) => entryMatchesQuery(entry, query));
-  if (primary.length === 0) return [];
-  const extra = entries.filter((entry) => {
-    if (primary.includes(entry)) return false;
-    const hay = normalizeCatalogText(entry.name);
-    return primary.some((hit) => hay.includes(normalizeCatalogText(hit.name)));
-  });
-  return [...primary, ...extra];
+  return entries.filter((entry) => entryMatchesQuery(entry, query));
 }
 
 export async function listByodCatalog(byodPath: string): Promise<CatalogEntry[]> {

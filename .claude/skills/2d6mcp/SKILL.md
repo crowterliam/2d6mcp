@@ -23,7 +23,7 @@ It shares rules databases, dice engine, prompt templates, and quality filters vi
 | `roll_table` | Roll on a named table. `source`: `ogl`, `osr`, or `byod`. Omit `table_name` with `source=byod` or `source=osr` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
 | `query_local_byod` | Search ingested personal files. Returns `chunkIndex`. Optional `include_full`. |
-| `sync_byod` | Index BYOD files. Optional `relative_path` for a single file. |
+| `sync_byod` | No args lists collections. `query` indexes matching folders. `relative_path` or `root` indexes a file or nested directory. |
 | `clear_byod` | Delete the BYOD index. |
 | `list_byod_files` | List indexed files. Optional `relative_path` inspects one file. |
 | `get_byod_chunk` | Retrieve full chunk content by path + chunk index. |
@@ -80,11 +80,11 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 - Use `parse_character` to read a character sheet file and extract UPP, characteristics, skills, name, and career
 
 ### BYOD Management
-- Use `sync_byod` after adding or modifying files in your BYOD directory
+- Use `sync_byod` with no arguments to list collections; pass `query` or `relative_path`/`root` to index that scope
 - Use `list_byod_files` to see what's indexed and available for search
 - Use `list_byod_files` with `relative_path` to see how a file was chunked (page breaks, heading structure)
 - Use `clear_byod` to reset the index completely
-- Use `sync_byod` with `relative_path` to index a single file by relative path (for large files that timeout in bulk sync, or selective indexing)
+- Use `sync_byod` with `relative_path` or `root` to index a file or a nested directory (walk stays inside that folder)
 - Use `get_byod_chunk` to retrieve full chunk content after `query_local_byod` returns snippets — pass file path and chunk index
 
 ### Session Management

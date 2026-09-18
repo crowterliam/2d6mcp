@@ -18,7 +18,7 @@ It shares rules databases, dice engine, prompt templates, and quality filters vi
 | `roll_table` | Roll on a named table. `source`: `ogl`, `osr`, or `byod`. Omit `table_name` with `source=byod` or `source=osr` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
 | `query_local_byod` | Search ingested personal files. Returns `chunkIndex`. Optional `include_full`. |
-| `sync_byod` | Index BYOD files. Optional `relative_path` for a single file. |
+| `sync_byod` | No args lists collections. `query` indexes matching folders. `relative_path` or `root` indexes a file or nested directory. |
 | `clear_byod` | Delete the BYOD index. |
 | `list_byod_files` | List indexed files. Optional `relative_path` inspects one file. |
 | `get_byod_chunk` | Retrieve full chunk content by path + chunk index. |
@@ -57,7 +57,7 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 
 **Character creation**: Six `roll(notation: "2d6", mechanic: "raw")` for characteristics. `query_rules(system: "ogl", "name", category: "careers")` for careers. `parse_character(path)` for existing sheets.
 
-**BYOD**: `list_byod_files` to check indexed content → `sync_byod` (repeat until `complete: true`) → `query_local_byod("term")` to search → `get_byod_chunk(file_path, chunk_index)` for full content from snippets. Single file: `sync_byod(relative_path)`. Inspect with `list_byod_files(relative_path)`. Reset with `clear_byod`.
+**BYOD**: `list_byod_files` to check indexed content → `sync_byod` with no args lists collections; pass `query` or a directory `root` and repeat until `complete: true` → `query_local_byod("term")` to search → `get_byod_chunk(file_path, chunk_index)` for full content from snippets. File or nested folder: `sync_byod(relative_path)`. Inspect with `list_byod_files(relative_path)`. Reset with `clear_byod`.
 
 **Session management**: `session(action: "start", "Session Name")` → `log_transcript(session_id, text)` → `get_session_context(session_id, minutes)` for recent context → `search_transcript(session_id, "query")` → `session(action: "end", session_id)`. List with `session` list. Summarize with `session(action: "summarize", session_id)`.
 

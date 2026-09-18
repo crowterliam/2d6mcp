@@ -228,11 +228,11 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
         properties: {
           search_term: {
             type: "string",
-            description: "Search term. Also used to choose which game folder to index (for example Traveller).",
+            description: "Search term. Also used to choose which game folder to index (for example collection-a).",
           },
           system: {
             type: "string",
-            description: "Optional game/collection name to index (for example \"traveller\" or \"call of cthulhu\").",
+            description: "Optional game/collection name to index (for example \"collection-a\").",
           },
           include_full: {
             type: "boolean",
@@ -246,13 +246,13 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
     {
       name: "sync_byod",
       description:
-        "On-demand BYOD indexing. With no query, lists top-level game folders (does not crawl the library). With query or system, indexes matching folders only and refreshes them if files were added. Optional relative_path indexes one file. If complete is false, call again.",
+        "On-demand BYOD indexing. With no query, lists top-level collections (does not crawl the library). With query or system, indexes matching folders only. relative_path or root may be a file or a directory under BYOD_PATH; a directory walk stays inside that folder. If complete is false, call again.",
       inputSchema: {
         type: "object",
         properties: {
           query: {
             type: "string",
-            description: "Game or collection to index, for example \"traveller\" or \"call of cthulhu\".",
+            description: "Game or collection to index, for example \"collection-a\".",
           },
           system: {
             type: "string",
@@ -260,7 +260,13 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
           },
           relative_path: {
             type: "string",
-            description: "If set, index only this file (relative to BYOD_PATH)",
+            description:
+              "File or directory relative to BYOD_PATH. A directory is indexed in time-budgeted batches without walking sibling folders.",
+          },
+          root: {
+            type: "string",
+            description:
+              "Directory (or file) relative to BYOD_PATH. Same as relative_path for a nested folder such as parent/line.",
           },
         },
       },

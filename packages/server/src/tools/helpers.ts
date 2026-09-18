@@ -13,7 +13,7 @@ import { populateOrcusDatabase } from "@2d6mcp/orcus/populate";
 import { populateOsrDatabase } from "@2d6mcp/osr/populate";
 import { checkByodConsent, getByodPath } from "../byod/gate.js";
 import { ingestFile, scanByodDirectory, SLOW_FS_READDIR_MS, type IngestedChunk, type IngestedFile } from "../byod/ingest.js";
-import { isPathInside } from "../byod/paths.js";
+import { isPathInside, resolveInsideByod, toRelativePath } from "../byod/paths.js";
 import { listByodCatalog, matchCatalogEntries, type CatalogEntry } from "../byod/catalog.js";
 import {
   getByodDatabase,
@@ -305,10 +305,13 @@ export interface SyncResult {
   discovered: number;
   matchedRoots: string[];
   catalog?: CatalogEntry[];
+  failedPaths: string[];
 }
 
 export interface SyncByodOptions {
   query?: string;
+  /** Directory or file relative to BYOD_PATH; walk stays inside this path. */
+  root?: string;
   roots?: string[];
   /** When true, skip collections already marked complete in walk state. */
   skipCompleted?: boolean;
@@ -316,6 +319,33 @@ export interface SyncByodOptions {
 
 const LOCAL_INDEX_CONCURRENCY = 3;
 const NETWORK_INDEX_CONCURRENCY = 1;
+/** Do not start another file ingest on a high-latency mount below this remaining budget. */
+export const NETWORK_INDEX_BUDGET_FLOOR_MS = 3000;
+/** CLI `sync-byod <query>` loops until complete, capped at this many time-budgeted rounds. */
+export const MAX_CLI_SYNC_ROUNDS = 100;
+
+export type SyncTarget =
+  | { kind: "file"; relativePath: string; absPath: string }
+  | { kind: "dir"; relativePath: string; absPath: string }
+  | { kind: "missing"; relativePath: string }
+  | { kind: "denied"; relativePath: string };
+
+export function resolveSyncTarget(byodPath: string, relativePath: string): SyncTarget {
+  const trimmed = relativePath.trim();
+  const abs = resolveInsideByod(byodPath, trimmed);
+  if (!abs) {
+    return { kind: "denied", relativePath: trimmed };
+  }
+  if (!existsSync(abs)) {
+    return { kind: "missing", relativePath: trimmed };
+  }
+  const rel = toRelativePath(byodPath, abs);
+  const st = statSync(abs);
+  if (st.isDirectory()) {
+    return { kind: "dir", relativePath: rel, absPath: abs };
+  }
+  return { kind: "file", relativePath: rel, absPath: abs };
+}
 
 function idleSyncResult(message: string, extra: Partial<SyncResult> = {}): SyncResult {
   return {
@@ -332,6 +362,7 @@ function idleSyncResult(message: string, extra: Partial<SyncResult> = {}): SyncR
     dirsRemaining: 0,
     discovered: 0,
     matchedRoots: [],
+    failedPaths: [],
     ...extra,
   };
 }
@@ -455,18 +486,46 @@ export async function syncByodIndex(config: Config, syncOptions: SyncByodOptions
   const byodPath = getByodPath();
   const db = getByodDatabase(byodPath);
   const query = syncOptions.query?.trim() ?? "";
+  const scopedRoot = syncOptions.root?.trim() ?? "";
   const explicitRoots = syncOptions.roots;
 
-  if (!explicitRoots && !query) {
+  if (!explicitRoots && !query && !scopedRoot) {
     const catalog = await listByodCatalog(byodPath);
     return idleSyncResult(
-      "Listed top-level BYOD collections. Pass query (for example \"traveller\") to index matching folders on demand.",
+      "Listed top-level BYOD collections. Pass query to index matching folders, or root / relative_path for a directory under BYOD_PATH.",
       { byodPath, catalog, complete: true, walkComplete: true }
     );
   }
 
   let catalog: CatalogEntry[] | undefined;
   let matchedRoots = explicitRoots;
+  if (!matchedRoots && scopedRoot) {
+    const target = resolveSyncTarget(byodPath, scopedRoot);
+    switch (target.kind) {
+      case "denied":
+        return idleSyncResult("Access denied. Path must be within the BYOD path.", {
+          byodPath,
+          matchedRoots: [],
+          complete: true,
+          walkComplete: true,
+        });
+      case "missing":
+        return idleSyncResult(`Path not found: ${scopedRoot}`, {
+          byodPath,
+          matchedRoots: [],
+          complete: true,
+          walkComplete: true,
+        });
+      case "file":
+      case "dir":
+        matchedRoots = [target.relativePath];
+        break;
+      default: {
+        const _never: never = target;
+        return _never;
+      }
+    }
+  }
   if (!matchedRoots) {
     catalog = await listByodCatalog(byodPath);
     matchedRoots = matchCatalogEntries(catalog, query).map((entry) => entry.relativePath);
@@ -482,6 +541,26 @@ export async function syncByodIndex(config: Config, syncOptions: SyncByodOptions
   }
 
   return runScopedByodSync(config, byodPath, db, matchedRoots, catalog, syncOptions.skipCompleted === true);
+}
+
+export async function syncByodUntilComplete(
+  config: Config,
+  options: SyncByodOptions,
+  maxRounds: number = MAX_CLI_SYNC_ROUNDS,
+  onRound?: (round: number, result: SyncResult) => void
+): Promise<{ result: SyncResult; rounds: number; stoppedEarly: boolean }> {
+  const limit = Math.max(1, maxRounds);
+  let result: SyncResult | undefined;
+  let rounds = 0;
+  while (rounds < limit) {
+    rounds += 1;
+    result = await syncByodIndex(config, options);
+    onRound?.(rounds, result);
+    if (result.complete) {
+      return { result, rounds, stoppedEarly: false };
+    }
+  }
+  return { result: result as SyncResult, rounds, stoppedEarly: true };
 }
 
 export interface EnsureByodResult {
@@ -521,7 +600,11 @@ async function classifyRoots(
   const dirs: string[] = [];
   const files: PersistedIngestedFile[] = [];
   for (const root of roots) {
-    const abs = root ? join(byodPath, root) : byodPath;
+    const abs = root ? resolve(byodPath, root) : resolve(byodPath);
+    if (!isPathInside(byodPath, abs)) {
+      process.stderr.write(`2d6mcp: Skipping BYOD root that escapes BYOD_PATH: ${root}\n`);
+      continue;
+    }
     try {
       const st = await statAsync(abs);
       if (st.isDirectory()) {
@@ -649,7 +732,14 @@ async function runScopedByodSync(
 
     if (state.pendingFiles.length === 0 && state.pendingDirs.length > 0) {
       const relDir = state.pendingDirs.shift() ?? "";
-      const absDir = relDir ? join(byodPath, relDir) : byodPath;
+      const absDir = relDir ? resolve(byodPath, relDir) : resolve(byodPath);
+      if (!isPathInside(byodPath, absDir)) {
+        process.stderr.write(`2d6mcp: Skipping directory that escapes BYOD_PATH: ${relDir}\n`);
+        didWork = true;
+        saveWalkState(db, state);
+        await yieldToEventLoop();
+        continue;
+      }
       const scanned = await scanByodDirectory(absDir, byodPath, config.byodMaxFileSize);
       if (scanned.readdirMs >= SLOW_FS_READDIR_MS) {
         state.slowFs = true;
@@ -669,6 +759,10 @@ async function runScopedByodSync(
       saveWalkState(db, state);
       await yieldToEventLoop();
       continue;
+    }
+
+    if (config.byodNetwork && didWork && deadline - Date.now() < NETWORK_INDEX_BUDGET_FLOOR_MS) {
+      break;
     }
 
     const batch: IngestedFile[] = [];
@@ -739,7 +833,12 @@ async function runScopedByodSync(
     );
   }
   if (skippedByHash > 0) parts.push(`${skippedByHash} already up to date`);
-  if (failedFiles > 0) parts.push(`${failedFiles} failed`);
+  const failedPaths = fileStatuses.filter((f) => f.status === "failed").map((f) => f.path);
+  if (failedFiles > 0) {
+    const listed = failedPaths.slice(0, 20);
+    const extra = failedPaths.length > listed.length ? ` (+${failedPaths.length - listed.length} more)` : "";
+    parts.push(`${failedFiles} failed: ${listed.join(", ")}${extra}`);
+  }
   const summary = parts.length > 0 ? parts.join(", ") : "no file changes";
 
   if (!walkComplete) {
@@ -758,6 +857,7 @@ async function runScopedByodSync(
       discovered: state.discovered,
       matchedRoots,
       catalog,
+      failedPaths,
     };
   }
 
@@ -776,6 +876,7 @@ async function runScopedByodSync(
     discovered: state.discovered,
     matchedRoots,
     catalog,
+    failedPaths,
   };
 }
 
