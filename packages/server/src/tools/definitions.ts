@@ -133,6 +133,11 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
             type: "integer",
             description: "Target number (2d6/d20) or roll-under percentile. If provided, calculates success.",
           },
+          difficulty: {
+            type: "string",
+            description:
+              "Optional generic operator target preset for 2d6 rolls: average=8, difficult=10, very_difficult=12, impossible=16. Ignored when target is set.",
+          },
           advantage: {
             type: "boolean",
             description: "d20 only: roll twice, take the higher. Default false.",
@@ -222,7 +227,7 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
     {
       name: "query_local_byod",
       description:
-        "Search personal RPG files. Matches top-level game folders to the query (or system), indexes only those collections, then searches. Does not crawl the whole library. If index_complete is false, call again to continue indexing. Already-indexed collections are reused. Results include chunkIndex for get_byod_chunk.",
+        "Search personal RPG files. Matches top-level game folders to the query (or system), indexes only those collections, then searches. Pass relative_path or root to pin a nested folder (walk stays inside that path; sibling editions are not indexed). If index_complete is false, call again to continue indexing. Already-indexed collections are reused. Results include chunkIndex for get_byod_chunk.",
       inputSchema: {
         type: "object",
         properties: {
@@ -238,6 +243,15 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
             type: "boolean",
             description: "If true, include full chunk content for each hit (default false)",
             default: false,
+          },
+          relative_path: {
+            type: "string",
+            description:
+              "Optional file or directory relative to BYOD_PATH. Indexes and searches only inside this folder (for example parent/line), skipping sibling editions.",
+          },
+          root: {
+            type: "string",
+            description: "Alias for relative_path. Pin search to a nested folder under BYOD_PATH.",
           },
         },
         required: ["search_term"],
@@ -316,16 +330,20 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
     {
       name: "parse_character",
       description:
-        "Parse a character sheet file and return structured data including UPP, characteristics, skills, name, and career.",
+        "Parse a character sheet from file_path (must be under the project directory or BYOD_PATH) or from pasted sheet_text. Returns UPP, characteristics, skills, name, and career.",
       inputSchema: {
         type: "object",
         properties: {
           file_path: {
             type: "string",
-            description: "Path to a character sheet file (text or JSON)",
+            description:
+              "Path to a character sheet file (text or JSON). Required unless sheet_text is set. Must be inside the project directory or BYOD_PATH.",
+          },
+          sheet_text: {
+            type: "string",
+            description: "Pasted character sheet text. Use when no local file_path is available.",
           },
         },
-        required: ["file_path"],
       },
     },
     {
@@ -394,13 +412,14 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
           },
           rules_system: {
             type: "string",
-            enum: ["ogl", "dw", "brp", "5ecompatible", "orcus", "osr"],
-            description: "Rules system for this session. Default: ogl.",
-            default: "ogl",
+            enum: ["ogl", "dw", "brp", "5ecompatible", "orcus", "osr", "byod"],
+            description:
+              "Rules system for this session. Use byod to prefer indexed personal files. Default: byod when byod_system is set, otherwise ogl.",
           },
           byod_system: {
             type: "string",
-            description: "Optional: narrow BYOD search to files matching this system name",
+            description:
+              "Optional collection name to filter BYOD. Prefer a nested root/relative_path on search so a family name does not index sibling folders.",
           },
           limit: {
             type: "integer",
@@ -473,7 +492,7 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
     {
       name: "search_transcript",
       description:
-        "Search session transcripts with SQL LIKE (not FTS5). Pass session_id for one session, or table_label to search every session with that campaign tag.",
+        "Search session transcripts with SQL LIKE (not FTS5). Unquoted tokens are AND (all terms present, not necessarily adjacent). Wrap the query in quotes for an exact phrase. Pass session_id for one session, or table_label to search every session with that campaign tag.",
       inputSchema: {
         type: "object",
         properties: {
@@ -487,7 +506,8 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
           },
           query: {
             type: "string",
-            description: "Search term",
+            description:
+              "Search terms. Unquoted tokens are AND (all present, not necessarily adjacent). Wrap the whole query in double quotes for an exact phrase.",
           },
         },
         required: ["query"],
@@ -496,7 +516,7 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
     {
       name: "synthesize_ruling",
       description:
-        "Synthesize a cited rules ruling with the local LLM. Auto-looks up licensed rules and BYOD (when consent is on). Default rules_system comes from the session when session_id is set. Set from_context to derive the question from recent transcript.",
+        "Synthesize a cited rules ruling with the local LLM. When byod_system is set (arg or session), retrieval prefers indexed personal files and skips licensed databases unless rules_system is set explicitly. Pass rules_context from get_byod_chunk when you already have chunks. If the local LLM is unavailable, retrieved context and warnings are still returned. Set from_context to derive the question from recent transcript.",
       inputSchema: {
         type: "object",
         properties: {
@@ -506,16 +526,30 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
           },
           rules_system: {
             type: "string",
-            enum: ["ogl", "dw", "brp", "5ecompatible", "orcus", "osr", "auto"],
-            description: "Which rules DB to search. Default: session rules_system when session_id is set, otherwise auto.",
+            enum: ["ogl", "dw", "brp", "5ecompatible", "orcus", "osr", "auto", "byod"],
+            description:
+              "Which rules DB to search. Omit when byod_system is set so retrieval prefers indexed personal files. Explicit ogl/dw/brp/etc. still searches that licensed database.",
           },
           session_id: {
             type: "string",
             description: "Optional session ID — scopes lookup and includes recent rulings",
           },
+          byod_system: {
+            type: "string",
+            description: "Optional collection name. Overrides session byod_system for this lookup.",
+          },
+          relative_path: {
+            type: "string",
+            description: "Optional BYOD folder pin (same as query_local_byod root) so sibling editions are not searched.",
+          },
+          root: {
+            type: "string",
+            description: "Alias for relative_path.",
+          },
           rules_context: {
             type: "string",
-            description: "Optional explicit rules text to use instead of auto-lookup",
+            description:
+              "Optional explicit rules text (prefer BYOD chunks from get_byod_chunk when you already have them).",
           },
           from_context: {
             type: "boolean",

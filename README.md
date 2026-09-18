@@ -101,22 +101,22 @@ BYOD (Bring Your Own Documents) mode enables local file ingestion for personal, 
 
 | Tool | Description |
 |------|-------------|
-| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`, `coc`). Infers mechanic from notation when omitted. |
+| `roll` | Roll dice. `notation` plus optional `mechanic` (`2d6`, `d20`, `percentile`, `damage`, `raw`, `coc`). Infers mechanic from notation when omitted. Optional `difficulty` operator target presets (`average=8`, `difficult=10`, `very_difficult=12`, `impossible=16`). |
 | `roll_table` | Roll on a named table. `source`: `ogl`, `osr`, or `byod`. Omit `table_name` with `source=byod` or `source=osr` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
-| `query_local_byod` | Search personal files. Indexes matching top-level game folders on demand, then searches. Optional `include_full`. |
+| `query_local_byod` | Search personal files. Indexes matching top-level game folders on demand, then searches. Optional `include_full`. Optional `relative_path` / `root` pin. |
 | `sync_byod` | On-demand index. No args lists folders. `query` indexes matching collections. `relative_path` or `root` indexes a file or a directory under `BYOD_PATH` (walk stays inside that folder). |
 | `clear_byod` | Delete the BYOD index. |
 | `list_byod_files` | List indexed files. Optional `relative_path` inspects one file. |
 | `get_byod_chunk` | Retrieve full chunk content by path + chunk index. |
-| `parse_character` | Parse a character sheet into structured JSON |
+| `parse_character` | Parse a character sheet (`file_path` or pasted `sheet_text`) |
 | `discord_post` | Post messages to Discord webhooks with smart routing |
 | `discord_webhook` | Manage webhooks: `action` add, remove, list, or test |
 | `session` | Manage sessions: `action` start, end, list, delete, or summarize. Optional `table_label` on start/list. |
 | `log_transcript` | Log a transcript segment to a session |
 | `get_session_context` | Get recent transcript segments and rulings (`session_id` or `table_label`) |
-| `search_transcript` | Search transcripts by `session_id` or `table_label` |
-| `synthesize_ruling` | Cited rules ruling. Optional `from_context` uses recent transcript |
+| `search_transcript` | Search transcripts (`session_id` or `table_label`). Unquoted tokens are AND; quotes are exact phrases |
+| `synthesize_ruling` | Cited rules ruling. Prefers BYOD when `byod_system` is set; pass `rules_context` from BYOD chunks |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. Last chunk sets `complete: true` |
 
 ## Prompts
@@ -210,15 +210,24 @@ Versioning is **SemVer 2.0 lockstep** (root + every `packages/*` share one versi
 
 ## Session labels
 
-`query_rules(system=ogl)` is Cepheus/2d6 sci-fi SRD — not old-school fantasy. For B/X-style procedures use `system=osr` plus BYOD for the operator's local OSR/B/X shelf PDFs.
+`query_rules(system=ogl)` is 2d6 sci-fi SRD — not old-school fantasy. For B/X-style procedures use `system=osr` plus BYOD for the operator's local OSR/B/X shelf PDFs.
 
 Set an optional durable `table_label` on `session` start so `get_session_context`, `search_transcript`, and `session list` can filter one table without mixing transcripts.
 
 | Example | `rules_system` | `table_label` | Notes |
 |---------|-----------------|---------------|-------|
-| Sci-fi table | `ogl` | `table-b` | Trade/encounter ticks via `roll_table(source=ogl)` — see recipes below |
+| Sci-fi SRD table | `ogl` | `table-b` | Trade/encounter ticks via `roll_table(source=ogl)` — see recipes below |
+| Personal files (BYOD) | `byod` | `table-b` | `byod_system` = collection folder; pin `root=parent/line` |
 | B/X-style table | `osr` | `table-a` | `byod_system=osr`; full books via BYOD |
 | Percentile table | `brp` | `campaign-label` | `roll(mechanic="coc", …)` for Hard/Extreme, bonus/penalty, SAN, opposed POW |
+
+### Personal files (BYOD)
+
+BYOD tooling is system-agnostic. `sync_byod` / `query_local_byod` / `root` / `relative_path` / `byod_system` work for any operator shelf folder. Pin with `root`/`relative_path` to stay inside one nested folder and avoid sibling collections.
+
+`rules_system=byod` (or a session with `byod_system` set) means rulings prefer indexed personal files. Pass `rules_context` from `get_byod_chunk` into `synthesize_ruling` when you already have chunks.
+
+Optional `roll` `difficulty` presets are generic operator targets (`average=8`, `difficult=10`, `very_difficult=12`, `impossible=16`). Ignored when `target` is set. `parse_character` needs `file_path` under the project or `BYOD_PATH`, or pasted `sheet_text`. `search_transcript` treats unquoted tokens as AND.
 
 ### OSR lookup vs commercial books
 
@@ -228,7 +237,7 @@ Set an optional durable `table_label` on `session` start so `get_session_context
 
 ### Multi-shelf BYOD
 
-Consent (`AGREE_BYOD_USE` or `npm run setup`) is required. Point `BYOD_PATH` at the parent of game folders so each top-level directory is a collection. `sync_byod` with no args lists those folders; `query` or `system` indexes matches only; `relative_path` or `root` indexes a nested folder such as `parent/line`. High-latency mounts: `BYOD_NETWORK=true`. After merging this change, rebuild and restart the local MCP process so `osr` and `table_label` exist.
+Consent (`AGREE_BYOD_USE` or `npm run setup`) is required. Point `BYOD_PATH` at the parent of game folders so each top-level directory is a collection. `sync_byod` with no args lists those folders; `query` or `system` indexes matches only; `relative_path` or `root` indexes a nested folder such as `parent/line`. High-latency mounts: `BYOD_NETWORK=true`. `query_local_byod` accepts the same `root` / `relative_path` pin so a family name does not search `edition-5-sibling`.
 
 ### Sci-fi trade and encounter recipes (`source=ogl`)
 

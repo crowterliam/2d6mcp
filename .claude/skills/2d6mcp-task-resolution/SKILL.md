@@ -14,9 +14,11 @@ Use the **2d6 ± modifier vs. target number** mechanic. The standard difficulty 
 ### Standard Check
 ```
 roll(notation: "2d6", mechanic: "2d6", modifier, target)
+roll(notation: "2d6+2", mechanic: "2d6", difficulty: "difficult")
 ```
 - `modifier`: Integer from skill ranks, characteristic bonus, difficulty, or circumstance
-- `target_number`: Typically 8 for an average task (6 = easy, 10 = difficult, 12 = very difficult, 14 = formidable)
+- `target`: Typically 8 for an average task
+- `difficulty`: Optional generic operator target preset (`average=8`, `difficult=10`, `very_difficult=12`, `impossible=16`). Ignored when `target` is set.
 
 ### Interpreting Results
 

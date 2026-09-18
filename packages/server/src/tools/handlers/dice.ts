@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
 import { roll2d6, rollCustom, rollD20, rollPercentile, rollPercentileCoc, rollDamage, parseDiceNotation } from "@2d6mcp/shared/dice";
+import { resolvePrintedTarget, PRINTED_TARGET_LABELS } from "@2d6mcp/shared/difficulty-presets";
 import { rollOnTable, normalizeDiceType } from "@2d6mcp/shared/tables";
 import { getDatabase } from "@2d6mcp/ogl/database";
 import { searchOglTables } from "@2d6mcp/ogl";
@@ -50,11 +51,23 @@ export async function handleRoll(args: Record<string, unknown> | undefined): Pro
       : inferMechanic(notation);
 
   const modifier = typeof args?.modifier === "number" ? args.modifier : undefined;
+  const difficultyRaw = typeof args?.difficulty === "string" ? args.difficulty : "";
+  const difficultyPreset = difficultyRaw ? resolvePrintedTarget(difficultyRaw) : null;
+  if (difficultyRaw && !difficultyPreset) {
+    return jsonResult(
+      {
+        error: `Unknown difficulty preset "${difficultyRaw}". Operator target presets: ${PRINTED_TARGET_LABELS.join(", ")} (8/10/12/16). Ignored when target is set.`,
+      },
+      true
+    );
+  }
   const target = typeof args?.target === "number"
     ? args.target
     : typeof args?.target_number === "number"
       ? args.target_number
-      : null;
+      : difficultyPreset
+        ? difficultyPreset.target
+        : null;
   const advantage = args?.advantage === true;
   const disadvantage = args?.disadvantage === true;
   const bonusDice = typeof args?.bonus_dice === "number" ? args.bonus_dice : 0;
@@ -80,7 +93,15 @@ export async function handleRoll(args: Record<string, unknown> | undefined): Pro
           mod = 0;
         }
       }
-      return jsonResult(roll2d6(mod, target));
+      const rolled = roll2d6(mod, target);
+      if (difficultyPreset && typeof args?.target !== "number" && typeof args?.target_number !== "number") {
+        return jsonResult({
+          ...rolled,
+          target_preset: difficultyPreset.label,
+          target_preset_note: difficultyPreset.note,
+        });
+      }
+      return jsonResult(rolled);
     }
 
     if (mechanic === "d20") {

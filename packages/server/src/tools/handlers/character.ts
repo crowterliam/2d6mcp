@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
 import { readFileSync, existsSync } from "node:fs";
-import { readCharacterFile } from "../../character/parser.js";
+import { parseCharacterText, readCharacterFile } from "../../character/parser.js";
 import { resolveSafePath } from "../helpers.js";
 
 export async function handleParseCharacter(args: Record<string, unknown> | undefined): Promise<{
@@ -11,16 +11,29 @@ export async function handleParseCharacter(args: Record<string, unknown> | undef
 }> {
   const filePath =
     typeof args?.file_path === "string" ? args.file_path : "";
+  const sheetText =
+    typeof args?.sheet_text === "string"
+      ? args.sheet_text
+      : typeof args?.text === "string"
+        ? args.text
+        : "";
 
-  if (!filePath) {
+  if (!filePath && !sheetText) {
     return {
       content: [
         {
           type: "text",
-          text: "Error: file_path is required",
+          text: "Error: file_path or sheet_text is required. file_path must be inside the project directory or BYOD_PATH; otherwise paste the sheet as sheet_text.",
         },
       ],
       isError: true,
+    };
+  }
+
+  if (sheetText && !filePath) {
+    const stats = parseCharacterText(sheetText);
+    return {
+      content: [{ type: "text", text: JSON.stringify(stats, null, 2) }],
     };
   }
 
@@ -31,7 +44,7 @@ export async function handleParseCharacter(args: Record<string, unknown> | undef
       content: [
         {
           type: "text",
-          text: "Error: Access denied. File must be within the project directory or your configured BYOD path.",
+          text: "Error: Access denied. File must be within the project directory or your configured BYOD path. Pass sheet_text instead if the client cannot share a local path.",
         },
       ],
       isError: true,

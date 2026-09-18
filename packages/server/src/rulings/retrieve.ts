@@ -64,13 +64,18 @@ import {
 
 export const RULES_SYSTEMS = ["ogl", "dw", "brp", "5ecompatible", "orcus", "osr"] as const;
 export type NamedRulesSystem = (typeof RULES_SYSTEMS)[number];
-export type RulesSystem = NamedRulesSystem | "auto";
+export type RulesSystem = NamedRulesSystem | "auto" | "byod";
+
+export const BYOD_PREFERRED_WARNING =
+  "byod_system is set, so retrieval prefers indexed personal files. Pass rules_context from get_byod_chunk when you already have chunks. Licensed databases are skipped unless rules_system is set explicitly.";
 
 export interface RetrieveOptions {
   question: string;
   rulesSystem?: string;
   sessionId?: string;
   maxChunks?: number;
+  byodSystem?: string;
+  byodRoot?: string;
 }
 
 export interface RetrieveResult {
@@ -79,6 +84,9 @@ export interface RetrieveResult {
   systemsSearched: NamedRulesSystem[];
   searchCalls: number;
   byodSearched: boolean;
+  byodHits: number;
+  warnings: string[];
+  byodSystem: string;
 }
 
 function isNamedSystem(value: string): value is NamedRulesSystem {
@@ -86,7 +94,7 @@ function isNamedSystem(value: string): value is NamedRulesSystem {
 }
 
 function isRulesSystem(value: string): value is RulesSystem {
-  return value === "auto" || isNamedSystem(value);
+  return value === "auto" || value === "byod" || isNamedSystem(value);
 }
 
 function stripMarks(snippet: string): string {
@@ -118,15 +126,29 @@ function scoreAndTakeTop(
   return deduped.slice(0, maxChunks).map((c) => c.text);
 }
 
-export function resolveRulesSystem(rulesSystem: string | undefined, sessionId: string | undefined): RulesSystem {
+export function resolveRulesSystem(
+  rulesSystem: string | undefined,
+  sessionId: string | undefined,
+  byodSystemHint?: string
+): RulesSystem {
   if (rulesSystem && isRulesSystem(rulesSystem)) return rulesSystem;
+
+  let sessionByod = "";
+  let sessionRules: RulesSystem | undefined;
   if (sessionId) {
     const config = loadConfig();
     const db = openSessionDb(config.sessionDbPath);
     const session = getSession(db, sessionId);
-    if (session && isNamedSystem(session.rules_system)) return session.rules_system;
+    sessionByod = session?.byod_system?.trim() || "";
+    if (session?.rules_system === "byod") {
+      sessionRules = "byod";
+    } else if (session && isNamedSystem(session.rules_system)) {
+      sessionRules = session.rules_system;
+    }
   }
-  return "auto";
+
+  if (byodSystemHint?.trim() || sessionByod) return "byod";
+  return sessionRules ?? "auto";
 }
 
 export function questionFromTranscript(transcriptText: string): string {
@@ -141,14 +163,29 @@ export function questionFromTranscript(transcriptText: string): string {
 
 export async function retrieveRulesContext(options: RetrieveOptions): Promise<RetrieveResult> {
   const question = options.question.trim();
-  const resolvedSystem = resolveRulesSystem(options.rulesSystem, options.sessionId);
   const maxChunks = options.maxChunks ?? 3;
+  const warnings: string[] = [];
+
+  let sessionByod = "";
+  if (options.sessionId) {
+    const config = loadConfig();
+    const db = openSessionDb(config.sessionDbPath);
+    const session = getSession(db, options.sessionId);
+    sessionByod = session?.byod_system?.trim() || "";
+  }
+  const byodSystem = options.byodSystem?.trim() || sessionByod;
+  const resolvedSystem = resolveRulesSystem(options.rulesSystem, options.sessionId, byodSystem);
   const systemsSearched: NamedRulesSystem[] =
-    resolvedSystem === "auto" ? [...RULES_SYSTEMS] : [resolvedSystem];
+    resolvedSystem === "auto" ? [...RULES_SYSTEMS] : resolvedSystem === "byod" ? [] : [resolvedSystem];
+
+  if (byodSystem) {
+    warnings.push(BYOD_PREFERRED_WARNING);
+  }
 
   const chunks: string[] = [];
   let searchCalls = 0;
   let byodSearched = false;
+  let byodHits = 0;
 
   const originalKeywords = extractKeywordList(question);
   const fuzzyKeywords = fuzzyKeywordList(originalKeywords);
@@ -281,29 +318,32 @@ export async function retrieveRulesContext(options: RetrieveOptions): Promise<Re
     try {
       const byodPath = getByodPath();
       const config = loadConfig();
-      let byodSystemFilter = "";
-      if (options.sessionId) {
-        const db = openSessionDb(config.sessionDbPath);
-        const session = getSession(db, options.sessionId);
-        byodSystemFilter = session?.byod_system || "";
-      }
-      const ensured = await ensureByodForQuery(config, question, byodSystemFilter || undefined);
+      const ensured = await ensureByodForQuery(config, question, byodSystem || undefined, {
+        root: options.byodRoot,
+      });
       const byodDb = getByodDatabase(byodPath);
       searchCalls += 1;
       byodSearched = true;
       const prefixes = ensured.matchedRoots.length > 0 ? ensured.matchedRoots : [];
       const byodResults = searchByodIndex(byodDb, searchTerm, 8, prefixes);
+      byodHits = byodResults.length;
       for (const b of byodResults) {
         chunks.push(`[BYOD: ${b.fileName} > ${b.title}]\n${stripMarks(b.snippet)}`);
       }
     } catch {
       // BYOD DB may not exist yet
     }
+  } else if (byodSystem) {
+    warnings.push(
+      "BYOD consent is off, so personal files were not searched. Enable AGREE_BYOD_USE or pass rules_context."
+    );
   }
 
   const context =
     scoreAndTakeTop(chunks, originalKeywords, fuzzyKeywords, maxChunks).join("\n\n") ||
-    "No matching rules found in the selected rules databases or BYOD index.";
+    (resolvedSystem === "byod"
+      ? "No matching BYOD chunks. Pin query_local_byod with root/relative_path, then pass rules_context from get_byod_chunk. Licensed databases were not searched."
+      : "No matching rules found in the selected rules databases or BYOD index.");
 
   return {
     context,
@@ -311,5 +351,8 @@ export async function retrieveRulesContext(options: RetrieveOptions): Promise<Re
     systemsSearched,
     searchCalls,
     byodSearched,
+    byodHits,
+    warnings,
+    byodSystem,
   };
 }

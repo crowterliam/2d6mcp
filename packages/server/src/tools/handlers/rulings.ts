@@ -18,7 +18,7 @@ import {
 } from "../../session/database.js";
 import { transcribeAudioBuffer } from "../../audio/mlx-transcribe.js";
 import { synthesizeRuling as mlxSynthesizeRuling } from "../../rulings/mlx-synthesize.js";
-import { questionFromTranscript, retrieveRulesContext } from "../../rulings/retrieve.js";
+import { questionFromTranscript, retrieveRulesContext, BYOD_PREFERRED_WARNING } from "../../rulings/retrieve.js";
 import { resolveSafePath } from "../helpers.js";
 import { isAudioLong, chunkAudio, transcribeChunk, cleanupChunks, getChunkFiles } from "../../audio/chunker.js";
 import { handleListTranscriptions, handleClearTranscription } from "./session.js";
@@ -69,15 +69,40 @@ export async function handleSynthesizeRuling(args: Record<string, unknown> | und
   }
 
   const rulesSystem = typeof args?.rules_system === "string" ? args.rules_system : undefined;
+  const byodSystem = typeof args?.byod_system === "string" ? args.byod_system : undefined;
+  const byodRoot =
+    typeof args?.relative_path === "string" && args.relative_path.trim()
+      ? args.relative_path.trim()
+      : typeof args?.root === "string" && args.root.trim()
+        ? args.root.trim()
+        : undefined;
   let rulesContext = typeof args?.rules_context === "string" ? args.rules_context : undefined;
+  let retrievedWarnings: string[] = [];
+  let retrievedMeta: {
+    resolvedSystem?: string;
+    systemsSearched?: string[];
+    byodSearched?: boolean;
+    byodHits?: number;
+  } = {};
 
   if (!rulesContext) {
     const retrieved = await retrieveRulesContext({
       question,
       rulesSystem,
       sessionId,
+      byodSystem,
+      byodRoot,
     });
     rulesContext = retrieved.context;
+    retrievedWarnings = retrieved.warnings;
+    retrievedMeta = {
+      resolvedSystem: retrieved.resolvedSystem,
+      systemsSearched: retrieved.systemsSearched,
+      byodSearched: retrieved.byodSearched,
+      byodHits: retrieved.byodHits,
+    };
+  } else if (byodSystem || sessionId) {
+    retrievedWarnings = [BYOD_PREFERRED_WARNING];
   }
 
   let sessionHistory = "";
@@ -115,13 +140,25 @@ export async function handleSynthesizeRuling(args: Record<string, unknown> | und
         latency_ms: latency,
         rules_context: rulesContext.substring(0, 500),
         from_context: fromContext || undefined,
+        warnings: retrievedWarnings,
+        ...retrievedMeta,
       }, null, 2) }],
     };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return {
-      content: [{ type: "text", text: `MLX synthesis failed: ${message}` }],
-      isError: true,
+      content: [{ type: "text", text: JSON.stringify({
+        question,
+        ruling: null,
+        llm_error: message,
+        rules_context: rulesContext,
+        warnings: [
+          ...retrievedWarnings,
+          "Local LLM is not available. Use the retrieved rules_context (or pass BYOD chunks as rules_context). This is not a missing-file bug.",
+        ],
+        from_context: fromContext || undefined,
+        ...retrievedMeta,
+      }, null, 2) }],
     };
   }
 }

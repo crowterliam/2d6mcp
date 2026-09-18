@@ -56,6 +56,19 @@ describe("MCP prompts", () => {
     expect(queriedText.text).toContain('query "collection-a"');
   });
 
+  it("renders start-session BYOD guidance", () => {
+    const result = getPrompt("start-session", {
+      name: "byod session",
+      byod_system: "collection-a",
+    });
+    const text = result.messages[0].content;
+    expect(text.type).toBe("text");
+    if (text.type !== "text") return;
+    expect(text.text).toContain('rules_system "byod"');
+    expect(text.text).toContain("collection-a");
+    expect(text.text).toContain("indexed personal files");
+  });
+
   it("rejects unknown prompts", () => {
     expect(isPromptName("skill-check")).toBe(true);
     expect(isPromptName("not-a-prompt")).toBe(false);

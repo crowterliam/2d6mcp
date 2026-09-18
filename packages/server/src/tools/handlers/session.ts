@@ -14,6 +14,7 @@ import {
   getRecentTranscript,
   searchTranscript,
   searchTranscriptByLabel,
+  parseTranscriptSearchQuery,
   getRecentTranscriptByLabel,
   getRecentRulingsByLabel,
   getLatestSessionByLabel,
@@ -56,9 +57,17 @@ export async function handleSessionStart(args: Record<string, unknown> | undefin
   isError?: boolean;
 }> {
   const name = typeof args?.name === "string" ? args.name : undefined;
-  const rulesSystem = typeof args?.rules_system === "string" ? args.rules_system : "ogl";
   const byodSystem = typeof args?.byod_system === "string" ? args.byod_system : undefined;
   const tableLabel = typeof args?.table_label === "string" ? args.table_label : undefined;
+  const allowed = new Set(["ogl", "dw", "brp", "5ecompatible", "orcus", "osr", "byod"]);
+  const requested = typeof args?.rules_system === "string" ? args.rules_system : undefined;
+  if (requested && !allowed.has(requested)) {
+    return {
+      content: [{ type: "text", text: `Error: rules_system must be one of ${[...allowed].join(", ")}` }],
+      isError: true,
+    };
+  }
+  const rulesSystem = requested ?? (byodSystem ? "byod" : "ogl");
 
   const config = loadConfig();
   const db = openSessionDb(config.sessionDbPath);
@@ -324,6 +333,7 @@ export async function handleSearchTranscript(args: Record<string, unknown> | und
 
   const config = loadConfig();
   const db = openSessionDb(config.sessionDbPath);
+  const parsed = parseTranscriptSearchQuery(query);
   const results = sessionId
     ? searchTranscript(db, sessionId, query)
     : searchTranscriptByLabel(db, tableLabel, query);
@@ -333,6 +343,8 @@ export async function handleSearchTranscript(args: Record<string, unknown> | und
       session_id: sessionId || null,
       table_label: tableLabel || null,
       query,
+      match: parsed.mode,
+      terms: parsed.terms,
       count: results.length,
       results,
     }, null, 2) }],

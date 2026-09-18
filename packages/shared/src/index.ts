@@ -7,3 +7,4 @@ export * from "./table-parser.js";
 export * from "./keywords.js";
 export * from "./prompts.js";
 export * from "./types.js";
+export * from "./difficulty-presets.js";

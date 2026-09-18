@@ -13,6 +13,10 @@ export async function handleQueryLocalByod(args: Record<string, unknown> | undef
   const searchTerm =
     typeof args?.search_term === "string" ? args.search_term : "";
   const systemHint = typeof args?.system === "string" ? args.system : undefined;
+  const relativePath =
+    typeof args?.relative_path === "string" ? args.relative_path.trim() : "";
+  const rootArg = typeof args?.root === "string" ? args.root.trim() : "";
+  const scope = relativePath || rootArg;
 
   const consent = checkByodConsent();
   if (!consent.allowed) {
@@ -23,7 +27,26 @@ export async function handleQueryLocalByod(args: Record<string, unknown> | undef
   }
 
   const config = loadConfig();
-  const ensured = await ensureByodForQuery(config, searchTerm, systemHint);
+  const ensured = await ensureByodForQuery(config, searchTerm, systemHint, scope ? { root: scope } : {});
+  if (ensured.error) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              query: searchTerm,
+              relative_path: scope || null,
+              message: ensured.error,
+            },
+            null,
+            2
+          ),
+        },
+      ],
+      isError: true,
+    };
+  }
   const byodPath = getByodPath();
   const db = getByodDatabase(byodPath);
   const prefixes = ensured.matchedRoots.length > 0 ? ensured.matchedRoots : [];
@@ -45,6 +68,7 @@ export async function handleQueryLocalByod(args: Record<string, unknown> | undef
           {
             query: searchTerm,
             matched_roots: ensured.matchedRoots,
+            relative_path: scope || null,
             index_complete: ensured.sync.complete,
             index: {
               filesIndexed: ensured.sync.filesIndexed,
