@@ -28,15 +28,15 @@ describe("query_local_byod path pin", () => {
     const byodPath = join(TMP, "shelf");
     mkdirSync(join(byodPath, "parent", "line"), { recursive: true });
     mkdirSync(join(byodPath, "parent", "edition-5-sibling"), { recursive: true });
-    writeFileSync(join(byodPath, "parent", "line", "core.txt"), "unique-line-token printed target ten");
+    writeFileSync(join(byodPath, "parent", "line", "core.txt"), "qzzvlinecore printed target ten");
     writeFileSync(
       join(byodPath, "parent", "edition-5-sibling", "zine.txt"),
-      "unique-sib-token sibling edition text"
+      "qzzvsiblingzine sibling edition text"
     );
     process.env.BYOD_PATH = byodPath;
 
     const result = await handleQueryLocalByod({
-      search_term: "unique-line-token",
+      search_term: "qzzvlinecore",
       root: join("parent", "line"),
     });
     expect(result.isError).toBeUndefined();
@@ -45,10 +45,10 @@ describe("query_local_byod path pin", () => {
       results: Array<{ snippet: string; filePath: string }>;
     };
     expect(payload.matched_roots.map((p) => p.replace(/\\/g, "/"))).toEqual(["parent/line"]);
-    expect(payload.results.some((r) => r.snippet.toLowerCase().includes("unique-line-token"))).toBe(true);
+    expect(payload.results.some((r) => /qzzvlinecore/i.test(r.snippet))).toBe(true);
 
     const sibling = await handleQueryLocalByod({
-      search_term: "unique-sib-token",
+      search_term: "qzzvsiblingzine",
       root: join("parent", "line"),
     });
     const siblingPayload = JSON.parse(sibling.content[0].text) as { results: unknown[] };
