@@ -18,7 +18,7 @@ It shares rules databases, dice engine, prompt templates, and quality filters vi
 | `roll_table` | Roll on a named table. `source`: `ogl`, `osr`, or `byod`. Omit `table_name` with `source=byod` or `source=osr` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
 | `query_local_byod` | Search personal files. Indexes matching top-level game folders on demand, then searches. Optional `include_full`. |
-| `sync_byod` | On-demand index. No args lists folders. `query` indexes matching collections. Optional `relative_path` for one file. |
+| `sync_byod` | On-demand index. No args lists folders. `query` indexes matching collections. `relative_path` or `root` indexes a file or a directory under `BYOD_PATH`. |
 | `clear_byod` | Delete the BYOD index. |
 | `list_byod_files` | List indexed files. Optional `relative_path` inspects one file. |
 | `get_byod_chunk` | Retrieve full chunk content by path + chunk index. |
@@ -73,11 +73,11 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 4. Parse existing sheets: `parse_character(file_path)`
 
 ### BYOD Management
-1. Search personal content: `query_local_byod("search term")` — names the game when possible (for example include "traveller") so matching folders are indexed, then searched
+1. Search personal content: `query_local_byod("search term")` — names the collection when possible (for example include "collection-a") so matching folders are indexed, then searched
 2. If `index_complete` is false, call `query_local_byod` again (or `sync_byod` with the same query) until complete
 3. Refresh a collection after adding files: `sync_byod` with `query` (re-call until `complete: true`)
 4. List top-level folders: `sync_byod` with no arguments (does not crawl the library)
-5. Index a single file: `sync_byod(relative_path)`
+5. Index a file or nested folder: `sync_byod(relative_path)` or `sync_byod(root)` — a directory walk stays inside that folder (for example `parent/line`)
 6. Inspect indexed files: `list_byod_files` / `list_byod_files(relative_path)`
 7. Get full chunk content: `get_byod_chunk(file_path, chunk_index)`
 8. Start fresh: `clear_byod`

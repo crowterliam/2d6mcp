@@ -39,7 +39,7 @@ Agent instructions: `.kilo/agent/`, `.claude/skills/`, `.cursor/rules/`, `.cline
 | `roll_table` | Roll on a named table. `source`: `ogl`, `osr`, or `byod`. Omit `table_name` with `source=byod` or `source=osr` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
 | `query_local_byod` | Search ingested personal files. Returns `chunkIndex`. Optional `include_full`. |
-| `sync_byod` | Index BYOD files. Optional `relative_path` for a single file. |
+| `sync_byod` | No args lists collections. `query` indexes matching folders. `relative_path` or `root` indexes a file or nested directory. |
 | `clear_byod` | Delete the BYOD index. |
 | `list_byod_files` | List indexed files. Optional `relative_path` inspects one file. |
 | `get_byod_chunk` | Retrieve full chunk content by path + chunk index. |

@@ -15,6 +15,14 @@ export function isPathInside(root: string, target: string): boolean {
   return rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
 }
 
+/** Resolve `relativePath` under `byodPath`, or null if it would escape. */
+export function resolveInsideByod(byodPath: string, relativePath: string): string | null {
+  const resolvedRoot = resolve(byodPath);
+  const resolvedTarget = resolve(resolvedRoot, relativePath);
+  if (!isPathInside(resolvedRoot, resolvedTarget)) return null;
+  return resolvedTarget;
+}
+
 export function pathHasPrefix(filePath: string, prefix: string): boolean {
   if (prefix === "") return true;
   const normalizedFile = filePath.replace(/\\/g, "/");

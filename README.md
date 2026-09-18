@@ -105,7 +105,7 @@ BYOD (Bring Your Own Documents) mode enables local file ingestion for personal, 
 | `roll_table` | Roll on a named table. `source`: `ogl`, `osr`, or `byod`. Omit `table_name` with `source=byod` or `source=osr` to list tables. |
 | `query_rules` | Search a licensed rules DB. `system` required. Default category is core FTS only. `category=categories` lists filters. |
 | `query_local_byod` | Search personal files. Indexes matching top-level game folders on demand, then searches. Optional `include_full`. |
-| `sync_byod` | On-demand index. No args lists folders. `query` indexes matching collections. Optional `relative_path` for one file. |
+| `sync_byod` | On-demand index. No args lists folders. `query` indexes matching collections. `relative_path` or `root` indexes a file or a directory under `BYOD_PATH` (walk stays inside that folder). |
 | `clear_byod` | Delete the BYOD index. |
 | `list_byod_files` | List indexed files. Optional `relative_path` inspects one file. |
 | `get_byod_chunk` | Retrieve full chunk content by path + chunk index. |
@@ -177,7 +177,7 @@ npm run build         # compile all packages (tsc --build)
 npm test              # run the Vitest suite
 npm run typecheck     # type-check without emitting
 npm run start         # run the MCP server (packages/server/dist/index.js)
-npm run sync-byod     # list BYOD collections; pass a query to index matches
+npm run sync-byod     # list BYOD collections; pass a query or --root to index that scope
 npm run version:check # assert lockstep SemVer across workspaces
 ```
 
@@ -228,7 +228,7 @@ Set an optional durable `table_label` on `session` start so `get_session_context
 
 ### Multi-shelf BYOD
 
-Consent (`AGREE_BYOD_USE` or `npm run setup`) is required. Point `BYOD_PATH` at the parent of game folders so each top-level directory is a collection. `sync_byod` with no args lists those folders; `query` or `system` indexes matches only. High-latency mounts: `BYOD_NETWORK=true`. After merging this change, rebuild and restart the local MCP process so `osr` and `table_label` exist.
+Consent (`AGREE_BYOD_USE` or `npm run setup`) is required. Point `BYOD_PATH` at the parent of game folders so each top-level directory is a collection. `sync_byod` with no args lists those folders; `query` or `system` indexes matches only; `relative_path` or `root` indexes a nested folder such as `parent/line`. High-latency mounts: `BYOD_NETWORK=true`. After merging this change, rebuild and restart the local MCP process so `osr` and `table_label` exist.
 
 ### Sci-fi trade and encounter recipes (`source=ogl`)
 

@@ -8,17 +8,18 @@ BYOD (Bring Your Own Data) lets you index and search your personal RPG files —
 ```
 sync_byod
 ```
-Indexes all supported files from your `BYOD_PATH` directory. Runs in time-budgeted batches (default 15 seconds per call). Returns progress with a `complete` flag.
+Lists top-level collections under `BYOD_PATH`. Does not index the library. Pass `query` to index matching folders in time-budgeted batches (default 15 seconds per call). Returns progress with a `complete` flag.
 
 **Critical**: If `complete` is `false`, you MUST call `sync_byod` again to continue. The tool skips files that haven't changed since the last sync, so subsequent calls are fast until they reach new files.
 
-**Startup behaviour**: The server runs an automatic sync on startup. If your BYOD directory is large, the initial sync may be incomplete. Check `list_byod_files` to verify coverage.
+The MCP tool stays time-budgeted. The CLI (`npm run sync-byod -- <query>`) loops until `complete` (bounded).
 
-### Syncing a Single File
+### Syncing a File or Directory
 ```
 sync_byod(relative_path)
+sync_byod(root)
 ```
-Indexes a single file by its relative path within `BYOD_PATH`. Useful for large PDFs that timeout during bulk sync, or to selectively re-index a modified file without running a full sync.
+Indexes a file or a directory by its relative path within `BYOD_PATH`. A directory walk stays inside that folder (for example `parent/line`) and does not visit sibling collections. Useful for nested shelves, large PDFs that timeout during bulk sync, or selective re-index.
 
 ### Listing Indexed Files
 ```
@@ -112,7 +113,7 @@ The sync process uses a 3-tier check to avoid unnecessary work:
 
 1. **Start of session**: Run `list_byod_files` to check what's indexed
 2. **Start session tracking**: `session(action: "start", name: "Session 12", byod_system: "call of cthulhu")`
-3. **Added new files?**: Run `sync_byod`. Repeat if `complete` is `false`
+3. **Added new files?**: Run `sync_byod` with `query` or a directory `root`. Repeat if `complete` is `false`
 4. **Need a rule?**: Try `synthesize_ruling` for natural-language questions — it auto-searches OGL/DW/BYOD with the system filter applied
 5. **Search manually**: Use `query_rules` with `system: "ogl"`, `query_rules` with `system: "dw"`, or `query_local_byod` for direct search
 6. **Need full text?**: Use `get_byod_chunk(path, index)` to retrieve complete chunk content after search returns snippets

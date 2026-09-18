@@ -11,7 +11,7 @@ import { populateBrpDatabase } from "@2d6mcp/brp/populate";
 import { populate5ecompatibleDatabase } from "@2d6mcp/5ecompatible/populate";
 import { populateOrcusDatabase } from "@2d6mcp/orcus/populate";
 import { populateOsrDatabase } from "@2d6mcp/osr/populate";
-import { syncByodIndex } from "./tools/helpers.js";
+import { syncByodIndex, syncByodUntilComplete, resolveSyncTarget, MAX_CLI_SYNC_ROUNDS } from "./tools/helpers.js";
 
 function cmdSetup(): void {
   if (existsSync(BYOD_CONSENT_FILE)) {
@@ -77,8 +77,9 @@ Usage:
   2d6mcp populate-osr   Generate OSR / B/X-compatible procedures DB (original summaries, not book text)
   2d6mcp populate-osr --force  Force regeneration of OSR procedures database
   2d6mcp populate-osr --source-dir <path>  Also import operator .md/.txt notes (never PDFs)
-  2d6mcp sync-byod     List top-level BYOD collections (no full-library crawl)
-  2d6mcp sync-byod <query>  Index matching collections until complete (e.g. traveller)
+  2d6mcp sync-byod     List top-level BYOD collections (does not index)
+  2d6mcp sync-byod <query>  Index matching collections until complete (e.g. collection-a)
+  2d6mcp sync-byod --root <relative-dir>  Index one directory under BYOD_PATH until complete
   2d6mcp help          Show this help
 
  Environment:
@@ -191,6 +192,28 @@ function cmdPopulateOsr(): void {
   console.log(result.message);
 }
 
+function parseSyncByodArgs(argv: string[]): { query: string; root: string } {
+  let query = "";
+  let root = "";
+  const rest: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--root" || arg === "--relative-path") {
+      const value = argv[i + 1];
+      if (!value || value.startsWith("-")) {
+        console.error(`${arg} requires a path relative to BYOD_PATH`);
+        process.exit(1);
+      }
+      root = value;
+      i += 1;
+      continue;
+    }
+    rest.push(arg);
+  }
+  query = rest.join(" ").trim();
+  return { query, root };
+}
+
 async function cmdSyncByod(): Promise<void> {
   if (!isByodEnabled()) {
     console.error("BYOD is not enabled. Run `npm run setup` and set BYOD_PATH to an existing directory.");
@@ -198,9 +221,9 @@ async function cmdSyncByod(): Promise<void> {
     return;
   }
 
-  const query = process.argv.slice(3).join(" ").trim();
+  const { query, root } = parseSyncByodArgs(process.argv.slice(3));
   const config = loadConfig();
-  if (!query) {
+  if (!query && !root) {
     const result = await syncByodIndex(config);
     console.log(result.message);
     if (result.catalog) {
@@ -209,28 +232,59 @@ async function cmdSyncByod(): Promise<void> {
     return;
   }
 
-  let round = 0;
-  while (true) {
-    round += 1;
-    const result = await syncByodIndex(config, { query });
-    console.log(
-      JSON.stringify({
-        round,
-        complete: result.complete,
-        walkComplete: result.walkComplete,
-        matchedRoots: result.matchedRoots,
-        filesIndexed: result.filesIndexed,
-        discovered: result.discovered,
-        remaining: result.remaining,
-        dirsRemaining: result.dirsRemaining,
-        chunksIndexed: result.chunksIndexed,
-        elapsedMs: result.elapsedMs,
-        message: result.message,
-      })
-    );
-    if (result.complete) {
+  if (root) {
+    const byodPath = config.byodPath;
+    if (!byodPath) {
+      console.error("BYOD_PATH is not set.");
+      process.exitCode = 1;
       return;
     }
+    const target = resolveSyncTarget(byodPath, root);
+    if (target.kind === "denied") {
+      console.error("Access denied. Path must be within the BYOD path.");
+      process.exitCode = 1;
+      return;
+    }
+    if (target.kind === "missing") {
+      console.error(`Path not found: ${root}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const options = root ? { root } : { query };
+  const { result, rounds, stoppedEarly } = await syncByodUntilComplete(
+    config,
+    options,
+    MAX_CLI_SYNC_ROUNDS,
+    (round, roundResult) => {
+      console.log(
+        JSON.stringify({
+          round,
+          complete: roundResult.complete,
+          walkComplete: roundResult.walkComplete,
+          matchedRoots: roundResult.matchedRoots,
+          filesIndexed: roundResult.filesIndexed,
+          discovered: roundResult.discovered,
+          remaining: roundResult.remaining,
+          dirsRemaining: roundResult.dirsRemaining,
+          chunksIndexed: roundResult.chunksIndexed,
+          elapsedMs: roundResult.elapsedMs,
+          failedPaths: roundResult.failedPaths,
+          message: roundResult.message,
+        })
+      );
+    }
+  );
+  if (stoppedEarly && !result.complete) {
+    console.error(
+      `Stopped after ${rounds} rounds with work remaining. Re-run to continue this scope.`
+    );
+    process.exitCode = 1;
+    return;
+  }
+  if (result.failedPaths.length > 0) {
+    console.error(`Failed paths: ${result.failedPaths.join(", ")}`);
   }
 }
 

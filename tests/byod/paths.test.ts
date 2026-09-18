@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { join, resolve } from "node:path";
-import { isPathInside, pathHasPrefix, pathMatchesAnyPrefix, toRelativePath } from "../../packages/server/src/byod/paths.js";
+import { isPathInside, pathHasPrefix, pathMatchesAnyPrefix, toRelativePath, resolveInsideByod } from "../../packages/server/src/byod/paths.js";
 
 describe("toRelativePath", () => {
   it("returns a path relative to the base directory", () => {
@@ -27,13 +27,25 @@ describe("isPathInside", () => {
   });
 });
 
+describe("resolveInsideByod", () => {
+  it("resolves a nested path under BYOD_PATH", () => {
+    const root = resolve("/tmp/byod-root");
+    expect(resolveInsideByod(root, join("parent", "line"))).toBe(join(root, "parent", "line"));
+  });
+
+  it("returns null when the path would escape BYOD_PATH", () => {
+    const root = resolve("/tmp/byod-root");
+    expect(resolveInsideByod(root, join("..", "outside"))).toBeNull();
+  });
+});
+
 describe("pathHasPrefix", () => {
   it("matches the prefix itself and nested paths across separators", () => {
-    expect(pathHasPrefix("Traveller/core.pdf", "Traveller")).toBe(true);
-    expect(pathHasPrefix("Traveller\\core.pdf", "Traveller")).toBe(true);
-    expect(pathHasPrefix("Traveller", "Traveller")).toBe(true);
-    expect(pathHasPrefix("Call of Cthulhu/sanity.txt", "Traveller")).toBe(false);
-    expect(pathHasPrefix("TravellerExtra/core.pdf", "Traveller")).toBe(false);
+    expect(pathHasPrefix("collection-a/core.pdf", "collection-a")).toBe(true);
+    expect(pathHasPrefix("collection-a\\core.pdf", "collection-a")).toBe(true);
+    expect(pathHasPrefix("collection-a", "collection-a")).toBe(true);
+    expect(pathHasPrefix("collection-b/notes.txt", "collection-a")).toBe(false);
+    expect(pathHasPrefix("collection-a-website-dump/core.pdf", "collection-a")).toBe(false);
   });
 
   it("treats an empty prefix as the whole library", () => {
@@ -43,7 +55,7 @@ describe("pathHasPrefix", () => {
 
 describe("pathMatchesAnyPrefix", () => {
   it("matches if any prefix hits", () => {
-    expect(pathMatchesAnyPrefix("Mongoose Traveller/hg.pdf", ["Traveller", "Mongoose Traveller"])).toBe(true);
-    expect(pathMatchesAnyPrefix("D&D/phb.pdf", ["Traveller", "Mongoose Traveller"])).toBe(false);
+    expect(pathMatchesAnyPrefix("parent/line/book.pdf", ["collection-a", "parent/line"])).toBe(true);
+    expect(pathMatchesAnyPrefix("other/book.pdf", ["collection-a", "parent/line"])).toBe(false);
   });
 });

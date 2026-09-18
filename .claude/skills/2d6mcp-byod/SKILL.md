@@ -9,11 +9,11 @@ BYOD (Bring Your Own Data) indexes your personal RPG files — PDFs, text, markd
 
 ## BYOD Tools
 
-### syncing Files
+### Listing collections / indexing a scope
 ```
 sync_byod
 ```
-Indexes files from `BYOD_PATH` in time-budgeted batches (default 15s). Returns `complete: false` if more remain — you MUST re-call. Already-indexed files are skipped via mtime+size fingerprinting.
+With no arguments, lists top-level collections under `BYOD_PATH`. Does not crawl or index the library. Pass `query` to index matching folders in time-budgeted batches (default 15s). Returns `complete: false` if more remain — you MUST re-call. Already-indexed files are skipped via mtime+size fingerprinting.
 
 ### Listing
 ```
@@ -33,11 +33,12 @@ query_local_byod(search_term)
 ```
 Full-text search across all indexed files. 20 results max. AND-first with OR fallback for broad queries.
 
-### Single File Syncing
+### Single File or Directory Syncing
 ```
 sync_byod(relative_path)
+sync_byod(root)
 ```
-Indexes a single file by its relative path within `BYOD_PATH`. Use for large files that timeout in bulk `sync_byod`, or for selective indexing without a full sync. Already-indexed files (unchanged mtime+size) are skipped.
+Indexes a file or a directory by relative path within `BYOD_PATH`. A directory walk stays inside that folder and does not visit sibling collections. Use for nested shelves such as `parent/line`, large files that timeout in bulk `sync_byod`, or selective indexing. Already-indexed files (unchanged mtime+size) are skipped.
 
 ### Retrieving Full Chunk Content
 ```
@@ -79,7 +80,7 @@ Each `BYOD_PATH` gets its own isolated database. A shared content cache deduplic
 
 ## Multi-shelf setup
 
-Point `BYOD_PATH` at the parent of game folders (not a single PDF). `sync_byod` with no args lists top-level collections; pass `query` to index matches only.
+Point `BYOD_PATH` at the parent of game folders (not a single PDF). `sync_byod` with no args lists top-level collections; pass `query` to index matching collections, or `relative_path` / `root` for a nested folder. High-latency mounts: `BYOD_NETWORK=true`. The CLI (`npm run sync-byod -- <query>`) loops until `complete`; the MCP tool stays time-budgeted.
 
 Example (docs only — never commit books):
 
