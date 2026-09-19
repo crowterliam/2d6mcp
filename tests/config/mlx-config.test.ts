@@ -41,7 +41,16 @@ describe("MLX and session config", () => {
     expect(config.sessionDbPath).toContain(".2d6mcp");
   });
 
-  it("allows custom SESSION_DB_PATH", () => {
+  it("returns default spacetime settings", () => {
+    delete process.env.SPACETIMEDB_URI;
+    delete process.env.SPACETIMEDB_MODE;
+    const config = loadConfig();
+    expect(config.spacetimeUri).toContain("127.0.0.1:3000");
+    expect(config.spacetimeDb).toBe("2d6mcp");
+    expect(config.spacetimeEmbeddedPath).toContain("spacetime-kernel.json");
+  });
+
+  it("allows custom SESSION_DB_PATH as the legacy import source", () => {
     process.env.SESSION_DB_PATH = "/tmp/my-sessions.db";
     const config = loadConfig();
     expect(config.sessionDbPath).toBe("/tmp/my-sessions.db");

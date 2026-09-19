@@ -5,6 +5,8 @@
 import { writeFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { PROJECT_ROOT, BYOD_CONSENT_FILE, loadConfig, isByodEnabled } from "./config.js";
+import { flushSessionStore, sessionStore } from "./session/database.js";
+import { importLegacySqliteSessions } from "./session/migrate-sqlite.js";
 import { populateOglDatabase } from "@2d6mcp/ogl/populate";
 import { populateDwDatabase } from "@2d6mcp/dw/populate";
 import { populateBrpDatabase } from "@2d6mcp/brp/populate";
@@ -81,6 +83,7 @@ Usage:
   2d6mcp sync-byod     List top-level BYOD collections (does not index)
   2d6mcp sync-byod <query>  Index matching collections until complete (e.g. collection-a)
   2d6mcp sync-byod --root <relative-dir>  Index one directory under BYOD_PATH until complete
+  2d6mcp import-sessions [path]  Import a legacy SQLite sessions.db into the Spacetime kernel
   2d6mcp help          Show this help
 
  Environment:
@@ -289,6 +292,19 @@ async function cmdSyncByod(): Promise<void> {
   }
 }
 
+async function cmdImportSessions(): Promise<void> {
+  const pathArg = process.argv[3];
+  const sqlitePath = pathArg && !pathArg.startsWith("-") ? resolve(pathArg) : loadConfig().sessionDbPath;
+  const result = importLegacySqliteSessions(sessionStore(), sqlitePath);
+  try {
+    await flushSessionStore();
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "flush failed";
+    console.error(`SpacetimeDB flush skipped: ${message}`);
+  }
+  console.log(JSON.stringify(result, null, 2));
+}
+
 const command = process.argv[2]?.toLowerCase() || "help";
 
 switch (command) {
@@ -316,6 +332,13 @@ switch (command) {
   case "sync-byod":
     cmdSyncByod().catch((err: unknown) => {
       const message = err instanceof Error ? err.message : "sync-byod failed";
+      console.error(message);
+      process.exit(1);
+    });
+    break;
+  case "import-sessions":
+    cmdImportSessions().catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : "import-sessions failed";
       console.error(message);
       process.exit(1);
     });

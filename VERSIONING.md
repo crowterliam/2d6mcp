@@ -82,9 +82,9 @@ CI runs `node scripts/bump-version.mjs check` without installing dependencies. T
 
 ## Next bump (operators)
 
-After `0.8.0`:
+After `0.9.0`:
 
-- Bugfix / docs-only / chore on `main` → `npm run version:bump -- patch` (`0.8.1`)
-- New user-facing capability (`feat:`) → `npm run version:bump -- minor` (`0.9.0`)
+- Bugfix / docs-only / chore on `main` → `npm run version:bump -- patch` (`0.9.1`)
+- New user-facing capability (`feat:`) → `npm run version:bump -- minor` (`0.10.0`)
 - Breaking MCP/tool change while still on 0.x → still `minor`
 - First stable API → `npm run version:bump -- major --force` (`1.0.0`), only when the maintainer asks

@@ -5,6 +5,12 @@ import { readFileSync, existsSync } from "node:fs";
 import { resolve, dirname, isAbsolute } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
+import {
+  DEFAULT_EMBEDDED_PATH,
+  DEFAULT_SPACETIME_DB,
+  DEFAULT_SPACETIME_URI,
+  resolveSpacetimeMode,
+} from "./session/database.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -39,6 +45,12 @@ export interface Config {
   orcusDbPath: string;
   osrDbPath: string;
   sessionDbPath: string;
+  spacetimeMode: "embedded" | "remote";
+  spacetimeUri: string;
+  spacetimeDb: string;
+  spacetimeToken: string | null;
+  spacetimeEmbeddedPath: string;
+  chronicleExportAllowPathsRaw: string;
   mlxWhisperModel: string;
   mlxLLMModel: string;
   whisperCppModel: string;
@@ -182,6 +194,14 @@ export function loadConfig(): Config {
     process.env.SESSION_DB_PATH ||
     resolve(homedir(), ".2d6mcp", "sessions.db");
 
+  const spacetimeMode = resolveSpacetimeMode();
+  const spacetimeUri = process.env.SPACETIMEDB_URI?.trim() || DEFAULT_SPACETIME_URI;
+  const spacetimeDb = process.env.SPACETIMEDB_DB?.trim() || DEFAULT_SPACETIME_DB;
+  const spacetimeToken = process.env.SPACETIMEDB_TOKEN?.trim() || null;
+  const spacetimeEmbeddedPath =
+    process.env.SPACETIMEDB_EMBEDDED_PATH?.trim() || DEFAULT_EMBEDDED_PATH;
+  const chronicleExportAllowPathsRaw = process.env.CHRONICLE_EXPORT_ALLOW_PATHS ?? "";
+
   const mlxWhisperModel =
     process.env.MLX_WHISPER_MODEL ||
     "mlx-community/whisper-large-v3-turbo";
@@ -208,7 +228,7 @@ export function loadConfig(): Config {
     process.env.LIVE_TRANSCRIPT_DB?.trim() || process.env.OPENGRANOLA_DB?.trim() || null;
   const liveTranscriptAllowPathsRaw = process.env.LIVE_TRANSCRIPT_ALLOW_PATHS ?? "";
 
-  return { byodConsented, byodPath, oglDbPath, dwDbPath, brpDbPath, sr5eDbPath, orcusDbPath, osrDbPath, sessionDbPath, mlxWhisperModel, mlxLLMModel, whisperCppModel, llamaCppModel, ollamaModel, ollamaHost, sttBackend, llmBackend, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs, byodMaxFileSize, byodNetwork, liveTranscriptDb, liveTranscriptAllowPathsRaw };
+  return { byodConsented, byodPath, oglDbPath, dwDbPath, brpDbPath, sr5eDbPath, orcusDbPath, osrDbPath, sessionDbPath, spacetimeMode, spacetimeUri, spacetimeDb, spacetimeToken, spacetimeEmbeddedPath, chronicleExportAllowPathsRaw, mlxWhisperModel, mlxLLMModel, whisperCppModel, llamaCppModel, ollamaModel, ollamaHost, sttBackend, llmBackend, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs, byodMaxFileSize, byodNetwork, liveTranscriptDb, liveTranscriptAllowPathsRaw };
 }
 
 export function isByodEnabled(): boolean {

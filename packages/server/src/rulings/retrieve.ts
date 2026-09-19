@@ -49,7 +49,7 @@ import {
 } from "@2d6mcp/osr";
 import { extractKeywordList, fuzzyKeywordList } from "@2d6mcp/shared";
 import { loadConfig } from "../config.js";
-import { openSessionDb, getSession } from "../session/database.js";
+import { sessionStore, getSession } from "../session/database.js";
 import { checkByodConsent, getByodPath } from "../byod/gate.js";
 import { getByodDatabase, searchByodIndex } from "../byod/search.js";
 import {
@@ -136,8 +136,7 @@ export function resolveRulesSystem(
   let sessionByod = "";
   let sessionRules: RulesSystem | undefined;
   if (sessionId) {
-    const config = loadConfig();
-    const db = openSessionDb(config.sessionDbPath);
+    const db = sessionStore();
     const session = getSession(db, sessionId);
     sessionByod = session?.byod_system?.trim() || "";
     if (session?.rules_system === "byod") {
@@ -264,8 +263,7 @@ export async function retrieveRulesContext(options: RetrieveOptions): Promise<Re
 
   let sessionByod = "";
   if (options.sessionId) {
-    const config = loadConfig();
-    const db = openSessionDb(config.sessionDbPath);
+    const db = sessionStore();
     const session = getSession(db, options.sessionId);
     sessionByod = session?.byod_system?.trim() || "";
   }

@@ -2,13 +2,12 @@
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
 import { statSync } from "node:fs";
-import { loadConfig } from "../config.js";
 import {
   getLiveTranscriptCursor,
   getSession,
   listLiveTranscriptCursors,
   logTranscript,
-  openSessionDb,
+  sessionStore,
   resetLiveTranscriptCursor,
   upsertLiveTranscriptCursor,
   type LiveTranscriptCursor,
@@ -41,6 +40,7 @@ export interface LiveTranscriptArgs {
   path?: unknown;
   meeting_id?: unknown;
   limit?: unknown;
+  chronicle_hints?: unknown;
 }
 
 function asString(value: unknown): string {
@@ -149,8 +149,7 @@ export function runLiveTranscript(
     return { ok: false, payload: { error: "Error: session_id is required" } };
   }
 
-  const config = loadConfig();
-  const db = openSessionDb(config.sessionDbPath);
+  const db = sessionStore();
   const session = getSession(db, sessionId);
   if (!session) {
     return { ok: false, payload: { error: `Session not found: ${sessionId}` } };
@@ -178,7 +177,14 @@ export function runLiveTranscript(
     case "reset_cursor":
       return handleReset(sessionId, kind, requestedPath, requestedMeeting);
     case "poll":
-      return handlePoll(sessionId, inferred, requestedPath, requestedMeeting, asLimit(args?.limit));
+      return handlePoll(
+        sessionId,
+        inferred,
+        requestedPath,
+        requestedMeeting,
+        asLimit(args?.limit),
+        args?.chronicle_hints === true
+      );
     default: {
       const _never: never = action;
       return _never;
@@ -192,8 +198,7 @@ function handleStatus(
   requestedPath: string,
   requestedMeeting: string
 ): { ok: true; payload: LiveStatusResult } {
-  const config = loadConfig();
-  const db = openSessionDb(config.sessionDbPath);
+  const db = sessionStore();
   const rows = listLiveTranscriptCursors(db, sessionId);
   let sourcePath: string | null = null;
   let matching: LiveTranscriptCursor | null = null;
@@ -237,8 +242,7 @@ function handleReset(
   requestedPath: string,
   requestedMeeting: string
 ): { ok: true; payload: LiveResetResult } {
-  const config = loadConfig();
-  const db = openSessionDb(config.sessionDbPath);
+  const db = sessionStore();
   let sourcePath: string | null = null;
   let reset = 0;
 
@@ -272,15 +276,15 @@ function handlePoll(
   kind: LiveSourceKind,
   requestedPath: string,
   requestedMeeting: string,
-  limit: number
+  limit: number,
+  chronicleHints: boolean
 ): { ok: boolean; payload: LivePollResult | { error: string } } {
   const located = resolveSourcePath(kind, requestedPath);
   if (located.error || !located.path) {
     return { ok: false, payload: { error: located.error ?? "Path is required." } };
   }
 
-  const config = loadConfig();
-  const db = openSessionDb(config.sessionDbPath);
+  const db = sessionStore();
   const token = meetingToken(requestedMeeting);
   const key = sourceKey(located.path, token);
   const cursor = getLiveTranscriptCursor(db, sessionId, kind, key);
@@ -300,6 +304,8 @@ function handlePoll(
 
   const logged = db.transaction(() => {
     const rows: LivePollResult["segments"] = [];
+    const chronicleBeats: LivePollResult["chronicle_beats"] = [];
+    const session = getSession(db, sessionId);
     for (const segment of batch) {
       const saved = logTranscript(db, sessionId, segment.text, segment.speaker, "voice", "narration");
       rows.push({
@@ -309,6 +315,17 @@ function handlePoll(
         source_segment_id: segment.id,
         start_ms: segment.start_ms,
       });
+      if (chronicleHints && session?.table_label && saved.text.trim()) {
+        const beat = db.addBeat({
+          table_label: session.table_label,
+          session_id: sessionId,
+          text: saved.text,
+          kind: "note",
+          source: "from_transcript",
+          confidence: "provisional",
+        });
+        chronicleBeats.push({ id: beat.id, text: beat.text, confidence: beat.confidence });
+      }
     }
 
     const last = batch[batch.length - 1];
@@ -322,7 +339,7 @@ function handlePoll(
       last_line_index: last?.line_index ?? cursor?.last_line_index ?? null,
       ingested_count: existingCount + batch.length,
     });
-    return { rows, nextCursor };
+    return { rows, nextCursor, chronicleBeats };
   })();
 
   return {
@@ -341,6 +358,7 @@ function handlePoll(
       remaining,
       cursor: cursorState(logged.nextCursor)!,
       segments: logged.rows,
+      chronicle_beats: logged.chronicleBeats,
     },
   };
 }

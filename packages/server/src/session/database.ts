@@ -1,490 +1,111 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
-import Database from "better-sqlite3";
-import { existsSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import { SESSION_SCHEMA_DDL } from "./schema.sql.js";
+import { homedir } from "node:os";
+import { resolve } from "node:path";
+import {
+  closeStore,
+  flushStore,
+  getOrOpenStore,
+  getSnapshotClient,
+  hydrateStore,
+  type SessionStore,
+  type TranscriptionProgress,
+} from "@2d6mcp/spacetime";
+import type { SpacetimeMode } from "@2d6mcp/spacetime";
 
-let db: Database.Database | null = null;
+export type {
+  SessionRow,
+  TranscriptSegment,
+  RulingRow,
+  TranscriptionProgress,
+  LiveTranscriptCursor,
+  SessionStore,
+} from "@2d6mcp/spacetime";
 
-export function openSessionDb(dbPath: string): Database.Database {
-  if (db) return db;
+export { parseTranscriptSearchQuery, normalizeTableLabel } from "@2d6mcp/spacetime";
+export type { TranscriptSearchMode, ParsedTranscriptQuery } from "@2d6mcp/spacetime";
 
-  const dir = dirname(dbPath);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
+export const DEFAULT_SPACETIME_URI = "http://127.0.0.1:3000";
+export const DEFAULT_SPACETIME_DB = "2d6mcp";
+export const DEFAULT_EMBEDDED_PATH = resolve(homedir(), ".2d6mcp", "spacetime-kernel.json");
+export const DEFAULT_SQLITE_IMPORT_PATH = resolve(homedir(), ".2d6mcp", "sessions.db");
+
+const DEFAULT_STORE_KEY = "__default__";
+let lastOpenedKey: string | null = null;
+
+export function isTestEnv(): boolean {
+  return process.env.VITEST !== undefined || process.env.NODE_ENV === "test";
+}
+
+export function resolveSpacetimeMode(): SpacetimeMode {
+  const raw = (process.env.SPACETIMEDB_MODE ?? "").trim().toLowerCase();
+  switch (raw) {
+    case "remote":
+      return "remote";
+    case "embedded":
+      return "embedded";
+    case "auto":
+      return process.env.SPACETIMEDB_URI?.trim() ? "remote" : "embedded";
+    default:
+      if (isTestEnv()) return "embedded";
+      return process.env.SPACETIMEDB_URI?.trim() ? "remote" : "embedded";
+  }
+}
+
+export function openSessionDb(dbPath: string): SessionStore {
+  lastOpenedKey = dbPath;
+  return getOrOpenStore({
+    isolationKey: dbPath,
+    mode: "embedded",
+    persist: false,
+  });
+}
+
+export function sessionStore(): SessionStore {
+  if (isTestEnv()) {
+    const path = process.env.SESSION_DB_PATH || "__vitest__";
+    lastOpenedKey = path;
+    return getOrOpenStore({
+      isolationKey: path,
+      mode: "embedded",
+      persist: false,
+    });
   }
 
-  db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
-
-  const statements = SESSION_SCHEMA_DDL.split(";")
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  for (const stmt of statements) {
-    try {
-      db.exec(stmt + ";");
-    } catch {
-      // Skip migration errors (e.g., column already exists)
-    }
-  }
-
-  return db;
+  const mode = resolveSpacetimeMode();
+  const persistPath = process.env.SPACETIMEDB_EMBEDDED_PATH?.trim() || DEFAULT_EMBEDDED_PATH;
+  lastOpenedKey = DEFAULT_STORE_KEY;
+  return getOrOpenStore({
+    isolationKey: DEFAULT_STORE_KEY,
+    mode,
+    persist: true,
+    persistPath,
+    uri: process.env.SPACETIMEDB_URI?.trim() || DEFAULT_SPACETIME_URI,
+    database: process.env.SPACETIMEDB_DB?.trim() || DEFAULT_SPACETIME_DB,
+    token: process.env.SPACETIMEDB_TOKEN?.trim() || undefined,
+  });
 }
 
 export function closeSessionDb(): void {
-  if (db) {
-    db.close();
-    db = null;
+  if (lastOpenedKey) {
+    closeStore(lastOpenedKey);
+    lastOpenedKey = null;
+    return;
   }
+  closeStore();
 }
 
-export interface SessionRow {
-  id: string;
-  name: string | null;
-  rules_system: string;
-  byod_system: string | null;
-  table_label: string | null;
-  started_at: number;
-  ended_at: number | null;
-  summary: string | null;
-  summary_generated_at: number | null;
+export async function hydrateSessionStore(): Promise<boolean> {
+  sessionStore();
+  return hydrateStore(lastOpenedKey ?? DEFAULT_STORE_KEY);
 }
 
-export function createSession(
-  database: Database.Database,
-  rulesSystem: string = "ogl",
-  name?: string,
-  byodSystem?: string,
-  tableLabel?: string
-): SessionRow {
-  const id = `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const now = Date.now();
-  const label = normalizeTableLabel(tableLabel);
-
-  database
-    .prepare(
-      "INSERT INTO sessions (id, name, rules_system, byod_system, table_label, started_at) VALUES (?, ?, ?, ?, ?, ?)"
-    )
-    .run(id, name ?? null, rulesSystem, byodSystem ?? null, label, now);
-
-  return {
-    id,
-    name: name ?? null,
-    rules_system: rulesSystem,
-    byod_system: byodSystem ?? null,
-    table_label: label,
-    started_at: now,
-    ended_at: null,
-    summary: null,
-    summary_generated_at: null,
-  };
-}
-
-export function normalizeTableLabel(value: string | undefined | null): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-export function endSession(
-  database: Database.Database,
-  sessionId: string
-): SessionRow | null {
-  const now = Date.now();
-  const result = database
-    .prepare("UPDATE sessions SET ended_at = ? WHERE id = ? AND ended_at IS NULL")
-    .run(now, sessionId);
-
-  if (result.changes === 0) return null;
-
-  return database
-    .prepare("SELECT * FROM sessions WHERE id = ?")
-    .get(sessionId) as SessionRow;
-}
-
-export function setSessionSummary(
-  database: Database.Database,
-  sessionId: string,
-  summary: string
-): boolean {
-  const now = Date.now();
-  const result = database
-    .prepare(
-      "UPDATE sessions SET summary = ?, summary_generated_at = ? WHERE id = ?"
-    )
-    .run(summary, now, sessionId);
-
-  return result.changes > 0;
-}
-
-export function getSession(
-  database: Database.Database,
-  sessionId: string
-): SessionRow | null {
-  return (database
-    .prepare("SELECT * FROM sessions WHERE id = ?")
-    .get(sessionId) as SessionRow) ?? null;
-}
-
-export function getActiveSession(database: Database.Database): SessionRow | null {
-  return (
-    (database
-      .prepare(
-        "SELECT * FROM sessions WHERE ended_at IS NULL ORDER BY started_at DESC LIMIT 1"
-      )
-      .get() as SessionRow | undefined) ?? null
-  );
-}
-
-export function listSessions(
-  database: Database.Database,
-  limit: number = 20,
-  tableLabel?: string
-): SessionRow[] {
-  const label = normalizeTableLabel(tableLabel);
-  if (label) {
-    return database
-      .prepare(
-        "SELECT * FROM sessions WHERE table_label = ? COLLATE NOCASE ORDER BY started_at DESC LIMIT ?"
-      )
-      .all(label, limit) as SessionRow[];
-  }
-  return database
-    .prepare(
-      "SELECT * FROM sessions ORDER BY started_at DESC LIMIT ?"
-    )
-    .all(limit) as SessionRow[];
-}
-
-export function getLatestSessionByLabel(
-  database: Database.Database,
-  tableLabel: string
-): SessionRow | null {
-  const label = normalizeTableLabel(tableLabel);
-  if (!label) return null;
-  const active = database
-    .prepare(
-      "SELECT * FROM sessions WHERE table_label = ? COLLATE NOCASE AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1"
-    )
-    .get(label) as SessionRow | undefined;
-  if (active) return active;
-  return (
-    (database
-      .prepare(
-        "SELECT * FROM sessions WHERE table_label = ? COLLATE NOCASE ORDER BY started_at DESC LIMIT 1"
-      )
-      .get(label) as SessionRow | undefined) ?? null
-  );
-}
-
-export interface TranscriptSegment {
-  id: number;
-  session_id: string;
-  timestamp: number;
-  speaker: string | null;
-  text: string;
-  source: string;
-  intent: string | null;
-}
-
-export function logTranscript(
-  database: Database.Database,
-  sessionId: string,
-  text: string,
-  speaker?: string,
-  source: string = "manual",
-  intent?: string
-): TranscriptSegment {
-  const now = Date.now();
-  const result = database
-    .prepare(
-      `INSERT INTO transcript_segments (session_id, timestamp, speaker, text, source, intent)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    )
-    .run(sessionId, now, speaker ?? null, text, source, intent ?? null);
-
-  return {
-    id: result.lastInsertRowid as number,
-    session_id: sessionId,
-    timestamp: now,
-    speaker: speaker ?? null,
-    text,
-    source,
-    intent: intent ?? null,
-  };
-}
-
-export function getTranscript(
-  database: Database.Database,
-  sessionId: string,
-  limit: number = 50
-): TranscriptSegment[] {
-  return database
-    .prepare(
-      "SELECT * FROM transcript_segments WHERE session_id = ? ORDER BY timestamp DESC LIMIT ?"
-    )
-    .all(sessionId, limit) as TranscriptSegment[];
-}
-
-export function getRecentTranscript(
-  database: Database.Database,
-  sessionId: string,
-  minutes: number = 5
-): TranscriptSegment[] {
-  const cutoff = Date.now() - minutes * 60 * 1000;
-  return database
-    .prepare(
-      "SELECT * FROM transcript_segments WHERE session_id = ? AND timestamp >= ? ORDER BY timestamp DESC"
-    )
-    .all(sessionId, cutoff) as TranscriptSegment[];
-}
-
-export type TranscriptSearchMode = "phrase" | "and";
-
-export interface ParsedTranscriptQuery {
-  mode: TranscriptSearchMode;
-  terms: string[];
-}
-
-function escapeLikeTerm(term: string): string {
-  return term.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
-}
-
-function likeContains(term: string): string {
-  return `%${escapeLikeTerm(term)}%`;
-}
-
-function unwrapQuoted(text: string): string | null {
-  if (text.length < 2) return null;
-  const start = text[0];
-  const end = text[text.length - 1];
-  if ((start === '"' && end === '"') || (start === "'" && end === "'")) {
-    return text.slice(1, -1);
-  }
-  return null;
-}
-
-export function parseTranscriptSearchQuery(query: string): ParsedTranscriptQuery {
-  const trimmed = query.trim();
-  const quoted = unwrapQuoted(trimmed);
-  if (quoted !== null) {
-    const phrase = quoted.trim();
-    return { mode: "phrase", terms: phrase ? [phrase] : [] };
-  }
-  const terms = trimmed.split(/\s+/).filter(Boolean);
-  if (terms.length <= 1) {
-    return { mode: "phrase", terms };
-  }
-  return { mode: "and", terms };
-}
-
-function transcriptLikeFilter(column: string, query: string): { sql: string; params: string[] } | null {
-  const parsed = parseTranscriptSearchQuery(query);
-  if (parsed.terms.length === 0) return null;
-  const sql = parsed.terms.map(() => `${column} LIKE ? ESCAPE '\\'`).join(" AND ");
-  return { sql, params: parsed.terms.map(likeContains) };
-}
-
-export function searchTranscript(
-  database: Database.Database,
-  sessionId: string,
-  query: string
-): TranscriptSegment[] {
-  const filter = transcriptLikeFilter("text", query);
-  if (!filter) return [];
-  return database
-    .prepare(
-      `SELECT * FROM transcript_segments WHERE session_id = ? AND ${filter.sql} ORDER BY timestamp DESC LIMIT 30`
-    )
-    .all(sessionId, ...filter.params) as TranscriptSegment[];
-}
-
-export function searchTranscriptByLabel(
-  database: Database.Database,
-  tableLabel: string,
-  query: string
-): TranscriptSegment[] {
-  const label = normalizeTableLabel(tableLabel);
-  if (!label) return [];
-  const filter = transcriptLikeFilter("t.text", query);
-  if (!filter) return [];
-  return database
-    .prepare(
-      `SELECT t.* FROM transcript_segments t
-       INNER JOIN sessions s ON s.id = t.session_id
-       WHERE s.table_label = ? COLLATE NOCASE AND ${filter.sql}
-       ORDER BY t.timestamp DESC LIMIT 30`
-    )
-    .all(label, ...filter.params) as TranscriptSegment[];
-}
-
-export function getRecentTranscriptByLabel(
-  database: Database.Database,
-  tableLabel: string,
-  minutes: number = 5
-): TranscriptSegment[] {
-  const label = normalizeTableLabel(tableLabel);
-  if (!label) return [];
-  const cutoff = Date.now() - minutes * 60 * 1000;
-  return database
-    .prepare(
-      `SELECT t.* FROM transcript_segments t
-       INNER JOIN sessions s ON s.id = t.session_id
-       WHERE s.table_label = ? COLLATE NOCASE AND t.timestamp >= ?
-       ORDER BY t.timestamp DESC`
-    )
-    .all(label, cutoff) as TranscriptSegment[];
-}
-
-export function getRecentRulingsByLabel(
-  database: Database.Database,
-  tableLabel: string,
-  limit: number = 5
-): RulingRow[] {
-  const label = normalizeTableLabel(tableLabel);
-  if (!label) return [];
-  return database
-    .prepare(
-      `SELECT r.* FROM rulings r
-       INNER JOIN sessions s ON s.id = r.session_id
-       WHERE s.table_label = ? COLLATE NOCASE
-       ORDER BY r.created_at DESC LIMIT ?`
-    )
-    .all(label, limit) as RulingRow[];
-}
-
-export interface RulingRow {
-  id: number;
-  session_id: string;
-  question: string;
-  ruling_text: string;
-  sources: string | null;
-  model_used: string | null;
-  latency_ms: number | null;
-  created_at: number;
-}
-
-export function storeRuling(
-  database: Database.Database,
-  sessionId: string,
-  question: string,
-  rulingText: string,
-  sources?: string[],
-  modelUsed?: string,
-  latencyMs?: number
-): RulingRow {
-  const now = Date.now();
-  const result = database
-    .prepare(
-      `INSERT INTO rulings (session_id, question, ruling_text, sources, model_used, latency_ms, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(
-      sessionId,
-      question,
-      rulingText,
-      sources ? JSON.stringify(sources) : null,
-      modelUsed ?? null,
-      latencyMs ?? null,
-      now
-    );
-
-  return {
-    id: result.lastInsertRowid as number,
-    session_id: sessionId,
-    question,
-    ruling_text: rulingText,
-    sources: sources ? JSON.stringify(sources) : null,
-    model_used: modelUsed ?? null,
-    latency_ms: latencyMs ?? null,
-    created_at: now,
-  };
-}
-
-export function getRecentRulings(
-  database: Database.Database,
-  sessionId: string,
-  limit: number = 5
-): RulingRow[] {
-  return database
-    .prepare(
-      "SELECT * FROM rulings WHERE session_id = ? ORDER BY created_at DESC LIMIT ?"
-    )
-    .all(sessionId, limit) as RulingRow[];
-}
-
-export function getRecentContext(
-  database: Database.Database,
-  sessionId: string,
-  minutes: number = 5
-): { transcripts: TranscriptSegment[]; rulings: RulingRow[] } {
-  const transcripts = getRecentTranscript(database, sessionId, minutes);
-  const rulings = getRecentRulings(database, sessionId, 5);
-
-  return { transcripts, rulings };
-}
-
-// ---- Transcription progress tracking ----
-
-export interface TranscriptionProgress {
-  file_path: string;
-  temp_dir: string | null;
-  chunk_size_seconds: number;
-  total_chunks: number;
-  processed_chunks: number[];
-  chunk_texts: Record<string, string>;
-  source_duration_seconds: number | null;
-  model_used: string | null;
-  session_id: string | null;
-  created_at: number;
-  updated_at: number;
-}
-
-function parseJsonArray(raw: unknown): number[] {
-  if (Array.isArray(raw)) return raw as number[];
-  if (typeof raw !== "string") return [];
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? parsed as number[] : [];
-  } catch {
-    return [];
-  }
-}
-
-function parseChunkTexts(raw: unknown): Record<string, string> {
-  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-    return raw as Record<string, string>;
-  }
-  if (typeof raw !== "string" || !raw) return {};
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      return parsed as Record<string, string>;
-    }
-  } catch {
-    // ignore corrupt JSON
-  }
-  return {};
-}
-
-function hydrateProgress(row: Record<string, unknown>): TranscriptionProgress {
-  return {
-    file_path: String(row.file_path),
-    temp_dir: (row.temp_dir as string | null) ?? null,
-    chunk_size_seconds: Number(row.chunk_size_seconds),
-    total_chunks: Number(row.total_chunks),
-    processed_chunks: parseJsonArray(row.processed_chunks),
-    chunk_texts: parseChunkTexts(row.chunk_texts),
-    source_duration_seconds: (row.source_duration_seconds as number | null) ?? null,
-    model_used: (row.model_used as string | null) ?? null,
-    session_id: (row.session_id as string | null) ?? null,
-    created_at: Number(row.created_at),
-    updated_at: Number(row.updated_at),
-  };
+export async function flushSessionStore(): Promise<void> {
+  if (!lastOpenedKey) return;
+  const remote = getSnapshotClient(lastOpenedKey);
+  if (!remote) return;
+  await flushStore(lastOpenedKey);
 }
 
 export function assembleChunkTranscript(progress: TranscriptionProgress): string {
@@ -497,44 +118,101 @@ export function assembleChunkTranscript(progress: TranscriptionProgress): string
   return parts.join(" ").trim();
 }
 
-export function getOrCreateProgress(
-  database: Database.Database,
-  filePath: string
-): TranscriptionProgress {
-  const existing = database
-    .prepare("SELECT * FROM transcription_progress WHERE file_path = ?")
-    .get(filePath) as Record<string, unknown> | undefined;
+export function createSession(
+  database: SessionStore,
+  rulesSystem: string = "ogl",
+  name?: string,
+  byodSystem?: string,
+  tableLabel?: string
+) {
+  return database.createSession(rulesSystem, name, byodSystem, tableLabel);
+}
 
-  if (existing) {
-    return hydrateProgress(existing);
-  }
+export function endSession(database: SessionStore, sessionId: string) {
+  return database.endSession(sessionId);
+}
 
-  const now = Date.now();
-  database
-    .prepare(
-      `INSERT INTO transcription_progress
-       (file_path, chunk_size_seconds, total_chunks, processed_chunks, chunk_texts, created_at, updated_at)
-       VALUES (?, ?, ?, '[]', '{}', ?, ?)`
-    )
-    .run(filePath, 120, 0, now, now);
+export function setSessionSummary(database: SessionStore, sessionId: string, summary: string) {
+  return database.setSessionSummary(sessionId, summary);
+}
 
-  return {
-    file_path: filePath,
-    temp_dir: null,
-    chunk_size_seconds: 120,
-    total_chunks: 0,
-    processed_chunks: [],
-    chunk_texts: {},
-    source_duration_seconds: null,
-    model_used: null,
-    session_id: null,
-    created_at: now,
-    updated_at: now,
-  };
+export function getSession(database: SessionStore, sessionId: string) {
+  return database.getSession(sessionId);
+}
+
+export function getActiveSession(database: SessionStore) {
+  return database.getActiveSession();
+}
+
+export function listSessions(database: SessionStore, limit: number = 20, tableLabel?: string) {
+  return database.listSessions(limit, tableLabel);
+}
+
+export function getLatestSessionByLabel(database: SessionStore, tableLabel: string) {
+  return database.getLatestSessionByLabel(tableLabel);
+}
+
+export function logTranscript(
+  database: SessionStore,
+  sessionId: string,
+  text: string,
+  speaker?: string,
+  source: string = "manual",
+  intent?: string
+) {
+  return database.logTranscript(sessionId, text, speaker, source, intent);
+}
+
+export function getTranscript(database: SessionStore, sessionId: string, limit: number = 50) {
+  return database.getTranscript(sessionId, limit);
+}
+
+export function getRecentTranscript(database: SessionStore, sessionId: string, minutes: number = 5) {
+  return database.getRecentTranscript(sessionId, minutes);
+}
+
+export function searchTranscript(database: SessionStore, sessionId: string, query: string) {
+  return database.searchTranscript(sessionId, query);
+}
+
+export function searchTranscriptByLabel(database: SessionStore, tableLabel: string, query: string) {
+  return database.searchTranscriptByLabel(tableLabel, query);
+}
+
+export function getRecentTranscriptByLabel(database: SessionStore, tableLabel: string, minutes: number = 5) {
+  return database.getRecentTranscriptByLabel(tableLabel, minutes);
+}
+
+export function storeRuling(
+  database: SessionStore,
+  sessionId: string,
+  question: string,
+  rulingText: string,
+  sources?: string[],
+  modelUsed?: string,
+  latencyMs?: number
+) {
+  return database.storeRuling(sessionId, question, rulingText, sources, modelUsed, latencyMs);
+}
+
+export function getRecentRulings(database: SessionStore, sessionId: string, limit: number = 5) {
+  return database.getRecentRulings(sessionId, limit);
+}
+
+export function getRecentRulingsByLabel(database: SessionStore, tableLabel: string, limit: number = 5) {
+  return database.getRecentRulingsByLabel(tableLabel, limit);
+}
+
+export function getRecentContext(database: SessionStore, sessionId: string, minutes: number = 5) {
+  return database.getRecentContext(sessionId, minutes);
+}
+
+export function getOrCreateProgress(database: SessionStore, filePath: string) {
+  return database.getOrCreateProgress(filePath);
 }
 
 export function updateProgress(
-  database: Database.Database,
+  database: SessionStore,
   filePath: string,
   updates: Partial<{
     temp_dir: string;
@@ -544,204 +222,64 @@ export function updateProgress(
     model_used: string;
     session_id: string;
   }>
-): void {
-  const sets: string[] = [];
-  const values: unknown[] = [];
-
-  for (const [key, value] of Object.entries(updates)) {
-    if (value !== undefined) {
-      sets.push(`${key} = ?`);
-      values.push(value);
-    }
-  }
-
-  if (sets.length === 0) return;
-
-  sets.push("updated_at = ?");
-  values.push(Date.now());
-  values.push(filePath);
-
-  database
-    .prepare(
-      `UPDATE transcription_progress SET ${sets.join(", ")} WHERE file_path = ?`
-    )
-    .run(...values);
+) {
+  return database.updateProgress(filePath, updates);
 }
 
 export function markChunkProcessed(
-  database: Database.Database,
+  database: SessionStore,
   filePath: string,
   chunkIndex: number,
   text?: string
-): void {
-  const progress = getOrCreateProgress(database, filePath);
-  const processed = new Set(progress.processed_chunks);
-  processed.add(chunkIndex);
-  const chunkTexts = { ...progress.chunk_texts };
-  if (typeof text === "string") {
-    chunkTexts[String(chunkIndex)] = text;
-  }
-
-  const now = Date.now();
-  database
-    .prepare(
-      "UPDATE transcription_progress SET processed_chunks = ?, chunk_texts = ?, updated_at = ? WHERE file_path = ?"
-    )
-    .run(JSON.stringify([...processed]), JSON.stringify(chunkTexts), now, filePath);
+) {
+  return database.markChunkProcessed(filePath, chunkIndex, text);
 }
 
-export function getNextUnprocessedChunk(
-  database: Database.Database,
-  filePath: string
-): number | null {
-  const progress = getOrCreateProgress(database, filePath);
-
-  for (let i = 0; i < progress.total_chunks; i++) {
-    if (!progress.processed_chunks.includes(i)) {
-      return i;
-    }
-  }
-
-  return null; // All done
+export function getNextUnprocessedChunk(database: SessionStore, filePath: string) {
+  return database.getNextUnprocessedChunk(filePath);
 }
 
-export function deleteProgress(
-  database: Database.Database,
-  filePath: string
-): void {
-  database
-    .prepare("DELETE FROM transcription_progress WHERE file_path = ?")
-    .run(filePath);
+export function deleteProgress(database: SessionStore, filePath: string) {
+  return database.deleteProgress(filePath);
 }
 
-export function deleteAllProgress(database: Database.Database): number {
-  const result = database
-    .prepare("DELETE FROM transcription_progress")
-    .run();
-  return result.changes;
+export function deleteAllProgress(database: SessionStore) {
+  return database.deleteAllProgress();
 }
 
-export function listAllProgress(database: Database.Database): TranscriptionProgress[] {
-  const rows = database
-    .prepare("SELECT * FROM transcription_progress ORDER BY updated_at DESC")
-    .all() as Record<string, unknown>[];
-
-  return rows.map((r) => hydrateProgress(r));
+export function listAllProgress(database: SessionStore) {
+  return database.listAllProgress();
 }
 
-export function deleteSession(
-  database: Database.Database,
-  sessionId: string
-): { transcriptSegments: number; rulings: number } {
-  database.prepare("DELETE FROM live_transcript_cursors WHERE session_id = ?").run(sessionId);
-
-  const transcriptResult = database
-    .prepare("DELETE FROM transcript_segments WHERE session_id = ?")
-    .run(sessionId);
-
-  const rulingsResult = database
-    .prepare("DELETE FROM rulings WHERE session_id = ?")
-    .run(sessionId);
-
-  database.prepare("DELETE FROM sessions WHERE id = ?").run(sessionId);
-
-  return {
-    transcriptSegments: transcriptResult.changes,
-    rulings: rulingsResult.changes,
-  };
-}
-
-export interface LiveTranscriptCursor {
-  session_id: string;
-  source_kind: string;
-  source_key: string;
-  meeting_id: string | null;
-  last_segment_id: string | null;
-  last_start_ms: number | null;
-  last_line_index: number | null;
-  ingested_count: number;
-  updated_at: number;
+export function deleteSession(database: SessionStore, sessionId: string) {
+  return database.deleteSession(sessionId);
 }
 
 export function getLiveTranscriptCursor(
-  database: Database.Database,
+  database: SessionStore,
   sessionId: string,
   sourceKind: string,
   sourceKey: string
-): LiveTranscriptCursor | null {
-  return (
-    (database
-      .prepare(
-        "SELECT * FROM live_transcript_cursors WHERE session_id = ? AND source_kind = ? AND source_key = ?"
-      )
-      .get(sessionId, sourceKind, sourceKey) as LiveTranscriptCursor | undefined) ?? null
-  );
+) {
+  return database.getLiveTranscriptCursor(sessionId, sourceKind, sourceKey);
 }
 
-export function listLiveTranscriptCursors(
-  database: Database.Database,
-  sessionId: string
-): LiveTranscriptCursor[] {
-  return database
-    .prepare(
-      "SELECT * FROM live_transcript_cursors WHERE session_id = ? ORDER BY updated_at DESC"
-    )
-    .all(sessionId) as LiveTranscriptCursor[];
+export function listLiveTranscriptCursors(database: SessionStore, sessionId: string) {
+  return database.listLiveTranscriptCursors(sessionId);
 }
 
 export function upsertLiveTranscriptCursor(
-  database: Database.Database,
-  cursor: Omit<LiveTranscriptCursor, "updated_at">
-): LiveTranscriptCursor {
-  const updatedAt = Date.now();
-  database
-    .prepare(
-      `INSERT INTO live_transcript_cursors (
-         session_id, source_kind, source_key, meeting_id, last_segment_id,
-         last_start_ms, last_line_index, ingested_count, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(session_id, source_kind, source_key) DO UPDATE SET
-         meeting_id = excluded.meeting_id,
-         last_segment_id = excluded.last_segment_id,
-         last_start_ms = excluded.last_start_ms,
-         last_line_index = excluded.last_line_index,
-         ingested_count = excluded.ingested_count,
-         updated_at = excluded.updated_at`
-    )
-    .run(
-      cursor.session_id,
-      cursor.source_kind,
-      cursor.source_key,
-      cursor.meeting_id,
-      cursor.last_segment_id,
-      cursor.last_start_ms,
-      cursor.last_line_index,
-      cursor.ingested_count,
-      updatedAt
-    );
-
-  return { ...cursor, updated_at: updatedAt };
+  database: SessionStore,
+  cursor: Omit<import("@2d6mcp/spacetime").LiveTranscriptCursor, "updated_at">
+) {
+  return database.upsertLiveTranscriptCursor(cursor);
 }
 
 export function resetLiveTranscriptCursor(
-  database: Database.Database,
+  database: SessionStore,
   sessionId: string,
   sourceKind?: string,
   sourceKey?: string
-): number {
-  if (sourceKind && sourceKey) {
-    return database
-      .prepare(
-        "DELETE FROM live_transcript_cursors WHERE session_id = ? AND source_kind = ? AND source_key = ?"
-      )
-      .run(sessionId, sourceKind, sourceKey).changes;
-  }
-  if (sourceKind) {
-    return database
-      .prepare("DELETE FROM live_transcript_cursors WHERE session_id = ? AND source_kind = ?")
-      .run(sessionId, sourceKind).changes;
-  }
-  return database
-    .prepare("DELETE FROM live_transcript_cursors WHERE session_id = ?")
-    .run(sessionId).changes;
+) {
+  return database.resetLiveTranscriptCursor(sessionId, sourceKind, sourceKey);
 }

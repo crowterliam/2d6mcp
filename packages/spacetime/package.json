@@ -1,0 +1,24 @@
+{
+  "name": "@2d6mcp/spacetime",
+  "version": "0.9.0",
+  "description": "SpacetimeDB TypeScript module kernel — session, live-transcript, and chronicle persistence for 2d6mcp",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "AGPL-3.0-only",
+  "author": "Jupiter Industries <liam@evaunit.one> (https://jupiter.industries)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/crowterliam/2d6mcp.git"
+  },
+  "dependencies": {
+    "@2d6mcp/shared": "*"
+  }
+}

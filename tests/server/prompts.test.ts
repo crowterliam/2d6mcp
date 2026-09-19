@@ -69,6 +69,16 @@ describe("MCP prompts", () => {
     expect(text.text).toContain("indexed personal files");
   });
 
+  it("renders chronicle-brief without an LLM", () => {
+    const result = getPrompt("chronicle-brief", { table_label: "table-a" });
+    const text = result.messages[0].content;
+    expect(text.type).toBe("text");
+    if (text.type !== "text") return;
+    expect(text.text).toContain('action "brief"');
+    expect(text.text).toContain("table-a");
+    expect(text.text).toContain("does not use an LLM");
+  });
+
   it("rejects unknown prompts", () => {
     expect(isPromptName("skill-check")).toBe(true);
     expect(isPromptName("not-a-prompt")).toBe(false);

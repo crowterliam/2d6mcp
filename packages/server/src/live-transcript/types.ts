@@ -69,6 +69,7 @@ export interface LivePollResult {
     source_segment_id: string;
     start_ms: number;
   }>;
+  chronicle_beats?: Array<{ id: string; text: string; confidence: string }>;
 }
 
 export interface LiveStatusResult {

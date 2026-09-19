@@ -23,7 +23,8 @@ The project is system-agnostic and avoids all third-party trademarks.
 │   ├── brp/                     # @2d6mcp/brp — BRP SQLite queries
 │   ├── 5ecompatible/            # @2d6mcp/5ecompatible — 5E-compatible SQLite queries
 │   ├── orcus/                   # @2d6mcp/orcus — Orcus d20-compatible SQLite queries
-│   └── osr/                     # @2d6mcp/osr — B/X-style procedures (original summaries)
+│   ├── osr/                     # @2d6mcp/osr — B/X-style procedures (original summaries)
+│   └── spacetime/               # @2d6mcp/spacetime — session + chronicle kernel (SpacetimeDB)
 ├── data/
 │   ├── ogl/cepheus.db           # Bundled OGL database
 │   ├── dw/dungeon-world.db      # Bundled DW database
@@ -51,6 +52,7 @@ npm run populate-5ecompatible  # regenerate 5E-compatible SQLite database from .
 npm run populate-orcus     # regenerate Orcus SQLite database
 npm run populate-osr      # regenerate OSR / B/X-compatible procedures database
 npm run sync-byod          # list BYOD collections; pass a query or --root to index that scope
+npm run import-sessions    # import a legacy SQLite sessions.db into the Spacetime kernel
 npm run version:check      # assert lockstep SemVer (root + packages/*)
 npm run version:bump -- patch|minor|major  # write lockstep version (see VERSIONING.md)
 ```
@@ -72,6 +74,7 @@ Specialised agent instructions are available for multiple AI coding harnesses:
 | `.kilo/agent/2d6mcp-rules-reference.md` | Rules lookup and table rolling — OGL, DW, BRP, 5E, 4E-compatible, BYOD search strategies |
 | `.kilo/agent/2d6mcp-character-creation.md` | Multi-system character creation — UPP, characteristics, careers, classes, skills |
 | `.kilo/agent/2d6mcp-byod.md` | BYOD sync, listing, inspection, troubleshooting |
+| `.kilo/agent/2d6mcp-chronicle.md` | Chronicle threads, beats, brief, promote, extract |
 
 Slash commands are in `.kilo/command/`:
 
@@ -90,6 +93,7 @@ Slash commands are in `.kilo/command/`:
 | `.claude/skills/2d6mcp-rules-reference/SKILL.md` | Rules lookup and table rolling — OGL, DW, BRP, 5E, 4E-compatible, BYOD search strategies |
 | `.claude/skills/2d6mcp-character-creation/SKILL.md` | Multi-system character creation — UPP, characteristics, careers, classes, skills |
 | `.claude/skills/2d6mcp-byod/SKILL.md` | BYOD sync, listing, inspection, troubleshooting |
+| `.claude/skills/2d6mcp-chronicle/SKILL.md` | Chronicle threads, beats, brief, promote, extract |
 
 ### Cursor (`.cursor/rules/`)
 
@@ -167,8 +171,11 @@ packages/server/src/
     backends/
       llamacpp.ts      # llama.cpp LLM backend (Win/Linux)
   session/
-    database.ts        # Session SQLite (transcripts, rulings, progress, live-ingest cursors)
-    schema.sql.ts      # DDL for sessions, segments, rulings, transcription_progress, live_transcript_cursors
+    database.ts        # Spacetime kernel facade (sessions, transcripts, rulings, progress, cursors, chronicle)
+    schema.sql.ts      # Legacy SQLite DDL for one-shot import-sessions
+    migrate-sqlite.ts  # Import ~/.2d6mcp/sessions.db into the kernel
+  chronicle/
+    export-path.ts     # Allowlisted markdown export paths
   live-transcript/
     paths.ts           # Allowlist + companion DB discovery
     sources.ts         # Companion SQLite + NDJSON/watch_dir readers
@@ -208,17 +215,19 @@ packages/shared/src/
 | `search_transcript` | Search transcripts. Unquoted tokens are AND; quoted queries are exact LIKE phrases. `session_id` or `table_label`. |
 | `synthesize_ruling` | Cited rules ruling. When `byod_system` is set, prefers indexed personal files. Pass `rules_context` from BYOD chunks. |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. `action`: transcribe, list, or clear. Last chunk sets `complete: true`. |
-| `ingest_live_transcript` | Ingest a live companion transcript into a session. `action`: poll (alias ingest), status, or reset_cursor. Sources: `companion_sqlite`, `ndjson_file`, `watch_dir`. |
+| `ingest_live_transcript` | Ingest a live companion transcript into a session. `action`: poll (alias ingest), status, or reset_cursor. Sources: `companion_sqlite`, `ndjson_file`, `watch_dir`. Optional `chronicle_hints` writes provisional chronicle beats. |
+| `chronicle` | Table-scoped chronicle (`table_label`): threads, beats, entities, links, hooks, `brief` (no LLM), `promote`, `search`, `extract_candidates`, `export`. Extracts are always provisional. |
 
 ## Prompts and Resources
 
-MCP prompts (workflows): `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create-character`, `start-session`, `ask-ruling`, `index-documents`.
+MCP prompts (workflows): `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create-character`, `start-session`, `ask-ruling`, `index-documents`, `chronicle-brief`.
 
 MCP resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://systems`, `2d6mcp://docs/quickstart`, `2d6mcp://docs/environment`, `2d6mcp://license`, `2d6mcp://session/current`, `2d6mcp://rules/{system}`.
 
 ## Session Management & Ruling Synthesis
 
-- **Session lifecycle**: Start with `session` `action: start`, log with `log_transcript`, end with `session` `action: end`.
+- **Session lifecycle**: Start with `session` `action: start`, log with `log_transcript`, end with `session` `action: end`. End/summarize return provisional `chronicle_candidates` for review — they are not auto-confirmed.
+- **Chronicle**: `chronicle brief` for prep (no LLM). Extracts from transcript/summary stay `provisional` until `promote`. See `.claude/skills/2d6mcp-chronicle/SKILL.md`.
 - **Table labels**: Pass optional `table_label` on start (examples: `table-a`, `campaign-label`) so list/context/search stay per-table.
 - **OSR vs OGL**: `query_rules(system=ogl)` is 2d6 sci-fi SRD. B/X-style procedures use `system=osr`. Full commercial books are BYOD (`AGREE_BYOD_USE` + `BYOD_PATH`, for example `/path/to/rpg-shelf` for the operator's local OSR/B/X shelf PDFs).
 - **OGL trade**: `query_rules(system=ogl, category=trade)` (alias `Trade & Commerce`) for freight, speculative trade, passengers, and mail. Broker is `category=skills`; Trade Codes/Routes are `category=worlds`. Commercial freight-lot matrices are not bundled (`category=list_tables` has none) — use Population/starport or BYOD.
@@ -318,7 +327,13 @@ Never reference any third-party game system or trademarked terms. Use generic de
 | `OSR_DB_PATH` | `data/osr/osr-procedures.db` | OSR / B/X-compatible procedures database path |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
-| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
+| `SPACETIMEDB_MODE` | `embedded` | `embedded` TypeScript kernel or `remote` SpacetimeDB replica |
+| `SPACETIMEDB_URI` | `http://127.0.0.1:3000` | SpacetimeDB HTTP endpoint (remote mode) |
+| `SPACETIMEDB_DB` | `2d6mcp` | SpacetimeDB database name |
+| `SPACETIMEDB_TOKEN` | — | Optional bearer token for remote reducer calls |
+| `SPACETIMEDB_EMBEDDED_PATH` | `~/.2d6mcp/spacetime-kernel.json` | Local kernel snapshot (not SQLite) |
+| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Legacy SQLite import source only (`import-sessions`) |
+| `CHRONICLE_EXPORT_ALLOW_PATHS` | — | Extra allowlisted markdown export paths (colon/semicolon; Windows drive letters kept) |
 | `STT_BACKEND` | `mlx` | STT backend: `mlx` (macOS) or `whispercpp` (Win/Linux) |
 | `LLM_BACKEND` | `mlx` | LLM backend: `mlx` (macOS), `llamacpp`, or `ollama`. On win32, default mlx falls back to ollama when `/api/tags` answers. |
 | `WHISPERCPP_MODEL` | `ggml-large-v3-turbo.bin` | whisper.cpp model path (Win/Linux) |

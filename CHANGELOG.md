@@ -11,8 +11,15 @@ with **lockstep** versions across the npm workspaces (see [VERSIONING.md](VERSIO
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-19
+
 ### Added
 
+- Chronicle tool family (`chronicle`) scoped by durable `table_label`: threads, beats, entities, links, hooks, `brief` (no LLM), `promote`, `search`, `extract_candidates`, and allowlisted markdown `export`.
+- Session end/summarize returns provisional `chronicle_candidates` for review. `log_transcript` `intent=chronicle|beat` and optional live-ingest `chronicle_hints` write provisional beats only.
+- SpacetimeDB TypeScript kernel (`@2d6mcp/spacetime`) for session transcript, rulings, live-transcript cursors, transcription progress, session metadata, and chronicle. Optional remote replica via `SPACETIMEDB_URI`.
+- CLI `import-sessions` to copy a legacy SQLite `sessions.db` into the kernel.
+- ADRs: BYOD/rules indexes stay on SQLite; session/chronicle state lives in SpacetimeDB.
 - BYOD sync can target a nested directory via `relative_path` or `root`. The walk stays inside that folder and rejects paths that escape `BYOD_PATH`.
 - `query_local_byod` accepts the same `relative_path` / `root` pin so a search does not walk sibling editions.
 - Session `rules_system=byod` (default when `byod_system` is set) so rulings prefer indexed personal files.
@@ -22,6 +29,11 @@ with **lockstep** versions across the npm workspaces (see [VERSIONING.md](VERSIO
 - CLI `sync-byod <query>` (and `--root`) loops until `complete`, with a round cap. The MCP tool stays time-budgeted.
 - `ingest_live_transcript` polls an external companion SQLite DB (`meetings` + `segments`) or an NDJSON/`watch_dir` fixture into `log_transcript`. System loopback / mic capture stays outside 2d6mcp.
 - `LLM_BACKEND=ollama` HTTP backend (`OLLAMA_HOST`, `OLLAMA_MODEL`, default `llama3.2:3b` at `http://127.0.0.1:11434`). On Windows, default mlx falls back to Ollama when `mlx_lm.generate` is missing and `/api/tags` answers; GGUF/`llama-cli` is not required.
+
+### Changed
+
+- **Breaking:** session persistence is no longer `~/.2d6mcp/sessions.db` at runtime. Default local store is `~/.2d6mcp/spacetime-kernel.json`. `SESSION_DB_PATH` is import-only.
+- Bare `sync_byod` / `npm run sync-byod` lists top-level collections. A query or directory root indexes that scope.
 
 ### Fixed
 
@@ -34,10 +46,6 @@ with **lockstep** versions across the npm workspaces (see [VERSIONING.md](VERSIO
 - `search_transcript` matches unquoted tokens with AND (all terms present, not necessarily adjacent). Quoted queries stay exact phrases.
 - `synthesize_ruling` prefers indexed personal files when `byod_system` is set and no longer silently ignores BYOD. Missing local LLM still returns retrieved context instead of a hard block.
 - `synthesize_ruling` `from_context` prefers the most recent speaker-`Me` rules-ish utterance (including STT lines that omit `?`) instead of latching an older `?` in the window.
-
-### Changed
-
-- Bare `sync_byod` / `npm run sync-byod` lists top-level collections. A query or directory root indexes that scope.
 
 ## [0.8.0] - 2026-09-16
 
@@ -66,6 +74,7 @@ with **lockstep** versions across the npm workspaces (see [VERSIONING.md](VERSIO
 
 - Self-hosted MCP server: dice, licensed rules databases, BYOD ingest, sessions, local STT/LLM backends, Discord webhook posting.
 
-[Unreleased]: https://github.com/crowterliam/2d6mcp/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/crowterliam/2d6mcp/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/crowterliam/2d6mcp/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/crowterliam/2d6mcp/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/crowterliam/2d6mcp/releases/tag/v0.7.0

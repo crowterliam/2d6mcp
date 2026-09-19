@@ -66,6 +66,8 @@ describe("MCP resources", () => {
     expect(environment.text).toMatch(/ollama/i);
     expect(environment.text).toMatch(/OLLAMA_HOST/);
     expect(environment.text).toMatch(/OLLAMA_MODEL/);
+    expect(environment.text).toMatch(/SPACETIMEDB_URI/);
+    expect(environment.text).toMatch(/CHRONICLE_EXPORT_ALLOW_PATHS/);
   });
 
   it("reports no active session when the db is missing", () => {

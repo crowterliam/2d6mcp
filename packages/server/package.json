@@ -1,6 +1,6 @@
 {
   "name": "@2d6mcp/server",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "2d6mcp MCP Server — system-agnostic mechanical engine, dice roller, and rules reference",
   "type": "module",
   "main": "dist/index.js",
@@ -37,6 +37,7 @@
     "@2d6mcp/5ecompatible": "*",
     "@2d6mcp/orcus": "*",
     "@2d6mcp/osr": "*",
+    "@2d6mcp/spacetime": "*",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@xmldom/xmldom": "^0.9.12",
     "better-sqlite3": "^11.8.0",
