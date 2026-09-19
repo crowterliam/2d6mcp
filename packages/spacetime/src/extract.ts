@@ -38,10 +38,28 @@ function inferEntityType(text: string): EntityType {
 }
 
 export function splitCandidateLines(text: string): string[] {
-  return text
-    .split(/\n+|(?<=[.!?])\s+/)
-    .map((line) => line.replace(/^[-*]\s+/, "").trim())
-    .filter((line) => line.length >= 12);
+  const pieces: string[] = [];
+  for (const rawLine of text.split("\n")) {
+    let rest = rawLine.trim();
+    if (rest.startsWith("- ") || rest.startsWith("* ")) rest = rest.slice(2).trim();
+    if (!rest) continue;
+    let buf = "";
+    for (let i = 0; i < rest.length; i++) {
+      const ch = rest[i] ?? "";
+      buf += ch;
+      const sentenceEnd = ch === "." || ch === "!" || ch === "?";
+      const next = rest[i + 1];
+      if (sentenceEnd && (next === undefined || next === " ")) {
+        const piece = buf.trim();
+        if (piece.length >= 12) pieces.push(piece);
+        buf = "";
+        if (next === " ") i += 1;
+      }
+    }
+    const leftover = buf.trim();
+    if (leftover.length >= 12) pieces.push(leftover);
+  }
+  return pieces;
 }
 
 const NAME_RE = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\b/g;
@@ -109,10 +127,14 @@ export function extractCandidatesHeuristic(
   };
 }
 
-function stripFences(raw: string): string {
+export function stripFences(raw: string): string {
   const trimmed = raw.trim();
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  return (fenced?.[1] ?? trimmed).trim();
+  if (!trimmed.startsWith("```")) return trimmed;
+  const firstNewline = trimmed.indexOf("\n");
+  if (firstNewline === -1) return trimmed;
+  const closing = trimmed.lastIndexOf("```");
+  if (closing <= firstNewline) return trimmed;
+  return trimmed.slice(firstNewline + 1, closing).trim();
 }
 
 function asBeatKind(value: unknown): BeatKind {

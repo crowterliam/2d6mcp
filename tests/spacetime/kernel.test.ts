@@ -7,7 +7,8 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdirSync, rmSync } from "node:fs";
 import { EmbeddedStore } from "../../packages/spacetime/src/kernel.js";
-import { parseExtractedCandidates } from "../../packages/spacetime/src/extract.js";
+import { parseExtractedCandidates, stripFences } from "../../packages/spacetime/src/extract.js";
+import { stripTrailingSlashes } from "../../packages/spacetime/src/client.js";
 import { importLegacySqliteSessions } from "../../packages/server/src/session/migrate-sqlite.js";
 import { SESSION_SCHEMA_DDL } from "../../packages/server/src/session/schema.sql.js";
 
@@ -39,6 +40,12 @@ describe("spacetime kernel", () => {
     );
     expect(parsed.beats[0]?.confidence).toBe("provisional");
     expect(parsed.entities[0]?.confidence).toBe("provisional");
+  });
+
+  it("strips markdown fences without a polynomial regex", () => {
+    const inner = '{"beats":[{"kind":"note","text":"A long enough candidate line."}]}';
+    expect(stripFences("```json\n" + inner + "\n```")).toBe(inner);
+    expect(stripTrailingSlashes("http://127.0.0.1:3000///")).toBe("http://127.0.0.1:3000");
   });
 
   it("imports a legacy sqlite session file", () => {

@@ -11,6 +11,14 @@ export interface SpacetimeClientOptions {
   token?: string;
 }
 
+export function stripTrailingSlashes(uri: string): string {
+  let end = uri.length;
+  while (end > 0 && uri.charCodeAt(end - 1) === 47) {
+    end -= 1;
+  }
+  return uri.slice(0, end);
+}
+
 /**
  * HTTP client for a published 2d6mcp SpacetimeDB module.
  * The MCP server runs the TypeScript kernel in-process and uses this
@@ -22,7 +30,7 @@ export class SpacetimeSnapshotClient {
   private readonly token: string | undefined;
 
   constructor(opts: SpacetimeClientOptions) {
-    this.uri = opts.uri.replace(/\/+$/, "");
+    this.uri = stripTrailingSlashes(opts.uri);
     this.database = opts.database;
     this.token = opts.token;
   }
