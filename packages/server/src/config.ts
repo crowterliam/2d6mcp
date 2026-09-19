@@ -47,6 +47,8 @@ export interface Config {
   byodSyncTimeoutMs: number;
   byodMaxFileSize: number;
   byodNetwork: boolean;
+  openGranolaDb: string | null;
+  liveTranscriptAllowPathsRaw: string;
 }
 
 const DEFAULT_CHUNK_SIZE = 8000;
@@ -177,7 +179,10 @@ export function loadConfig(): Config {
   const sttBackend = (process.env.STT_BACKEND === "whispercpp") ? "whispercpp" : "mlx";
   const llmBackend = (process.env.LLM_BACKEND === "llamacpp") ? "llamacpp" : "mlx";
 
-  return { byodConsented, byodPath, oglDbPath, dwDbPath, brpDbPath, sr5eDbPath, orcusDbPath, osrDbPath, sessionDbPath, mlxWhisperModel, mlxLLMModel, whisperCppModel, llamaCppModel, sttBackend, llmBackend, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs, byodMaxFileSize, byodNetwork };
+  const openGranolaDb = process.env.OPENGRANOLA_DB?.trim() || null;
+  const liveTranscriptAllowPathsRaw = process.env.LIVE_TRANSCRIPT_ALLOW_PATHS ?? "";
+
+  return { byodConsented, byodPath, oglDbPath, dwDbPath, brpDbPath, sr5eDbPath, orcusDbPath, osrDbPath, sessionDbPath, mlxWhisperModel, mlxLLMModel, whisperCppModel, llamaCppModel, sttBackend, llmBackend, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs, byodMaxFileSize, byodNetwork, openGranolaDb, liveTranscriptAllowPathsRaw };
 }
 
 export function isByodEnabled(): boolean {

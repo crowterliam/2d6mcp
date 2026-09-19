@@ -106,6 +106,14 @@ describe("loadConfig", () => {
     const config = loadConfig();
     expect(config.byodChunkSize).toBe(8000);
   });
+
+  it("reads OPENGRANOLA_DB and LIVE_TRANSCRIPT_ALLOW_PATHS from env", () => {
+    process.env.OPENGRANOLA_DB = "/tmp/opengranola.db";
+    process.env.LIVE_TRANSCRIPT_ALLOW_PATHS = "/tmp/a;/tmp/b";
+    const config = loadConfig();
+    expect(config.openGranolaDb).toBe("/tmp/opengranola.db");
+    expect(config.liveTranscriptAllowPathsRaw).toBe("/tmp/a;/tmp/b");
+  });
 });
 
 describe("isByodEnabled", () => {

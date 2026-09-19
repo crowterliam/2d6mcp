@@ -27,6 +27,7 @@ You should receive an acknowledgment within 72 hours. The maintainer will work w
 - Dependency supply-chain risks (`npm` packages)
 - SQL injection vectors in FTS5 queries
 - Path traversal in file walking logic
+- Path traversal in live-transcript companion ingest (`packages/server/src/live-transcript/`)
 - Hardcoded data injection in OGL or DW populate modules
 - Shell injection via `execFile` calls (audio CLI wrappers, LLM CLI wrappers)
 - Discord webhook URL storage (`.mcp-discord-webhooks.json`)

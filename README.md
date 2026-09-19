@@ -126,6 +126,7 @@ BYOD (Bring Your Own Documents) mode enables local file ingestion for personal, 
 | `search_transcript` | Search transcripts (`session_id` or `table_label`). Unquoted tokens are AND; quotes are exact phrases |
 | `synthesize_ruling` | Cited rules ruling. Prefers BYOD when `byod_system` is set; pass `rules_context` from BYOD chunks |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. Last chunk sets `complete: true` |
+| `ingest_live_transcript` | Ingest a live companion transcript (`opengranola_sqlite`, `ndjson_file`, or `watch_dir`) into a session. `action`: poll, status, or reset_cursor |
 
 ## Prompts
 
@@ -215,6 +216,20 @@ Versioning is **SemVer 2.0 lockstep** (root + every `packages/*` share one versi
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
 | `STT_BACKEND` | `mlx` | STT backend: `mlx` or `whispercpp` |
 | `LLM_BACKEND` | `mlx` | LLM backend: `mlx` or `llamacpp` |
+| `OPENGRANOLA_DB` | — | External Open Granola (or compatible) SQLite path for `ingest_live_transcript` |
+| `LIVE_TRANSCRIPT_ALLOW_PATHS` | — | Extra allowlisted paths for companion SQLite/NDJSON (colon or semicolon separated) |
+
+## Live transcript companion (Open Granola)
+
+2d6mcp does not capture system audio and does not vendor Open Granola. Use an external companion, or NDJSON for smoke tests without that app installed.
+
+1. Install [Open Granola](https://github.com/anshuman-pandey/open-granola) separately (Apache-2.0). GitHub Releases/MSI may be missing — `ndjson_file` still works.
+2. Set `OPENGRANOLA_DB` to `<app_data>\library\opengranola.db` (Windows example: `C:\Users\<you>\AppData\Roaming\app.opengranola\library\opengranola.db`) and/or `LIVE_TRANSCRIPT_ALLOW_PATHS` for fixture files.
+3. Start a session with `session` `action: start`.
+4. Poll `ingest_live_transcript` (`action: poll` or `ingest`) with that `session_id`. New segments are logged as voice/narration. Repeat during play; the per-session cursor is incremental and idempotent.
+5. `action: status` shows the cursor; `action: reset_cursor` clears it. Paths outside the project root, `BYOD_PATH`, `LIVE_TRANSCRIPT_ALLOW_PATHS`, and `OPENGRANOLA_DB` are rejected.
+
+Discord tools stay outbound-only (webhooks). This server does not add Discord bots or WASAPI capture.
 
 ## Session labels
 

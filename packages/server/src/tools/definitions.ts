@@ -593,6 +593,48 @@ export function getToolDefinitions(options: ToolDefinitionOptions = {}): Tool[] 
         },
       },
     },
+    {
+      name: "ingest_live_transcript",
+      description:
+        "Ingest a live companion transcript into a session. Reads new segments since a per-session cursor and logs them via log_transcript (source=voice, intent=narration). Sources: opengranola_sqlite (external Open Granola or compatible DB; not bundled), ndjson_file, or watch_dir. action: poll (alias ingest), status, or reset_cursor. Paths must be under the project root, BYOD_PATH, LIVE_TRANSCRIPT_ALLOW_PATHS, or OPENGRANOLA_DB.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          action: {
+            type: "string",
+            enum: ["poll", "ingest", "status", "reset_cursor"],
+            description: "poll/ingest new segments, status for cursor info, or reset_cursor",
+            default: "poll",
+          },
+          session_id: {
+            type: "string",
+            description: "Session ID from session start",
+          },
+          source: {
+            type: "string",
+            enum: ["opengranola_sqlite", "ndjson_file", "watch_dir"],
+            description:
+              "Companion source. Omit to infer from path (.db → sqlite, directory → watch_dir, else NDJSON). Default sqlite when path is omitted.",
+          },
+          path: {
+            type: "string",
+            description:
+              "SQLite DB, NDJSON/JSONL file, or watch directory. Optional for sqlite when OPENGRANOLA_DB is set or the companion DB is auto-discovered.",
+          },
+          meeting_id: {
+            type: "string",
+            description:
+              "Meeting id to follow. Omit or pass latest to pin the current latest meeting on first poll.",
+          },
+          limit: {
+            type: "integer",
+            description: "Max new segments to ingest per poll (default 100, max 500)",
+            default: 100,
+          },
+        },
+        required: ["session_id"],
+      },
+    },
   ];
 
   const annotated = tools.map(annotateTool);

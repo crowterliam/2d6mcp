@@ -31,6 +31,7 @@ It shares rules databases, dice engine, prompt templates, and quality filters vi
 | `search_transcript` | Search session transcripts. Unquoted tokens are AND; quoted queries are exact phrases. |
 | `synthesize_ruling` | Cited rules ruling. When `byod_system` is set, prefers BYOD. Pass `rules_context` from BYOD chunks. |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. `action`: transcribe, list, or clear. Last chunk sets `complete: true`. |
+| `ingest_live_transcript` | Ingest a live companion transcript. `action`: poll, status, or reset_cursor. Sources: `opengranola_sqlite`, `ndjson_file`, `watch_dir`. |
 
 Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create-character`, `start-session`, `ask-ruling`, `index-documents`. Resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://systems`, `2d6mcp://docs/*`, `2d6mcp://license`, `2d6mcp://session/current`, `2d6mcp://rules/{system}`.
 
@@ -95,6 +96,7 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 1. Ask a question: `synthesize_ruling("question", session_id)` — when `byod_system` is set, retrieval prefers indexed personal files. Pass `rules_context` from `get_byod_chunk` when you already have chunks.
 2. Context resolution: `synthesize_ruling(from_context: true, session_id)` — auto-detect question from recent transcript
 3. Audio: `transcribe_audio(file_path)` — voice-to-text (requires `mlx_whisper`)
+4. Live companion: `ingest_live_transcript(action: poll, session_id)` — Open Granola SQLite or NDJSON; not vendored; no WASAPI in 2d6mcp
 
 ### Discord Posting
 1. Post: `discord_post(content, webhook_names, context)` — smart routing, rich embeds
@@ -124,4 +126,6 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
+| `OPENGRANOLA_DB` | — | External companion SQLite for `ingest_live_transcript` |
+| `LIVE_TRANSCRIPT_ALLOW_PATHS` | — | Extra allowlisted companion/NDJSON paths |
 

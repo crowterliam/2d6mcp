@@ -20,6 +20,7 @@ const NEW_TOOLS = [
   "search_transcript",
   "synthesize_ruling",
   "transcribe_audio",
+  "ingest_live_transcript",
 ];
 
 const OLD_TOOLS = [

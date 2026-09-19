@@ -29,6 +29,7 @@ It shares rules databases, dice engine, prompt templates, and quality filters vi
 | `search_transcript` | Search session transcripts with SQL LIKE (not FTS5). |
 | `synthesize_ruling` | Cited rules ruling. Optional `from_context` uses recent transcript. Default `rules_system` from the session when `session_id` is set. |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. `action`: transcribe, list, or clear. Last chunk sets `complete: true`. |
+| `ingest_live_transcript` | Ingest a live companion transcript. `action`: poll, status, or reset_cursor. Sources: `opengranola_sqlite`, `ndjson_file`, `watch_dir`. |
 
 Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create-character`, `start-session`, `ask-ruling`, `index-documents`. Resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://systems`, `2d6mcp://docs/*`, `2d6mcp://license`, `2d6mcp://session/current`, `2d6mcp://rules/{system}`.
 
@@ -93,6 +94,7 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 - Use `synthesize_ruling` to ask a rules question and get an AI-generated cited ruling based on OGL/DW/BRP/5E-compatible/BYOD rules (requires `mlx_lm.generate`)
 - Use `synthesize_ruling` with `from_context` to run the full pipeline — take recent transcript, detect the rules question, look up rules, synthesize a ruling, and log it to the session
 - Use `transcribe_audio` to convert recorded audio to text using local MLX Whisper (requires `mlx_whisper`)
+- Use `ingest_live_transcript` to poll an external live companion (Open Granola SQLite or NDJSON) into the session. Open Granola is not bundled.
 
 ### Discord Posting
 - Use `discord_post` to send messages to Discord with smart routing based on context tags and rich embeds
@@ -153,4 +155,6 @@ When starting a session, ensure knowledge is available:
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
+| `OPENGRANOLA_DB` | — | External companion SQLite for `ingest_live_transcript` |
+| `LIVE_TRANSCRIPT_ALLOW_PATHS` | — | Extra allowlisted companion/NDJSON paths |
 

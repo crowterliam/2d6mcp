@@ -52,6 +52,7 @@ Agent instructions: `.kilo/agent/`, `.claude/skills/`, `.cursor/rules/`, `.cline
 | `search_transcript` | Search session transcripts with SQL LIKE (not FTS5). |
 | `synthesize_ruling` | Cited rules ruling. Optional `from_context` uses recent transcript. Default `rules_system` from the session when `session_id` is set. |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. `action`: transcribe, list, or clear. Last chunk sets `complete: true`. |
+| `ingest_live_transcript` | Ingest a live companion transcript. `action`: poll, status, or reset_cursor. Sources: `opengranola_sqlite`, `ndjson_file`, `watch_dir`. |
 
 Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create-character`, `start-session`, `ask-ruling`, `index-documents`. Resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://systems`, `2d6mcp://docs/*`, `2d6mcp://license`, `2d6mcp://session/current`, `2d6mcp://rules/{system}`.
 
@@ -75,4 +76,6 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
 | `STT_BACKEND` | `mlx` | STT backend: `mlx` or `whispercpp` |
 | `LLM_BACKEND` | `mlx` | LLM backend: `mlx` or `llamacpp` |
+| `OPENGRANOLA_DB` | — | External companion SQLite for `ingest_live_transcript` |
+| `LIVE_TRANSCRIPT_ALLOW_PATHS` | — | Extra allowlisted companion/NDJSON paths |
 

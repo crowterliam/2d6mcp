@@ -21,6 +21,14 @@ startCommand:
         type: string
         title: Session database
         description: Path to the session SQLite file.
+      OPENGRANOLA_DB:
+        type: string
+        title: Companion transcript database
+        description: Path to an external Open Granola (or compatible) SQLite file.
+      LIVE_TRANSCRIPT_ALLOW_PATHS:
+        type: string
+        title: Live transcript allowlist
+        description: Extra allowlisted paths for companion SQLite or NDJSON (colon or semicolon separated).
   commandFunction: |-
     (config) => ({
       command: 'node',
@@ -29,5 +37,7 @@ startCommand:
         AGREE_BYOD_USE: config.AGREE_BYOD_USE || 'false',
         ...(config.BYOD_PATH ? { BYOD_PATH: config.BYOD_PATH } : {}),
         ...(config.SESSION_DB_PATH ? { SESSION_DB_PATH: config.SESSION_DB_PATH } : {}),
+        ...(config.OPENGRANOLA_DB ? { OPENGRANOLA_DB: config.OPENGRANOLA_DB } : {}),
+        ...(config.LIVE_TRANSCRIPT_ALLOW_PATHS ? { LIVE_TRANSCRIPT_ALLOW_PATHS: config.LIVE_TRANSCRIPT_ALLOW_PATHS } : {}),
       }
     })

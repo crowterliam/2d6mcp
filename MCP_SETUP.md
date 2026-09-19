@@ -147,6 +147,8 @@ If the server is connected, the assistant will call `roll` and return dice resul
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
 | `STT_BACKEND` | `mlx` | STT backend: `mlx` or `whispercpp` |
 | `LLM_BACKEND` | `mlx` | LLM backend: `mlx` or `llamacpp` |
+| `OPENGRANOLA_DB` | — | External Open Granola (or compatible) SQLite path |
+| `LIVE_TRANSCRIPT_ALLOW_PATHS` | — | Extra allowlisted companion/NDJSON paths (colon or semicolon) |
 
 ## Troubleshooting
 
