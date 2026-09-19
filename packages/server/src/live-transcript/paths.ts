@@ -55,28 +55,30 @@ function addRoot(roots: Set<string>, path: string): void {
   }
 }
 
-/** Well-known companion DB locations (Tauri identifier `app.opengranola`). */
+/** Opaque app-data directory names and library filenames used by compatible companion apps. */
+const COMPANION_LIBRARY_FILE = "opengranola.db";
+const COMPANION_APP_DIR_NAMES = ["app.opengranola", "Open Granola", "open-granola", "opengranola"];
+
 export function companionDbCandidates(): string[] {
   const home = homedir();
   const appData = process.env.APPDATA;
   const localAppData = process.env.LOCALAPPDATA;
   const xdg = process.env.XDG_DATA_HOME;
-  const ids = ["app.opengranola", "Open Granola", "open-granola", "opengranola"];
   const out: string[] = [];
-  for (const id of ids) {
-    if (appData) out.push(resolve(appData, id, "library", "opengranola.db"));
-    if (localAppData) out.push(resolve(localAppData, id, "library", "opengranola.db"));
-    out.push(resolve(home, "Library", "Application Support", id, "library", "opengranola.db"));
-    out.push(resolve(home, ".local", "share", id, "library", "opengranola.db"));
-    if (xdg) out.push(resolve(xdg, id, "library", "opengranola.db"));
+  for (const id of COMPANION_APP_DIR_NAMES) {
+    if (appData) out.push(resolve(appData, id, "library", COMPANION_LIBRARY_FILE));
+    if (localAppData) out.push(resolve(localAppData, id, "library", COMPANION_LIBRARY_FILE));
+    out.push(resolve(home, "Library", "Application Support", id, "library", COMPANION_LIBRARY_FILE));
+    out.push(resolve(home, ".local", "share", id, "library", COMPANION_LIBRARY_FILE));
+    if (xdg) out.push(resolve(xdg, id, "library", COMPANION_LIBRARY_FILE));
   }
   return [...new Set(out)];
 }
 
-export function discoverOpenGranolaDb(): string | null {
-  const { openGranolaDb } = loadConfig();
-  if (openGranolaDb) {
-    const resolved = resolve(openGranolaDb);
+export function discoverCompanionSqlite(): string | null {
+  const { liveTranscriptDb } = loadConfig();
+  if (liveTranscriptDb) {
+    const resolved = resolve(liveTranscriptDb);
     if (existsSync(resolved)) {
       try {
         return realpathSync(resolved);
@@ -105,8 +107,8 @@ export function liveTranscriptAllowRoots(): string[] {
   for (const extra of splitEnvPathList(config.liveTranscriptAllowPathsRaw)) {
     addRoot(roots, extra);
   }
-  if (config.openGranolaDb) {
-    const resolved = resolve(config.openGranolaDb);
+  if (config.liveTranscriptDb) {
+    const resolved = resolve(config.liveTranscriptDb);
     addRoot(roots, dirname(resolved));
     addRoot(roots, resolved);
   }
@@ -135,7 +137,7 @@ export function resolveLiveTranscriptPath(filePath: string, mustExist = true): L
       ok: false,
       reason: "denied",
       message:
-        "Access denied. Path must be under the project root, BYOD_PATH, LIVE_TRANSCRIPT_ALLOW_PATHS, or OPENGRANOLA_DB.",
+        "Access denied. Path must be under the project root, BYOD_PATH, LIVE_TRANSCRIPT_ALLOW_PATHS, or LIVE_TRANSCRIPT_DB.",
     };
   }
 

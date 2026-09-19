@@ -36,7 +36,7 @@ It shares rules databases, dice engine, prompt templates, and quality filters vi
 | `search_transcript` | Search session transcripts. Unquoted tokens are AND; quoted queries are exact phrases. |
 | `synthesize_ruling` | Cited rules ruling. When `byod_system` is set, prefers BYOD. Pass `rules_context` from BYOD chunks. |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. `action`: transcribe, list, or clear. Last chunk sets `complete: true`. |
-| `ingest_live_transcript` | Ingest a live companion transcript into a session. `action`: poll (alias ingest), status, or reset_cursor. Sources: `opengranola_sqlite`, `ndjson_file`, `watch_dir`. |
+| `ingest_live_transcript` | Ingest a live companion transcript into a session. `action`: poll (alias ingest), status, or reset_cursor. Sources: `companion_sqlite`, `ndjson_file`, `watch_dir`. |
 
 Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create-character`, `start-session`, `ask-ruling`, `index-documents`. Resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://systems`, `2d6mcp://docs/*`, `2d6mcp://license`, `2d6mcp://session/current`, `2d6mcp://rules/{system}`.
 
@@ -101,7 +101,7 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 - Use `synthesize_ruling` to ask a rules question. When `byod_system` is set, retrieval prefers indexed personal files. Pass `rules_context` from `get_byod_chunk` when you already have chunks. If the local LLM is missing, retrieved context is still returned.
 - Use `synthesize_ruling` with `from_context` to run the full producer pipeline: take recent transcript, detect rules question, look up rules, synthesize ruling, and log it to the session
 - Use `transcribe_audio` to convert recorded audio to text using local MLX Whisper (requires `mlx_whisper`)
-- Use `ingest_live_transcript` to poll an external live companion (Open Granola SQLite or NDJSON) into `log_transcript`. Open Granola is not bundled. Repeat poll during play; the cursor is incremental.
+- Use `ingest_live_transcript` to poll an external live-transcript companion (SQLite or NDJSON) into `log_transcript`. Repeat poll during play; the cursor is incremental.
 
 ### Discord Posting
 - Use `discord_post` to send messages to Discord webhooks — supports smart routing based on context tags and rich embeds
@@ -156,6 +156,6 @@ When starting a session, ensure knowledge is available:
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
-| `OPENGRANOLA_DB` | — | External Open Granola (or compatible) SQLite path |
+| `LIVE_TRANSCRIPT_DB` | — | External companion SQLite path (`meetings` + `segments`) |
 | `LIVE_TRANSCRIPT_ALLOW_PATHS` | — | Extra allowlisted companion/NDJSON paths |
 

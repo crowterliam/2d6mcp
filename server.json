@@ -32,8 +32,8 @@
           "isSecret": false
         },
         {
-          "name": "OPENGRANOLA_DB",
-          "description": "Path to an external Open Granola (or compatible) SQLite database for ingest_live_transcript",
+          "name": "LIVE_TRANSCRIPT_DB",
+          "description": "Path to an external companion SQLite database (meetings + segments) for ingest_live_transcript",
           "isRequired": false,
           "format": "string",
           "isSecret": false

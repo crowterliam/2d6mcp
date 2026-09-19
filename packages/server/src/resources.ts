@@ -226,7 +226,7 @@ function renderResource(uri: ResourceUri): string {
         "| OSR_DB_PATH | data/osr/osr-procedures.db | OSR / B/X-compatible procedures database |",
         "| STT_BACKEND | mlx | mlx or whispercpp |",
         "| LLM_BACKEND | mlx | mlx or llamacpp |",
-        "| OPENGRANOLA_DB | — | External companion SQLite for ingest_live_transcript |",
+        "| LIVE_TRANSCRIPT_DB | — | External companion SQLite for ingest_live_transcript |",
         "| LIVE_TRANSCRIPT_ALLOW_PATHS | — | Extra allowlisted companion/NDJSON paths |",
         "",
         "Never put secrets in this resource. Discord webhook URLs live in `.mcp-discord-webhooks.json`.",

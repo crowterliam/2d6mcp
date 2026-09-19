@@ -13,11 +13,11 @@ import {
   upsertLiveTranscriptCursor,
   type LiveTranscriptCursor,
 } from "../session/database.js";
-import { discoverOpenGranolaDb, liveTranscriptAllowRoots, resolveLiveTranscriptPath } from "./paths.js";
+import { discoverCompanionSqlite, liveTranscriptAllowRoots, resolveLiveTranscriptPath } from "./paths.js";
 import {
   applyCursor,
   readNdjsonFile,
-  readOpenGranolaSegments,
+  readCompanionSegments,
   readWatchDir,
 } from "./sources.js";
 import {
@@ -65,7 +65,7 @@ function cursorState(row: LiveTranscriptCursor | null): IngestCursorState | null
 
 function inferSourceKind(path: string | undefined, explicit: string): LiveSourceKind {
   if (explicit && isLiveSourceKind(explicit)) return explicit;
-  if (!path) return "opengranola_sqlite";
+  if (!path) return "companion_sqlite";
   try {
     if (statSync(path).isDirectory()) return "watch_dir";
   } catch {
@@ -73,7 +73,7 @@ function inferSourceKind(path: string | undefined, explicit: string): LiveSource
   }
   const lower = path.toLowerCase();
   if (lower.endsWith(".db") || lower.endsWith(".sqlite") || lower.endsWith(".sqlite3")) {
-    return "opengranola_sqlite";
+    return "companion_sqlite";
   }
   return "ndjson_file";
 }
@@ -91,12 +91,12 @@ function resolveSourcePath(
   kind: LiveSourceKind,
   requestedPath: string
 ): { path?: string; error?: string } {
-  if (kind === "opengranola_sqlite" && !requestedPath) {
-    const discovered = discoverOpenGranolaDb();
+  if (kind === "companion_sqlite" && !requestedPath) {
+    const discovered = discoverCompanionSqlite();
     if (!discovered) {
       return {
         error:
-          "No companion database path. Set OPENGRANOLA_DB, pass path, or install the external live-transcript companion so opengranola.db can be auto-discovered.",
+          "No companion database path. Set LIVE_TRANSCRIPT_DB, pass path, or place a companion library SQLite file where it can be auto-discovered.",
       };
     }
     const resolved = resolveLiveTranscriptPath(discovered);
@@ -119,8 +119,8 @@ function readSource(
   meetingId: string | undefined
 ): SourceReadResult {
   switch (kind) {
-    case "opengranola_sqlite":
-      return readOpenGranolaSegments(path, meetingId);
+    case "companion_sqlite":
+      return readCompanionSegments(path, meetingId);
     case "ndjson_file":
       return readNdjsonFile(path, meetingId);
     case "watch_dir":
@@ -160,7 +160,7 @@ export function runLiveTranscript(
   if (explicitSource && !isLiveSourceKind(explicitSource)) {
     return {
       ok: false,
-      payload: { error: "Error: source must be opengranola_sqlite, ndjson_file, or watch_dir" },
+      payload: { error: "Error: source must be companion_sqlite, ndjson_file, or watch_dir" },
     };
   }
 
@@ -200,7 +200,7 @@ function handleStatus(
 
   if (kind) {
     const resolved = resolveSourcePath(kind, requestedPath);
-    sourcePath = resolved.path ?? (requestedPath || discoverOpenGranolaDb());
+    sourcePath = resolved.path ?? (requestedPath || discoverCompanionSqlite());
     if (sourcePath) {
       const token = meetingToken(requestedMeeting);
       matching = getLiveTranscriptCursor(db, sessionId, kind, sourceKey(sourcePath, token));
@@ -225,7 +225,7 @@ function handleStatus(
       meeting_id: matching?.meeting_id ?? (requestedMeeting || null),
       cursor: cursorState(matching),
       cursors: rows.map((row) => cursorState(row)!),
-      companion_db: discoverOpenGranolaDb(),
+      companion_db: discoverCompanionSqlite(),
       allow_roots: liveTranscriptAllowRoots(),
     },
   };

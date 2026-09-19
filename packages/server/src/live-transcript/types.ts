@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
-export const LIVE_SOURCE_KINDS = ["opengranola_sqlite", "ndjson_file", "watch_dir"] as const;
+export const LIVE_SOURCE_KINDS = ["companion_sqlite", "ndjson_file", "watch_dir"] as const;
 
 export type LiveSourceKind = (typeof LIVE_SOURCE_KINDS)[number];
 

@@ -103,7 +103,7 @@ interface SqliteSegmentRow {
   text: string;
 }
 
-export function readOpenGranolaSegments(
+export function readCompanionSegments(
   dbPath: string,
   meetingId: string | undefined
 ): SourceReadResult {
@@ -133,7 +133,7 @@ export function readOpenGranolaSegments(
     );
     if (!tables.has("segments") || !tables.has("meetings")) {
       result.error =
-        "SQLite file is missing meetings/segments tables. Expected an Open Granola (or compatible) companion database.";
+        "SQLite file is missing meetings/segments tables. Expected a companion database with meetings (id, title, started_at, …) and segments (id, meeting_id, start_ms, end_ms, speaker, text).";
       return result;
     }
 

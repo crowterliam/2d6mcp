@@ -14,7 +14,7 @@ import { formatSpeaker } from "../../packages/server/src/live-transcript/sources
 const TMP = join(tmpdir(), `2d6mcp-live-transcript-${Date.now()}`);
 const originalEnv = { ...process.env };
 
-function writeOpenGranolaDb(
+function writeCompanionSqlite(
   dbPath: string,
   meetings: Array<{ id: string; title: string; started_at: string }>,
   segments: Array<{
@@ -92,9 +92,9 @@ describe("ingest_live_transcript", () => {
     expect(formatSpeaker("GM")).toBe("GM");
   });
 
-  it("ingests Open Granola SQLite segments incrementally without duplicates", async () => {
-    const dbPath = join(TMP, "opengranola.db");
-    writeOpenGranolaDb(
+  it("ingests companion SQLite segments incrementally without duplicates", async () => {
+    const dbPath = join(TMP, "companion.db");
+    writeCompanionSqlite(
       dbPath,
       [
         { id: "meet-old", title: "Earlier", started_at: "2026-09-19T08:00:00" },
@@ -142,7 +142,7 @@ describe("ingest_live_transcript", () => {
         await dispatchToolCall("ingest_live_transcript", {
           action: "poll",
           session_id: sessionId,
-          source: "opengranola_sqlite",
+          source: "companion_sqlite",
           path: dbPath,
           limit: 2,
         })
@@ -168,7 +168,7 @@ describe("ingest_live_transcript", () => {
         await dispatchToolCall("ingest_live_transcript", {
           action: "ingest",
           session_id: sessionId,
-          source: "opengranola_sqlite",
+          source: "companion_sqlite",
           path: dbPath,
         })
       ).content[0].text
@@ -182,7 +182,7 @@ describe("ingest_live_transcript", () => {
       (
         await dispatchToolCall("ingest_live_transcript", {
           session_id: sessionId,
-          source: "opengranola_sqlite",
+          source: "companion_sqlite",
           path: dbPath,
         })
       ).content[0].text
@@ -205,7 +205,7 @@ describe("ingest_live_transcript", () => {
 
   it("pins the latest meeting across later companion rows", async () => {
     const dbPath = join(TMP, "pin.db");
-    writeOpenGranolaDb(
+    writeCompanionSqlite(
       dbPath,
       [{ id: "meet-a", title: "First", started_at: "2026-09-19T10:00:00" }],
       [
@@ -222,7 +222,7 @@ describe("ingest_live_transcript", () => {
     const sessionId = await startSession("pin meeting");
     await dispatchToolCall("ingest_live_transcript", {
       session_id: sessionId,
-      source: "opengranola_sqlite",
+      source: "companion_sqlite",
       path: dbPath,
     });
 
@@ -244,7 +244,7 @@ describe("ingest_live_transcript", () => {
       (
         await dispatchToolCall("ingest_live_transcript", {
           session_id: sessionId,
-          source: "opengranola_sqlite",
+          source: "companion_sqlite",
           path: dbPath,
         })
       ).content[0].text
@@ -402,11 +402,11 @@ describe("ingest_live_transcript", () => {
     rmSync(outside, { force: true });
   });
 
-  it("allows OPENGRANOLA_DB as an allowlisted sqlite path", async () => {
+  it("allows LIVE_TRANSCRIPT_DB as an allowlisted sqlite path", async () => {
     const nested = join(TMP, "companion", "library");
     mkdirSync(nested, { recursive: true });
-    const dbPath = join(nested, "opengranola.db");
-    writeOpenGranolaDb(
+    const dbPath = join(nested, "companion.db");
+    writeCompanionSqlite(
       dbPath,
       [{ id: "m1", title: "Env", started_at: "2026-09-19T12:00:00" }],
       [
@@ -416,26 +416,26 @@ describe("ingest_live_transcript", () => {
           start_ms: 0,
           end_ms: 10,
           speaker: 0,
-          text: "From OPENGRANOLA_DB",
+          text: "From LIVE_TRANSCRIPT_DB",
         },
       ]
     );
 
     delete process.env.LIVE_TRANSCRIPT_ALLOW_PATHS;
-    process.env.OPENGRANOLA_DB = dbPath;
+    process.env.LIVE_TRANSCRIPT_DB = dbPath;
 
     const sessionId = await startSession("env db");
     const result = JSON.parse(
       (
         await dispatchToolCall("ingest_live_transcript", {
           session_id: sessionId,
-          source: "opengranola_sqlite",
+          source: "companion_sqlite",
         })
       ).content[0].text
     ) as { ingested: number; source_path: string };
 
     expect(result.ingested).toBe(1);
     expect(result.source_path).toBe(dbPath);
-    expect(loadConfig().openGranolaDb).toBe(dbPath);
+    expect(loadConfig().liveTranscriptDb).toBe(dbPath);
   });
 });
