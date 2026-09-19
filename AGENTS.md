@@ -47,7 +47,7 @@ npm run setup            # create BYOD consent token
 npm run populate-ogl     # regenerate OGL SQLite database
 npm run populate-dw      # regenerate DW SQLite database
 npm run populate-brp     # regenerate BRP SQLite database
-npm run populate-5ecompatible  # regenerate 5E-compatible SQLite database
+npm run populate-5ecompatible  # regenerate 5E-compatible SQLite database from .reference/SRD (clone https://github.com/oldmanumby/dnd.srd.5.2.1; credit Oldmanumby for markdown packaging)
 npm run populate-orcus     # regenerate Orcus SQLite database
 npm run populate-osr      # regenerate OSR / B/X-compatible procedures database
 npm run sync-byod          # list BYOD collections; pass a query or --root to index that scope
@@ -254,7 +254,7 @@ BYOD tooling is system-agnostic. `sync_byod`, `query_local_byod`, `root`, `relat
 - `OGL-1.0a.txt` contains the full OGL text with Cepheus SRD copyright attributions
 - `data/dw/CC-BY-3.0.txt` contains the full CC-BY-3.0 license text
 - `data/dw/ATTRIBUTION` contains Dungeon World derivation and attribution details
-- `data/5ecompatible/SRD-NOTICE.txt` contains 5E-compatible SRD attribution details
+- `data/5ecompatible/SRD-NOTICE.txt` contains 5E-compatible SRD attribution details (Wizards of the Coast LLC / CC-BY-4.0) plus credit for Oldmanumby's markdown packaging at https://github.com/oldmanumby/dnd.srd.5.2.1 (clone into `.reference/SRD`; do not vendor SRD text)
 - `data/orcus/ATTRIBUTION` contains Orcus 4e-compatible derivation and attribution details
 - `data/osr/NOTICE.txt` explains that bundled OSR / B/X-compatible rows are original summaries, not commercial book text
 

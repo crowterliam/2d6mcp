@@ -3,8 +3,8 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 import Database from "better-sqlite3";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { close5ecompatibleDatabase } from "@2d6mcp/5ecompatible/database";
 import { populate5ecompatibleDatabase, resolveCompiledSrdPath } from "@2d6mcp/5ecompatible/populate";
@@ -140,5 +140,29 @@ describe("populate5ecompatibleDatabase compiled sections", () => {
 
     expect(result.success).toBe(true);
     expect(countSections(dbPath)).toBeGreaterThan(0);
+  });
+
+  it("points operators at Oldmanumby's markdown packaging when the source tree is missing", () => {
+    const root = makeTempRoot("missing-srd");
+    const dbPath = join(root, "5ecompatible-srd.db");
+    const missing = join(root, "no-such-srd");
+
+    const result = populate5ecompatibleDatabase(dbPath, missing);
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain("Oldmanumby");
+    expect(result.message).toContain("https://github.com/oldmanumby/dnd.srd.5.2.1");
+    expect(result.message).toContain(".reference/SRD");
+  });
+});
+
+describe("SRD source packaging credit", () => {
+  it("credits Oldmanumby for markdown packaging without claiming SRD authorship", () => {
+    const notice = readFileSync(resolve("data/5ecompatible/SRD-NOTICE.txt"), "utf8");
+    expect(notice).toContain("Wizards of the Coast LLC");
+    expect(notice).toContain("CC-BY-4.0");
+    expect(notice).toContain("Oldmanumby");
+    expect(notice).toContain("https://github.com/oldmanumby/dnd.srd.5.2.1");
+    expect(notice).toMatch(/Oldmanumby did not author the SRD text/i);
   });
 });

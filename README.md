@@ -32,11 +32,19 @@ npm run setup          # create consent token for BYOD mode
 npm run populate-ogl   # generate the OGL rules database
 npm run populate-dw    # generate the Dungeon World rules database
 npm run populate-brp   # generate the Basic Roleplaying rules database
-npm run populate-5ecompatible  # generate the 5E-compatible rules database
+npm run populate-5ecompatible  # generate the 5E-compatible rules database from .reference/SRD
 npm run populate-orcus      # generate the Orcus database
 npm run populate-osr        # generate OSR / B/X-compatible procedures (original summaries, not book text)
 npm run start          # run the MCP server (stdio transport)
 ```
+
+`populate-5ecompatible` reads a local clone at `.reference/SRD`. Clone the structured markdown tree **maintained by Oldmanumby** (packaging only — they did not author the SRD text; Wizards of the Coast LLC / CC-BY-4.0 remains the SRD 5.2.1 attribution):
+
+```bash
+git clone https://github.com/oldmanumby/dnd.srd.5.2.1 .reference/SRD
+```
+
+See [`data/5ecompatible/SRD-NOTICE.txt`](data/5ecompatible/SRD-NOTICE.txt). Do not vendor that markdown tree into git.
 
 ## MCP Client Configuration
 
@@ -260,7 +268,7 @@ This project uses a multi-license architecture:
 - **OGL game data** (`data/ogl/**`): [OGL v1.0a](OGL-1.0a.txt)
 - **Dungeon World data** (`data/dw/**`): [CC-BY-3.0](data/dw/CC-BY-3.0.txt)
 - **Basic Roleplaying data** (`data/brp/**`): [BRP Open Game License v1.0](data/brp/BRP-OGL-1.0.txt)
-- **5E-compatible SRD data** (`data/5ecompatible/**`): [CC-BY-4.0](data/5ecompatible/SRD-NOTICE.txt)
+- **5E-compatible SRD data** (`data/5ecompatible/**`): [CC-BY-4.0](data/5ecompatible/SRD-NOTICE.txt). Populate clones Oldmanumby's markdown packaging into `.reference/SRD` ([oldmanumby/dnd.srd.5.2.1](https://github.com/oldmanumby/dnd.srd.5.2.1)); Oldmanumby did not author the SRD text.
 - **OSR / B/X-compatible procedures** (`data/osr/**`): original 2d6mcp summaries ([NOTICE](data/osr/NOTICE.txt), AGPL); commercial rulebooks via BYOD only
 
 The BRP logo (`BRP.png` in the project root and `data/brp/BRP.png`) is a trademark of Chaosium Inc., displayed in compliance with Section 15 of the BRP Open Game License v1.0.

@@ -12,6 +12,12 @@
 // by Wizards of the Coast LLC. Licensed under CC-BY-4.0.
 // See data/5ecompatible/SRD-NOTICE.txt for full attribution.
 //
+// Populate reads a local clone of the structured markdown tree maintained by
+// Oldmanumby at .reference/SRD (https://github.com/oldmanumby/dnd.srd.5.2.1).
+// Oldmanumby packaged and maintains that tree; they did not author the SRD text.
+// Clone: git clone https://github.com/oldmanumby/dnd.srd.5.2.1 .reference/SRD
+// Do not vendor SRD markdown into git.
+//
 // The resulting database output in data/5ecompatible/ is designated as Open Game Content
 // under CC-BY-4.0.
 
@@ -102,7 +108,7 @@ export function populate5ecompatibleDatabase(
   if (!existsSync(sourcePath)) {
     return {
       success: false,
-      message: `SRD source directory not found: ${sourcePath}. Clone the 5.2.1 SRD into .reference/SRD/ first.`,
+      message: `SRD source directory not found: ${sourcePath}. Clone Oldmanumby's markdown packaging (https://github.com/oldmanumby/dnd.srd.5.2.1) into .reference/SRD/ first.`,
     };
   }
 

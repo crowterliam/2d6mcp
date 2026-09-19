@@ -5,3 +5,8 @@ International License, available at https://creativecommons.org/licenses/by/4.0/
 This work is 5E-compatible. It is not affiliated with, endorsed, sponsored, or specifically approved by
 Wizards of the Coast LLC. The resulting database output in data/5ecompatible/ is designated as Open Game
 Content under CC-BY-4.0.
+
+Source packaging: operators clone the structured markdown tree maintained by Oldmanumby into
+.reference/SRD. That packaging is available at https://github.com/oldmanumby/dnd.srd.5.2.1.
+Oldmanumby did not author the SRD text; Wizards of the Coast LLC remains the SRD 5.2.1 rights holder
+under CC-BY-4.0. 2d6mcp does not vendor that markdown tree in git.
