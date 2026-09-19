@@ -167,8 +167,12 @@ packages/server/src/
     backends/
       llamacpp.ts      # llama.cpp LLM backend (Win/Linux)
   session/
-    database.ts        # Session SQLite (transcripts, rulings, progress)
-    schema.sql.ts      # DDL for sessions, segments, rulings, transcription_progress
+    database.ts        # Session SQLite (transcripts, rulings, progress, live-ingest cursors)
+    schema.sql.ts      # DDL for sessions, segments, rulings, transcription_progress, live_transcript_cursors
+  live-transcript/
+    paths.ts           # Allowlist + companion DB discovery
+    sources.ts         # Companion SQLite + NDJSON/watch_dir readers
+    ingest.ts          # Incremental poll into log_transcript
   tools/               # Componentised tool handlers
     helpers.ts         # Shared helpers, keyword extraction, fuzzy matching
     definitions.ts     # All tool JSON schemas
@@ -204,6 +208,7 @@ packages/shared/src/
 | `search_transcript` | Search transcripts. Unquoted tokens are AND; quoted queries are exact LIKE phrases. `session_id` or `table_label`. |
 | `synthesize_ruling` | Cited rules ruling. When `byod_system` is set, prefers indexed personal files. Pass `rules_context` from BYOD chunks. |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. `action`: transcribe, list, or clear. Last chunk sets `complete: true`. |
+| `ingest_live_transcript` | Ingest a live companion transcript into a session. `action`: poll (alias ingest), status, or reset_cursor. Sources: `companion_sqlite`, `ndjson_file`, `watch_dir`. |
 
 ## Prompts and Resources
 
@@ -220,6 +225,27 @@ MCP resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://
 - **BYOD system scoping**: Pass `byod_system` on session start to filter BYOD searches. Pin nested folders with `root` / `relative_path` so a family name does not index `edition-5-sibling`.
 - **Ruling synthesis**: `synthesize_ruling` auto-looks up licensed rules and BYOD (when consent is on). If `byod_system` is set, retrieval prefers indexed personal files and skips licensed databases unless `rules_system` is set explicitly. Pass `rules_context` from `get_byod_chunk` when you already have chunks. Default licensed `rules_system` comes from the session only when `byod_system` is unset.
 - **Audio transcription**: `transcribe_audio` processes files longer than 180 seconds in 2-minute chunks. Call repeatedly until `complete: true`. The last chunk sets `complete` itself.
+- **Live transcript companion**: Voice chat, call apps, and screen recorders stay outside this server. Point `LIVE_TRANSCRIPT_DB` at a companion SQLite file, or use an NDJSON fixture. Start a `session`, then poll `ingest_live_transcript`. See **Live transcript companion** below.
+
+### Live transcript companion
+
+2d6mcp does not capture system loopback or microphone audio. An external live-transcript companion (or an NDJSON fixture) writes segments; this server polls them into `log_transcript`.
+
+Companion SQLite schema:
+
+- `meetings`: `id`, `title`, `started_at`, `duration_s`, …
+- `segments`: `id`, `meeting_id`, `start_ms`, `end_ms`, `speaker` (integer), `text`
+
+1. Run a compatible companion app separately, or write NDJSON for smoke tests without that app installed.
+2. Set `LIVE_TRANSCRIPT_DB` to the companion SQLite file, and/or `LIVE_TRANSCRIPT_ALLOW_PATHS` (colon/semicolon-separated) for fixture files. Windows drive letters in those lists are kept intact.
+3. `session` `action: start` to get a `session_id`.
+4. Poll `ingest_live_transcript` with `action: poll` (alias `ingest`). Default source is `companion_sqlite` when `path` is omitted. Use `source: ndjson_file` plus `path` for `{ "start_ms", "end_ms", "speaker", "text", "id"? }` lines. `watch_dir` reads `.ndjson`/`.jsonl`/`.json` files in an allowlisted folder.
+5. Repeat poll during play. Cursors are per session and incremental — the same segment is not logged twice. `action: status` shows the cursor; `action: reset_cursor` starts over.
+6. Paths must stay under the project root, `BYOD_PATH`, `LIVE_TRANSCRIPT_ALLOW_PATHS`, or `LIVE_TRANSCRIPT_DB`. Compatible companion library files under common app-data locations are auto-discovered when present. System loopback / mic capture is out of scope for 2d6mcp.
+
+The `2d6-mcp-stt-notes-ingest` workflow is not a repo skill (harness skills live under `.claude/skills/` / `.kilo/agent/`). Use this section plus the master `2d6mcp` skill.
+
+Outbound webhook tools are unchanged.
 
 ### Personal files (BYOD)
 
@@ -294,6 +320,8 @@ Never reference any third-party game system or trademarked terms. Use generic de
 | `LLM_BACKEND` | `mlx` | LLM backend: `mlx` (macOS) or `llamacpp` (Win/Linux) |
 | `WHISPERCPP_MODEL` | `ggml-large-v3-turbo.bin` | whisper.cpp model path (Win/Linux) |
 | `LLAMACPP_MODEL` | `Llama-3.2-3B-Instruct.Q4_K_M.gguf` | llama.cpp model path (Win/Linux) |
+| `LIVE_TRANSCRIPT_DB` | — | Path to an external companion SQLite file (`meetings` + `segments`). Allowlisted for `ingest_live_transcript`. |
+| `LIVE_TRANSCRIPT_ALLOW_PATHS` | — | Extra allowlisted files/directories for companion SQLite or NDJSON (colon or semicolon separated; Windows drive letters kept intact). |
 
 ### Security Note
 

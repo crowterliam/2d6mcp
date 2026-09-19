@@ -31,6 +31,7 @@ It shares rules databases, dice engine, prompt templates, and quality filters vi
 | `search_transcript` | Search session transcripts with SQL LIKE (not FTS5). |
 | `synthesize_ruling` | Cited rules ruling. Optional `from_context` uses recent transcript. Default `rules_system` from the session when `session_id` is set. |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. `action`: transcribe, list, or clear. Last chunk sets `complete: true`. |
+| `ingest_live_transcript` | Ingest a live companion transcript. `action`: poll, status, or reset_cursor. Sources: `companion_sqlite`, `ndjson_file`, `watch_dir`. |
 
 Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create-character`, `start-session`, `ask-ruling`, `index-documents`. Resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://systems`, `2d6mcp://docs/*`, `2d6mcp://license`, `2d6mcp://session/current`, `2d6mcp://rules/{system}`.
 
@@ -61,7 +62,7 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 
 **Session management**: `session(action: "start", "Session Name")` → `log_transcript(session_id, text)` → `get_session_context(session_id, minutes)` for recent context → `search_transcript(session_id, "query")` → `session(action: "end", session_id)`. List with `session` list. Summarize with `session(action: "summarize", session_id)`.
 
-**Ruling synthesis**: `synthesize_ruling("question", rules_system: "auto")` for AI rulings with OGL/DW/BRP/5E-compatible/BYOD citations. `synthesize_ruling(from_context: true, session_id)` to auto-detect question from recent transcript. `transcribe_audio(file_path)` for voice-to-text.
+**Ruling synthesis**: `synthesize_ruling("question", rules_system: "auto")` for AI rulings with OGL/DW/BRP/5E-compatible/BYOD citations. `synthesize_ruling(from_context: true, session_id)` to auto-detect question from recent transcript. `transcribe_audio(file_path)` for voice-to-text. `ingest_live_transcript` polls an external companion SQLite or NDJSON fixture.
 
 **Discord**: `discord_post(content, webhook_names, context)` for smart-routed messages with embeds. `discord_webhook(action: "add", name, url, tags)` to configure. `discord_webhook(action: "list")` to view. `discord_webhook(action: "test", name)` to verify. `discord_webhook(action: "remove", name)` to remove.
 
@@ -86,4 +87,6 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
+| `LIVE_TRANSCRIPT_DB` | — | External companion SQLite for `ingest_live_transcript` |
+| `LIVE_TRANSCRIPT_ALLOW_PATHS` | — | Extra allowlisted companion/NDJSON paths |
 

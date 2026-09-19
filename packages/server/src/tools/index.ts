@@ -27,6 +27,7 @@ import {
   handleSynthesizeRuling,
   handleTranscribeAudio,
 } from "./handlers/rulings.js";
+import { handleIngestLiveTranscript } from "./handlers/live-transcript.js";
 
 export { getToolDefinitions };
 
@@ -69,6 +70,8 @@ export async function dispatchToolCall(
       return handleSynthesizeRuling(args);
     case "transcribe_audio":
       return handleTranscribeAudio(args);
+    case "ingest_live_transcript":
+      return handleIngestLiveTranscript(args);
     default:
       throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
   }

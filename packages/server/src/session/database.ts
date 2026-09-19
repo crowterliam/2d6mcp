@@ -633,6 +633,8 @@ export function deleteSession(
   database: Database.Database,
   sessionId: string
 ): { transcriptSegments: number; rulings: number } {
+  database.prepare("DELETE FROM live_transcript_cursors WHERE session_id = ?").run(sessionId);
+
   const transcriptResult = database
     .prepare("DELETE FROM transcript_segments WHERE session_id = ?")
     .run(sessionId);
@@ -647,4 +649,99 @@ export function deleteSession(
     transcriptSegments: transcriptResult.changes,
     rulings: rulingsResult.changes,
   };
+}
+
+export interface LiveTranscriptCursor {
+  session_id: string;
+  source_kind: string;
+  source_key: string;
+  meeting_id: string | null;
+  last_segment_id: string | null;
+  last_start_ms: number | null;
+  last_line_index: number | null;
+  ingested_count: number;
+  updated_at: number;
+}
+
+export function getLiveTranscriptCursor(
+  database: Database.Database,
+  sessionId: string,
+  sourceKind: string,
+  sourceKey: string
+): LiveTranscriptCursor | null {
+  return (
+    (database
+      .prepare(
+        "SELECT * FROM live_transcript_cursors WHERE session_id = ? AND source_kind = ? AND source_key = ?"
+      )
+      .get(sessionId, sourceKind, sourceKey) as LiveTranscriptCursor | undefined) ?? null
+  );
+}
+
+export function listLiveTranscriptCursors(
+  database: Database.Database,
+  sessionId: string
+): LiveTranscriptCursor[] {
+  return database
+    .prepare(
+      "SELECT * FROM live_transcript_cursors WHERE session_id = ? ORDER BY updated_at DESC"
+    )
+    .all(sessionId) as LiveTranscriptCursor[];
+}
+
+export function upsertLiveTranscriptCursor(
+  database: Database.Database,
+  cursor: Omit<LiveTranscriptCursor, "updated_at">
+): LiveTranscriptCursor {
+  const updatedAt = Date.now();
+  database
+    .prepare(
+      `INSERT INTO live_transcript_cursors (
+         session_id, source_kind, source_key, meeting_id, last_segment_id,
+         last_start_ms, last_line_index, ingested_count, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(session_id, source_kind, source_key) DO UPDATE SET
+         meeting_id = excluded.meeting_id,
+         last_segment_id = excluded.last_segment_id,
+         last_start_ms = excluded.last_start_ms,
+         last_line_index = excluded.last_line_index,
+         ingested_count = excluded.ingested_count,
+         updated_at = excluded.updated_at`
+    )
+    .run(
+      cursor.session_id,
+      cursor.source_kind,
+      cursor.source_key,
+      cursor.meeting_id,
+      cursor.last_segment_id,
+      cursor.last_start_ms,
+      cursor.last_line_index,
+      cursor.ingested_count,
+      updatedAt
+    );
+
+  return { ...cursor, updated_at: updatedAt };
+}
+
+export function resetLiveTranscriptCursor(
+  database: Database.Database,
+  sessionId: string,
+  sourceKind?: string,
+  sourceKey?: string
+): number {
+  if (sourceKind && sourceKey) {
+    return database
+      .prepare(
+        "DELETE FROM live_transcript_cursors WHERE session_id = ? AND source_kind = ? AND source_key = ?"
+      )
+      .run(sessionId, sourceKind, sourceKey).changes;
+  }
+  if (sourceKind) {
+    return database
+      .prepare("DELETE FROM live_transcript_cursors WHERE session_id = ? AND source_kind = ?")
+      .run(sessionId, sourceKind).changes;
+  }
+  return database
+    .prepare("DELETE FROM live_transcript_cursors WHERE session_id = ?")
+    .run(sessionId).changes;
 }

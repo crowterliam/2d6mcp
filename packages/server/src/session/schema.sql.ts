@@ -55,6 +55,19 @@ CREATE TABLE IF NOT EXISTS transcription_progress (
   updated_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS live_transcript_cursors (
+  session_id TEXT NOT NULL REFERENCES sessions(id),
+  source_kind TEXT NOT NULL,
+  source_key TEXT NOT NULL,
+  meeting_id TEXT,
+  last_segment_id TEXT,
+  last_start_ms INTEGER,
+  last_line_index INTEGER,
+  ingested_count INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (session_id, source_kind, source_key)
+);
+
 -- Migration: add byod_system column to existing sessions table
 ALTER TABLE sessions ADD COLUMN byod_system TEXT;
 ALTER TABLE sessions ADD COLUMN table_label TEXT;

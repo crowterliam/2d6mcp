@@ -214,7 +214,7 @@ function renderPrompt(name: PromptName, args?: Record<string, string>): GetPromp
           'Call session with action "start", the name, rules_system, and table_label if provided.',
           "If byod_system is set, rules_system defaults to byod so rulings prefer indexed personal files. Pin later BYOD searches with root/relative_path (for example parent/line) so sibling collections are not indexed.",
           "Optional table_label examples: table-a, campaign-label.",
-          "Return the session id. Offer to log_transcript as play proceeds. For rulings, pass rules_context from BYOD chunks when you already have them.",
+          "Return the session id. Offer to log_transcript as play proceeds, or poll ingest_live_transcript when a live companion transcript is configured. For rulings, pass rules_context from BYOD chunks when you already have them.",
         ].join("\n")
       );
     }

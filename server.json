@@ -30,6 +30,20 @@
           "isRequired": false,
           "format": "string",
           "isSecret": false
+        },
+        {
+          "name": "LIVE_TRANSCRIPT_DB",
+          "description": "Path to an external companion SQLite database (meetings + segments) for ingest_live_transcript",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "LIVE_TRANSCRIPT_ALLOW_PATHS",
+          "description": "Colon or semicolon separated extra allowlisted paths for companion SQLite or NDJSON",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
         }
       ]
     }
