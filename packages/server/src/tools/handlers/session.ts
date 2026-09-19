@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
-import { loadConfig } from "../../config.js";
 import {
-  openSessionDb,
+  sessionStore,
   createSession,
   endSession,
   setSessionSummary,
@@ -18,15 +17,14 @@ import {
   getRecentTranscriptByLabel,
   getRecentRulingsByLabel,
   getLatestSessionByLabel,
-  storeRuling,
   getRecentRulings,
-  getRecentContext,
   deleteProgress,
   deleteAllProgress,
   listAllProgress,
   deleteSession,
 } from "../../session/database.js";
 import { synthesizeRuling as mlxSynthesizeRuling } from "../../rulings/mlx-synthesize.js";
+import { sessionCandidateBeats } from "./chronicle.js";
 
 export async function handleSession(args: Record<string, unknown> | undefined): Promise<{
   content: Array<{ type: "text"; text: string }>;
@@ -69,8 +67,7 @@ export async function handleSessionStart(args: Record<string, unknown> | undefin
   }
   const rulesSystem = requested ?? (byodSystem ? "byod" : "ogl");
 
-  const config = loadConfig();
-  const db = openSessionDb(config.sessionDbPath);
+  const db = sessionStore();
   const session = createSession(db, rulesSystem, name, byodSystem, tableLabel);
 
   return {
@@ -87,8 +84,7 @@ export async function handleSessionEnd(args: Record<string, unknown> | undefined
     return { content: [{ type: "text", text: "Error: session_id is required" }], isError: true };
   }
 
-  const config = loadConfig();
-  const db = openSessionDb(config.sessionDbPath);
+  const db = sessionStore();
   const session = endSession(db, sessionId);
 
   if (!session) {
@@ -98,8 +94,15 @@ export async function handleSessionEnd(args: Record<string, unknown> | undefined
     };
   }
 
+  const chronicle_candidates = sessionCandidateBeats(sessionId, true);
+
   return {
-    content: [{ type: "text", text: JSON.stringify(session, null, 2) }],
+    content: [{ type: "text", text: JSON.stringify({
+      ...session,
+      chronicle_candidates,
+      chronicle_note:
+        "Candidate beats are provisional. Review, then chronicle extract_candidates write=true and promote. Nothing was auto-confirmed.",
+    }, null, 2) }],
   };
 }
 
@@ -110,8 +113,7 @@ export async function handleSessionList(args: Record<string, unknown> | undefine
   const limit = typeof args?.limit === "number" ? args.limit : 20;
   const tableLabel = typeof args?.table_label === "string" ? args.table_label : undefined;
 
-  const config = loadConfig();
-  const db = openSessionDb(config.sessionDbPath);
+  const db = sessionStore();
   const sessions = listSessions(db, limit, tableLabel);
 
   return {
@@ -128,8 +130,7 @@ export async function handleSessionSummarize(args: Record<string, unknown> | und
     return { content: [{ type: "text", text: "Error: session_id is required" }], isError: true };
   }
 
-  const config = loadConfig();
-  const db = openSessionDb(config.sessionDbPath);
+  const db = sessionStore();
 
   const session = getSession(db, sessionId);
   if (!session) {
@@ -210,6 +211,7 @@ export async function handleSessionSummarize(args: Record<string, unknown> | und
     }
 
     setSessionSummary(db, sessionId, summary);
+    const chronicle_candidates = sessionCandidateBeats(sessionId, true);
 
     return {
       content: [{ type: "text", text: JSON.stringify({
@@ -217,6 +219,9 @@ export async function handleSessionSummarize(args: Record<string, unknown> | und
         summary,
         model: "mlx-community/Llama-3.2-3B-Instruct-4bit",
         transcript_length: transcriptText.length,
+        chronicle_candidates,
+        chronicle_note:
+          "Candidate beats are provisional and not written. Pass them to chronicle extract_candidates with write=true after review. Promote to confirm.",
       }, null, 2) }],
     };
   } catch (err: unknown) {
@@ -242,8 +247,7 @@ export async function handleLogTranscript(args: Record<string, unknown> | undefi
     return { content: [{ type: "text", text: "Error: session_id and text are required" }], isError: true };
   }
 
-  const config = loadConfig();
-  const db = openSessionDb(config.sessionDbPath);
+  const db = sessionStore();
 
   const session = getSession(db, sessionId);
   if (!session) {
@@ -251,9 +255,27 @@ export async function handleLogTranscript(args: Record<string, unknown> | undefi
   }
 
   const segment = logTranscript(db, sessionId, text, speaker, source, intent);
+  const chronicleIntent = intent === "chronicle" || intent === "beat" || intent === "chronicle_beat";
+  let chronicle_beat = null;
+  if (chronicleIntent && session.table_label) {
+    chronicle_beat = db.addBeat({
+      table_label: session.table_label,
+      session_id: sessionId,
+      text,
+      kind: "note",
+      source: "from_transcript",
+      confidence: "provisional",
+    });
+  }
 
   return {
-    content: [{ type: "text", text: JSON.stringify(segment, null, 2) }],
+    content: [{ type: "text", text: JSON.stringify({
+      ...segment,
+      chronicle_beat,
+      chronicle_note: chronicleIntent
+        ? "Provisional beat stored. Promote after operator review."
+        : undefined,
+    }, null, 2) }],
   };
 }
 
@@ -270,8 +292,7 @@ export async function handleGetSessionContext(args: Record<string, unknown> | un
     return { content: [{ type: "text", text: "Error: session_id or table_label is required" }], isError: true };
   }
 
-  const config = loadConfig();
-  const db = openSessionDb(config.sessionDbPath);
+  const db = sessionStore();
 
   if (sessionId) {
     const session = getSession(db, sessionId);
@@ -331,8 +352,7 @@ export async function handleSearchTranscript(args: Record<string, unknown> | und
     return { content: [{ type: "text", text: "Error: session_id or table_label is required" }], isError: true };
   }
 
-  const config = loadConfig();
-  const db = openSessionDb(config.sessionDbPath);
+  const db = sessionStore();
   const parsed = parseTranscriptSearchQuery(query);
   const results = sessionId
     ? searchTranscript(db, sessionId, query)
@@ -354,8 +374,7 @@ export async function handleSearchTranscript(args: Record<string, unknown> | und
 export async function handleListTranscriptions(_args: Record<string, unknown> | undefined): Promise<{
   content: Array<{ type: "text"; text: string }>;
 }> {
-  const config = loadConfig();
-  const db = openSessionDb(config.sessionDbPath);
+  const db = sessionStore();
   const items = listAllProgress(db);
 
   const summary = items.map((p) => ({
@@ -378,8 +397,7 @@ export async function handleListTranscriptions(_args: Record<string, unknown> | 
 export async function handleClearTranscription(args: Record<string, unknown> | undefined): Promise<{
   content: Array<{ type: "text"; text: string }>;
 }> {
-  const config = loadConfig();
-  const db = openSessionDb(config.sessionDbPath);
+  const db = sessionStore();
   const filePath = typeof args?.file_path === "string" ? args.file_path : undefined;
 
   if (filePath) {
@@ -410,8 +428,7 @@ export async function handleDeleteSession(args: Record<string, unknown> | undefi
     return { content: [{ type: "text", text: "Error: session_id is required" }], isError: true };
   }
 
-  const config = loadConfig();
-  const db = openSessionDb(config.sessionDbPath);
+  const db = sessionStore();
   const result = deleteSession(db, sessionId);
 
   return {

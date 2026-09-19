@@ -36,9 +36,10 @@ It shares rules databases, dice engine, prompt templates, and quality filters vi
 | `search_transcript` | Search session transcripts. Unquoted tokens are AND; quoted queries are exact phrases. |
 | `synthesize_ruling` | Cited rules ruling. When `byod_system` is set, prefers BYOD. Pass `rules_context` from BYOD chunks. |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. `action`: transcribe, list, or clear. Last chunk sets `complete: true`. |
-| `ingest_live_transcript` | Ingest a live companion transcript into a session. `action`: poll (alias ingest), status, or reset_cursor. Sources: `companion_sqlite`, `ndjson_file`, `watch_dir`. |
+| `ingest_live_transcript` | Ingest a live companion transcript into a session. `action`: poll (alias ingest), status, or reset_cursor. Sources: `companion_sqlite`, `ndjson_file`, `watch_dir`. Optional `chronicle_hints`. |
+| `chronicle` | Table-scoped chronicle: threads, beats, entities, hooks, `brief` (no LLM), `promote`, `extract_candidates`. |
 
-Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create-character`, `start-session`, `ask-ruling`, `index-documents`. Resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://systems`, `2d6mcp://docs/*`, `2d6mcp://license`, `2d6mcp://session/current`, `2d6mcp://rules/{system}`.
+Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create-character`, `start-session`, `ask-ruling`, `index-documents`, `chronicle-brief`. Resources: `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d6mcp://systems`, `2d6mcp://docs/*`, `2d6mcp://license`, `2d6mcp://session/current`, `2d6mcp://rules/{system}`.
 
 
 
@@ -155,7 +156,7 @@ When starting a session, ensure knowledge is available:
 | `OSR_DB_PATH` | `data/osr/osr-procedures.db` | OSR / B/X-compatible procedures database path |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
-| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
+| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Legacy SQLite import source only |
 | `LIVE_TRANSCRIPT_DB` | — | External companion SQLite path (`meetings` + `segments`) |
 | `LIVE_TRANSCRIPT_ALLOW_PATHS` | — | Extra allowlisted companion/NDJSON paths |
 

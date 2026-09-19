@@ -73,7 +73,7 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 | `OSR_DB_PATH` | `data/osr/osr-procedures.db` | OSR / B/X-compatible procedures database path |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LLM model |
-| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
+| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Legacy SQLite import source only |
 | `STT_BACKEND` | `mlx` | STT backend: `mlx` or `whispercpp` |
 | `LLM_BACKEND` | `mlx` | LLM backend: `mlx`, `llamacpp`, or `ollama` |
 | `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama daemon URL |

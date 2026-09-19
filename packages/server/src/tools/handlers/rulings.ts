@@ -4,7 +4,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { loadConfig } from "../../config.js";
 import {
-  openSessionDb,
+  sessionStore,
   getRecentRulings,
   getRecentContext,
   storeRuling,
@@ -43,8 +43,7 @@ export async function handleSynthesizeRuling(args: Record<string, unknown> | und
     if (!sessionId) {
       return { content: [{ type: "text", text: "Error: session_id is required when from_context is true" }], isError: true };
     }
-    const config = loadConfig();
-    const db = openSessionDb(config.sessionDbPath);
+    const db = sessionStore();
     const { transcripts } = getRecentContext(db, sessionId, minutes);
     if (transcripts.length === 0) {
       return {
@@ -101,8 +100,7 @@ export async function handleSynthesizeRuling(args: Record<string, unknown> | und
 
   let sessionHistory = "";
   if (sessionId) {
-    const config = loadConfig();
-    const db = openSessionDb(config.sessionDbPath);
+    const db = sessionStore();
     const recent = getRecentRulings(db, sessionId, 3);
     if (recent.length > 0) {
       sessionHistory = recent
@@ -121,8 +119,7 @@ export async function handleSynthesizeRuling(args: Record<string, unknown> | und
     const latency = Date.now() - startTime;
 
     if (sessionId) {
-      const config = loadConfig();
-      const db = openSessionDb(config.sessionDbPath);
+      const db = sessionStore();
       storeRuling(db, sessionId, question, result.response, undefined, result.model, latency);
     }
 
@@ -200,7 +197,7 @@ export async function handleTranscribeAudio(args: Record<string, unknown> | unde
   const sessionId = typeof args?.session_id === "string" ? args.session_id : undefined;
   const chunkSizeSeconds = typeof args?.chunk_size_seconds === "number" ? args.chunk_size_seconds : 120;
   const config = loadConfig();
-  const sessionDb = openSessionDb(config.sessionDbPath);
+  const sessionDb = sessionStore();
 
   if (isAudioLong(resolvedPath, LONG_AUDIO_SECONDS)) {
     try {

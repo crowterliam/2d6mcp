@@ -7,6 +7,8 @@ Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
 | Version | Supported          |
 | ------- | ------------------ |
+| 0.9.x   | :white_check_mark: |
+| 0.8.x   | :white_check_mark: |
 | 0.7.x   | :white_check_mark: |
 | 0.6.x   | :white_check_mark: |
 | < 0.6   | :x:                |
@@ -28,6 +30,7 @@ You should receive an acknowledgment within 72 hours. The maintainer will work w
 - SQL injection vectors in FTS5 queries
 - Path traversal in file walking logic
 - Path traversal in live-transcript companion ingest (`packages/server/src/live-transcript/`)
+- Path traversal in chronicle markdown export (`packages/server/src/chronicle/`)
 - Hardcoded data injection in OGL or DW populate modules
 - Shell injection via `execFile` calls (audio CLI wrappers, LLM CLI wrappers)
 - Discord webhook URL storage (`.mcp-discord-webhooks.json`)
@@ -41,7 +44,7 @@ You should receive an acknowledgment within 72 hours. The maintainer will work w
 - `*.tsbuildinfo` — gitignored. TypeScript incremental build cache
 - `*.pdf` — gitignored. Commercial book PDFs and extracted dumps must never be committed. Index them locally with BYOD only.
 
-The MCP server reads secrets from environment variables only — never from committed files. BYOD file contents stay on the operator's machine (consent-gated, never uploaded).
+The MCP server reads secrets from environment variables only — never from committed files. BYOD file contents stay on the operator's machine (consent-gated, never uploaded). `SPACETIMEDB_TOKEN` is env-only. Session and chronicle state lives in the local Spacetime kernel snapshot (`SPACETIMEDB_EMBEDDED_PATH`) or a configured replica — not in git. Chronicle `export` writes only under project / BYOD / live-transcript / `CHRONICLE_EXPORT_ALLOW_PATHS` roots.
 
 ## Out of Scope
 

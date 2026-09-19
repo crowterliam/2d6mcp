@@ -1,6 +1,6 @@
 {
   "name": "2d6mcp",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "bin": {
     "2d6mcp": "./packages/server/dist/index.js",
     "crowterliam-2d6mcp": "./packages/server/dist/index.js"
@@ -23,6 +23,7 @@
     "populate-orcus": "node packages/server/dist/cli.js populate-orcus",
     "populate-osr": "node packages/server/dist/cli.js populate-osr",
     "sync-byod": "node packages/server/dist/cli.js sync-byod",
+    "import-sessions": "node packages/server/dist/cli.js import-sessions",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

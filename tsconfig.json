@@ -8,6 +8,7 @@
     { "path": "packages/5ecompatible" },
     { "path": "packages/orcus" },
     { "path": "packages/osr" },
+    { "path": "packages/spacetime" },
     { "path": "packages/server" }
   ]
 }

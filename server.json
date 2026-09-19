@@ -7,12 +7,12 @@
     "url": "https://github.com/crowterliam/2d6mcp",
     "source": "github"
   },
-  "version": "0.8.0",
+  "version": "0.9.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "crowterliam-2d6mcp",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "transport": {
         "type": "stdio"
       },
@@ -41,6 +41,27 @@
         {
           "name": "LIVE_TRANSCRIPT_ALLOW_PATHS",
           "description": "Colon or semicolon separated extra allowlisted paths for companion SQLite or NDJSON",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "SPACETIMEDB_URI",
+          "description": "SpacetimeDB HTTP endpoint for session and chronicle state",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "SPACETIMEDB_DB",
+          "description": "SpacetimeDB database name (default 2d6mcp)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "SPACETIMEDB_MODE",
+          "description": "embedded TypeScript kernel or remote SpacetimeDB replica",
           "isRequired": false,
           "format": "string",
           "isSecret": false

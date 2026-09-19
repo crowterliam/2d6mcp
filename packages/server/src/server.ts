@@ -17,6 +17,7 @@ import { ensureOglDb, ensureDwDb, ensureOrcusDb, getServerVersion } from "./tool
 import { loadConfig } from "./config.js";
 import { getPrompt, getPromptDefinitions } from "./prompts.js";
 import { getResourceDefinitions, getResourceTemplates, readResource } from "./resources.js";
+import { flushSessionStore, hydrateSessionStore } from "./session/database.js";
 
 export function createMcpServer(): Server {
   const version = getServerVersion();
@@ -42,7 +43,14 @@ export function createMcpServer(): Server {
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-    return dispatchToolCall(name, args);
+    const result = await dispatchToolCall(name, args);
+    try {
+      await flushSessionStore();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "flush failed";
+      process.stderr.write(`2d6mcp: SpacetimeDB flush skipped: ${message}\n`);
+    }
+    return result;
   });
 
   server.setRequestHandler(ListPromptsRequestSchema, async () => {
@@ -76,6 +84,12 @@ export async function startServer(): Promise<void> {
   ensureOglDb();
   ensureDwDb();
   ensureOrcusDb();
+  try {
+    await hydrateSessionStore();
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "hydrate failed";
+    process.stderr.write(`2d6mcp: SpacetimeDB hydrate skipped: ${message}\n`);
+  }
 
   await server.connect(transport);
 }

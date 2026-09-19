@@ -156,7 +156,12 @@ If the server is connected, the assistant will call `roll` and return dice resul
 | `SR5E_DB_PATH` | `data/5ecompatible/5ecompatible-srd.db` | Path to custom 5E-compatible SQLite database |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LLM model |
-| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
+| `SPACETIMEDB_MODE` | `embedded` | `embedded` kernel or `remote` SpacetimeDB replica |
+| `SPACETIMEDB_URI` | `http://127.0.0.1:3000` | SpacetimeDB HTTP endpoint |
+| `SPACETIMEDB_DB` | `2d6mcp` | SpacetimeDB database name |
+| `SPACETIMEDB_EMBEDDED_PATH` | `~/.2d6mcp/spacetime-kernel.json` | Local kernel snapshot (not SQLite) |
+| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Legacy SQLite import source only |
+| `CHRONICLE_EXPORT_ALLOW_PATHS` | — | Extra allowlisted chronicle markdown export paths |
 | `STT_BACKEND` | `mlx` | STT backend: `mlx` or `whispercpp` |
 | `LLM_BACKEND` | `mlx` | LLM backend: `mlx`, `llamacpp`, or `ollama`. On Windows, default mlx falls back to ollama when `/api/tags` answers. |
 | `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama daemon URL (`LLM_BACKEND=ollama`) |

@@ -49,7 +49,8 @@ type CatalogToolName =
   | "search_transcript"
   | "synthesize_ruling"
   | "transcribe_audio"
-  | "ingest_live_transcript";
+  | "ingest_live_transcript"
+  | "chronicle";
 
 const CATALOG_TOOL_NAMES = new Set<string>([
   "roll",
@@ -70,6 +71,7 @@ const CATALOG_TOOL_NAMES = new Set<string>([
   "synthesize_ruling",
   "transcribe_audio",
   "ingest_live_transcript",
+  "chronicle",
 ]);
 
 function isCatalogToolName(name: string): name is CatalogToolName {
@@ -93,6 +95,7 @@ function annotationsFor(name: CatalogToolName): ToolAnnotations {
     case "synthesize_ruling":
     case "transcribe_audio":
     case "ingest_live_transcript":
+    case "chronicle":
       return WRITE_LOCAL;
     case "clear_byod":
     case "session":

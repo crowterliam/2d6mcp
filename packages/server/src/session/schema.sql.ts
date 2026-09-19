@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
+//
+// Legacy SQLite DDL kept for `2d6mcp import-sessions` only.
+// Runtime session/chronicle state lives in the SpacetimeDB TypeScript kernel.
 
 export const SESSION_SCHEMA_DDL = `
 CREATE TABLE IF NOT EXISTS sessions (

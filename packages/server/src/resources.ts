@@ -8,7 +8,7 @@ import { loadConfig } from "./config.js";
 import { getServerVersion } from "./tools/helpers.js";
 import { getToolDefinitions } from "./tools/definitions.js";
 import { getPromptDefinitions } from "./prompts.js";
-import { getActiveSession, openSessionDb } from "./session/database.js";
+import { getActiveSession, sessionStore } from "./session/database.js";
 
 const MIME_JSON = "application/json";
 const MIME_MARKDOWN = "text/markdown";
@@ -217,7 +217,12 @@ function renderResource(uri: ResourceUri): string {
         "|----------|---------|---------|",
         "| AGREE_BYOD_USE | false | Enable personal file ingestion |",
         "| BYOD_PATH | .reference/ | Directory of local source files |",
-        "| SESSION_DB_PATH | ~/.2d6mcp/sessions.db | Session database |",
+        "| SPACETIMEDB_URI | http://127.0.0.1:3000 | Local SpacetimeDB HTTP endpoint |",
+        "| SPACETIMEDB_DB | 2d6mcp | SpacetimeDB database name |",
+        "| SPACETIMEDB_MODE | embedded | embedded kernel or remote SpacetimeDB replica |",
+        "| SPACETIMEDB_EMBEDDED_PATH | ~/.2d6mcp/spacetime-kernel.json | Local kernel snapshot (not SQLite) |",
+        "| SESSION_DB_PATH | ~/.2d6mcp/sessions.db | Legacy SQLite import source only |",
+        "| CHRONICLE_EXPORT_ALLOW_PATHS | — | Extra allowlisted markdown export paths |",
         "| OGL_DB_PATH | data/ogl/cepheus.db | OGL database |",
         "| DW_DB_PATH | data/dw/dungeon-world.db | Fantasy database |",
         "| BRP_DB_PATH | data/brp/basic-roleplaying.db | Percentile database |",
@@ -267,11 +272,7 @@ function renderResource(uri: ResourceUri): string {
 }
 
 function readCurrentSession(): string {
-  const { sessionDbPath } = loadConfig();
-  if (!existsSync(sessionDbPath)) {
-    return JSON.stringify({ active: false, reason: "No session database yet" }, null, 2);
-  }
-  const db = openSessionDb(sessionDbPath);
+  const db = sessionStore();
   const active = getActiveSession(db);
   if (!active) {
     return JSON.stringify({ active: false }, null, 2);

@@ -13,6 +13,7 @@
     { "path": "../brp" },
     { "path": "../5ecompatible" },
     { "path": "../orcus" },
-    { "path": "../osr" }
+    { "path": "../osr" },
+    { "path": "../spacetime" }
   ]
 }

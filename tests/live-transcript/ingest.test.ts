@@ -438,4 +438,31 @@ describe("ingest_live_transcript", () => {
     expect(result.source_path).toBe(dbPath);
     expect(loadConfig().liveTranscriptDb).toBe(dbPath);
   });
+
+  it("writes provisional chronicle beats when chronicle_hints is true", async () => {
+    const ndjsonPath = join(TMP, "hints.ndjson");
+    writeFileSync(
+      ndjsonPath,
+      `${JSON.stringify({ id: "s1", start_ms: 10, end_ms: 20, speaker: "Me", text: "The relic is at the ford." })}\n`
+    );
+    const started = await dispatchToolCall("session", {
+      action: "start",
+      name: "hints",
+      rules_system: "osr",
+      table_label: "table-a",
+    });
+    const sessionId = (JSON.parse(started.content[0].text) as { id: string }).id;
+    const result = JSON.parse(
+      (
+        await dispatchToolCall("ingest_live_transcript", {
+          session_id: sessionId,
+          source: "ndjson_file",
+          path: ndjsonPath,
+          chronicle_hints: true,
+        })
+      ).content[0].text
+    ) as { ingested: number; chronicle_beats?: Array<{ confidence: string }> };
+    expect(result.ingested).toBe(1);
+    expect(result.chronicle_beats?.[0]?.confidence).toBe("provisional");
+  });
 });

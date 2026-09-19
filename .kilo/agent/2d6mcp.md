@@ -154,7 +154,7 @@ When starting a session, ensure knowledge is available:
 | `OSR_DB_PATH` | `data/osr/osr-procedures.db` | OSR / B/X-compatible procedures database path |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model for STT |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
-| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
+| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Legacy SQLite import source only |
 | `LIVE_TRANSCRIPT_DB` | — | External companion SQLite for `ingest_live_transcript` |
 | `LIVE_TRANSCRIPT_ALLOW_PATHS` | — | Extra allowlisted companion/NDJSON paths |
 

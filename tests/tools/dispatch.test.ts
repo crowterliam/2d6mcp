@@ -21,6 +21,7 @@ const NEW_TOOLS = [
   "synthesize_ruling",
   "transcribe_audio",
   "ingest_live_transcript",
+  "chronicle",
 ];
 
 const OLD_TOOLS = [

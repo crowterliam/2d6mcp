@@ -12,6 +12,7 @@ export const PROMPT_NAMES = [
   "start-session",
   "ask-ruling",
   "index-documents",
+  "chronicle-brief",
 ] as const;
 
 export type PromptName = (typeof PROMPT_NAMES)[number];
@@ -113,6 +114,14 @@ export function getPromptDefinitions(): Prompt[] {
       arguments: [
         { name: "query", description: "Game or collection to index, for example collection-a", required: false },
         { name: "relative_path", description: "Optional file or directory relative to BYOD_PATH", required: false },
+      ],
+    },
+    {
+      name: "chronicle-brief",
+      title: "Chronicle brief",
+      description: "Assemble open threads, recent beats, hot entities, and ready hooks for a table_label. No LLM.",
+      arguments: [
+        { name: "table_label", description: "Durable table tag, for example table-a or campaign-label", required: true },
       ],
     },
   ];
@@ -247,6 +256,18 @@ function renderPrompt(name: PromptName, args?: Record<string, string>): GetPromp
               ? `Call sync_byod with query "${query}". If complete is false, call it again until complete is true.`
               : "Call sync_byod with no arguments to list top-level collections. Then index a scope with query, relative_path, or root (a nested folder such as parent/line). If complete is false, call it again until complete is true.",
           "query_local_byod also indexes matching folders from the search term. Then call list_byod_files to confirm what was indexed. Do not read those files with non-2d6mcp file tools.",
+        ].join("\n")
+      );
+    }
+    case "chronicle-brief": {
+      const tableLabel = arg(args, "table_label", "table-a");
+      return userPrompt(
+        "Assemble a chronicle brief",
+        [
+          `Call chronicle with action "brief" and table_label "${tableLabel}".`,
+          "Do not call synthesize_ruling or extract_candidates for this brief. The brief tool does not use an LLM.",
+          "Present open threads, recent beats, hot entities, and ready hooks. Flag provisional rows; only promote after operator review.",
+          "Optional: chronicle action export writes a draft markdown file to an allowlisted local path. Do not Discord auto-post.",
         ].join("\n")
       );
     }

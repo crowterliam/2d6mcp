@@ -1,0 +1,11 @@
+{
+  "name": "@2d6mcp/spacetime-module",
+  "private": true,
+  "version": "0.9.0",
+  "type": "module",
+  "description": "Publishable SpacetimeDB TypeScript module for 2d6mcp session + chronicle tables",
+  "license": "AGPL-3.0-only",
+  "dependencies": {
+    "spacetimedb": "^1.11.0"
+  }
+}

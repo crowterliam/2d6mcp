@@ -126,7 +126,8 @@ BYOD (Bring Your Own Documents) mode enables local file ingestion for personal, 
 | `search_transcript` | Search transcripts (`session_id` or `table_label`). Unquoted tokens are AND; quotes are exact phrases |
 | `synthesize_ruling` | Cited rules ruling. Prefers BYOD when `byod_system` is set; pass `rules_context` from BYOD chunks |
 | `transcribe_audio` | Transcribe audio. Files over 180 seconds are chunked. Last chunk sets `complete: true` |
-| `ingest_live_transcript` | Ingest a live companion transcript (`companion_sqlite`, `ndjson_file`, or `watch_dir`) into a session. `action`: poll, status, or reset_cursor |
+| `ingest_live_transcript` | Ingest a live companion transcript (`companion_sqlite`, `ndjson_file`, or `watch_dir`) into a session. `action`: poll, status, or reset_cursor. Optional `chronicle_hints`. |
+| `chronicle` | Table-scoped chronicle: threads, beats, entities, links, hooks, `brief` (no LLM), `promote`, `search`, `extract_candidates`, `export` |
 
 ## Prompts
 
@@ -140,6 +141,7 @@ BYOD (Bring Your Own Documents) mode enables local file ingestion for personal, 
 | `start-session` | Start a logged session |
 | `ask-ruling` | Cited ruling via `synthesize_ruling` |
 | `index-documents` | On-demand BYOD ingest via `sync_byod` |
+| `chronicle-brief` | Prep brief via `chronicle` `brief` (no LLM) |
 
 ## Resources
 
@@ -157,7 +159,8 @@ Attachable context at `2d6mcp://info`, `2d6mcp://tools`, `2d6mcp://prompts`, `2d
 │   ├── brp/             # @2d6mcp/brp — BRP rules database + queries
 │   ├── 5ecompatible/    # @2d6mcp/5ecompatible — 5E-compatible rules database + queries
 │   ├── orcus/           # @2d6mcp/orcus — Orcus d20-compatible rules database + queries
-│   └── osr/             # @2d6mcp/osr — B/X-style procedures (original summaries; books via BYOD)
+│   ├── osr/             # @2d6mcp/osr — B/X-style procedures (original summaries; books via BYOD)
+│   └── spacetime/       # @2d6mcp/spacetime — session + chronicle kernel
 ├── data/                # SQLite databases (shared)
 ├── tests/               # Vitest test suite
 ├── tsconfig.base.json
@@ -213,7 +216,12 @@ Versioning is **SemVer 2.0 lockstep** (root + every `packages/*` share one versi
 | `OSR_DB_PATH` | `data/osr/osr-procedures.db` | Path to OSR / B/X-compatible procedures database |
 | `MLX_WHISPER_MODEL` | `mlx-community/whisper-large-v3-turbo` | MLX Whisper model |
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LLM model |
-| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
+| `SPACETIMEDB_MODE` | `embedded` | `embedded` kernel or `remote` SpacetimeDB replica |
+| `SPACETIMEDB_URI` | `http://127.0.0.1:3000` | SpacetimeDB HTTP endpoint |
+| `SPACETIMEDB_DB` | `2d6mcp` | SpacetimeDB database name |
+| `SPACETIMEDB_EMBEDDED_PATH` | `~/.2d6mcp/spacetime-kernel.json` | Local kernel snapshot (not SQLite) |
+| `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Legacy SQLite import source only |
+| `CHRONICLE_EXPORT_ALLOW_PATHS` | — | Extra allowlisted chronicle markdown export paths |
 | `STT_BACKEND` | `mlx` | STT backend: `mlx` or `whispercpp` |
 | `LLM_BACKEND` | `mlx` | LLM backend: `mlx`, `llamacpp`, or `ollama`. On Windows, default mlx falls back to ollama when `/api/tags` answers. |
 | `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama daemon URL (`LLM_BACKEND=ollama`) |
