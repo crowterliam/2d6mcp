@@ -21,6 +21,7 @@ with **lockstep** versions across the npm workspaces (see [VERSIONING.md](VERSIO
 - Sync results include `failedPaths` (relative paths that failed to ingest), not only a failed count.
 - CLI `sync-byod <query>` (and `--root`) loops until `complete`, with a round cap. The MCP tool stays time-budgeted.
 - `ingest_live_transcript` polls an external companion SQLite DB (`meetings` + `segments`) or an NDJSON/`watch_dir` fixture into `log_transcript`. System loopback / mic capture stays outside 2d6mcp.
+- `LLM_BACKEND=ollama` HTTP backend (`OLLAMA_HOST`, `OLLAMA_MODEL`, default `llama3.2:3b` at `http://127.0.0.1:11434`). On Windows, default mlx falls back to Ollama when `mlx_lm.generate` is missing and `/api/tags` answers; GGUF/`llama-cli` is not required.
 
 ### Fixed
 

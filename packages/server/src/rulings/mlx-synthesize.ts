@@ -2,9 +2,12 @@
 // Copyright (C) 2026 Jupiter Industries (Liam Crowter) and the 2d6mcp maintainers
 
 import { spawn, execSync } from "node:child_process";
-import { loadConfig } from "../config.js";
+import { loadConfig, type LlmBackend } from "../config.js";
 import { getSystemPrompt, cleanRulingResponse } from "@2d6mcp/shared";
 import { synthesizeWithLlamaCpp, isLlamaCppAvailable } from "./backends/llamacpp.js";
+import { synthesizeWithOllama, isOllamaAvailable } from "./backends/ollama.js";
+
+let ollamaFallbackBannerLogged = false;
 
 export interface MLXSynthesizeResult {
   response: string;
@@ -119,6 +122,54 @@ function execMlxGenerate(
   });
 }
 
+function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
+  return typeof error === "object" && error !== null && "code" in error;
+}
+
+function isMlxGenerateAvailable(): boolean {
+  try {
+    execSync("which mlx_lm.generate", { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function logOllamaFallback(host: string): void {
+  if (ollamaFallbackBannerLogged) return;
+  ollamaFallbackBannerLogged = true;
+  process.stderr.write(
+    `2d6mcp: mlx_lm.generate is unavailable; using ollama at ${host} (set LLM_BACKEND=ollama to skip this probe)\n`
+  );
+}
+
+export function resetOllamaFallbackLogForTests(): void {
+  ollamaFallbackBannerLogged = false;
+}
+
+export async function resolveEffectiveLlmBackend(
+  platform: NodeJS.Platform = process.platform
+): Promise<LlmBackend> {
+  const config = loadConfig();
+  switch (config.llmBackend) {
+    case "llamacpp":
+    case "ollama":
+      return config.llmBackend;
+    case "mlx": {
+      if (isMlxGenerateAvailable()) return "mlx";
+      if (platform === "win32" && (await isOllamaAvailable(config.ollamaHost))) {
+        logOllamaFallback(config.ollamaHost);
+        return "ollama";
+      }
+      return "mlx";
+    }
+    default: {
+      const _never: never = config.llmBackend;
+      return _never;
+    }
+  }
+}
+
 function applyQualityFilter(
   rawResponse: string,
   rulesContext: string | undefined,
@@ -137,8 +188,13 @@ export async function synthesizeRuling(
 ): Promise<MLXSynthesizeResult> {
   const config = loadConfig();
   const enableQualityFilter = options.qualityFilter !== false;
+  const backend = await resolveEffectiveLlmBackend();
 
-  if (config.llmBackend === "llamacpp") {
+  const userContent = rulesContext
+    ? `Reference rules:\n${rulesContext}\n\nQuestion: ${question}`
+    : question;
+
+  if (backend === "llamacpp") {
     const model = options.model || config.llamaCppModel;
     const systemPrompt = getSystemPrompt(model, options.systemPrompt);
     const family = detectModelFamily(model);
@@ -149,6 +205,26 @@ export async function synthesizeRuling(
       temperature: options.temperature,
       topP: options.topP,
       topK: options.topK,
+    });
+    const cleaned = applyQualityFilter(result.response, rulesContext, enableQualityFilter);
+    return {
+      ...result,
+      response: cleaned.response,
+      qualityWarnings: cleaned.qualityWarnings,
+    };
+  }
+
+  if (backend === "ollama") {
+    const model = options.model || config.ollamaModel;
+    const systemPrompt = getSystemPrompt(model, options.systemPrompt);
+    const result = await synthesizeWithOllama(userContent, {
+      model,
+      host: config.ollamaHost,
+      maxTokens: options.maxTokens,
+      temperature: options.temperature,
+      topP: options.topP,
+      topK: options.topK,
+      system: systemPrompt,
     });
     const cleaned = applyQualityFilter(result.response, rulesContext, enableQualityFilter);
     return {
@@ -177,7 +253,20 @@ export async function synthesizeRuling(
   ];
 
   const startTime = Date.now();
-  const { stdout } = await execMlxGenerate(args, prompt);
+  let stdout: string;
+  try {
+    ({ stdout } = await execMlxGenerate(args, prompt));
+  } catch (err) {
+    if (isErrnoException(err) && err.code === "ENOENT") {
+      throw new Error(
+        `mlx_lm.generate not found (LLM_BACKEND=${config.llmBackend}). ` +
+          `On Windows set LLM_BACKEND=ollama with Ollama at ${config.ollamaHost} ` +
+          `(OLLAMA_MODEL=${config.ollamaModel}), or set LLM_BACKEND=llamacpp. ` +
+          `win32 auto-falls back to ollama when /api/tags answers.`
+      );
+    }
+    throw err;
+  }
   const duration = (Date.now() - startTime) / 1000;
 
   const rawResponse = stdout
@@ -202,11 +291,34 @@ export async function synthesizeRuling(
 
 export function isMLXLLMAvailable(): boolean {
   const config = loadConfig();
-  if (config.llmBackend === "llamacpp") return isLlamaCppAvailable();
-  try {
-    execSync("which mlx_lm.generate", { stdio: "ignore" });
-    return true;
-  } catch {
-    return false;
+  switch (config.llmBackend) {
+    case "llamacpp":
+      return isLlamaCppAvailable();
+    case "ollama":
+      return true;
+    case "mlx":
+      return isMlxGenerateAvailable();
+    default: {
+      const _never: never = config.llmBackend;
+      return _never;
+    }
+  }
+}
+
+export async function isLLMAvailable(
+  platform: NodeJS.Platform = process.platform
+): Promise<boolean> {
+  const backend = await resolveEffectiveLlmBackend(platform);
+  switch (backend) {
+    case "llamacpp":
+      return isLlamaCppAvailable();
+    case "ollama":
+      return isOllamaAvailable(loadConfig().ollamaHost);
+    case "mlx":
+      return isMlxGenerateAvailable();
+    default: {
+      const _never: never = backend;
+      return _never;
+    }
   }
 }

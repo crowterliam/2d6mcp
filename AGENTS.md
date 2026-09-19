@@ -163,7 +163,7 @@ packages/server/src/
     speakers.ts        # silence-gap speaker diarization
   rulings/
     retrieve.ts        # Shared rules lookup for synthesize_ruling
-    mlx-synthesize.ts  # MLX LM + llama.cpp backend dispatch, quality filter
+    mlx-synthesize.ts  # MLX LM + llama.cpp + ollama backend dispatch, quality filter
     backends/
       llamacpp.ts      # llama.cpp LLM backend (Win/Linux)
   session/
@@ -263,7 +263,9 @@ BYOD tooling is system-agnostic. `sync_byod`, `query_local_byod`, `root`, `relat
 | Platform | STT Backend | LLM Backend |
 |---|---|---|
 | macOS (default) | `mlx` (MLX Whisper) | `mlx` (MLX LM) |
-| Windows/Linux | `whispercpp` (whisper.cpp) | `llamacpp` (llama.cpp) |
+| Windows/Linux | `whispercpp` (whisper.cpp) | `llamacpp` (llama.cpp) or `ollama` |
+
+On Windows, if `LLM_BACKEND` is unset/`mlx` and `mlx_lm.generate` is missing, `synthesize_ruling` probes `OLLAMA_HOST` `/api/tags` and uses Ollama when that answers. Set `LLM_BACKEND=ollama` in mcp.json to skip the probe. GGUF/`llama-cli` is not required when Ollama is present.
 
 ## Multi-License Architecture
 
@@ -317,9 +319,11 @@ Never reference any third-party game system or trademarked terms. Use generic de
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LM model for ruling synthesis |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
 | `STT_BACKEND` | `mlx` | STT backend: `mlx` (macOS) or `whispercpp` (Win/Linux) |
-| `LLM_BACKEND` | `mlx` | LLM backend: `mlx` (macOS) or `llamacpp` (Win/Linux) |
+| `LLM_BACKEND` | `mlx` | LLM backend: `mlx` (macOS), `llamacpp`, or `ollama`. On win32, default mlx falls back to ollama when `/api/tags` answers. |
 | `WHISPERCPP_MODEL` | `ggml-large-v3-turbo.bin` | whisper.cpp model path (Win/Linux) |
 | `LLAMACPP_MODEL` | `Llama-3.2-3B-Instruct.Q4_K_M.gguf` | llama.cpp model path (Win/Linux) |
+| `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama daemon base URL (`LLM_BACKEND=ollama`) |
+| `OLLAMA_MODEL` | `llama3.2:3b` | Ollama model name (`LLM_BACKEND=ollama`) |
 | `LIVE_TRANSCRIPT_DB` | — | Path to an external companion SQLite file (`meetings` + `segments`). Allowlisted for `ingest_live_transcript`. |
 | `LIVE_TRANSCRIPT_ALLOW_PATHS` | — | Extra allowlisted files/directories for companion SQLite or NDJSON (colon or semicolon separated; Windows drive letters kept intact). |
 

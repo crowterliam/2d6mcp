@@ -15,11 +15,11 @@ A system-agnostic Model Context Protocol (MCP) server providing a mechanical eng
 - **Dungeon World Database** — Generated on first use from bundled seed data: moves, classes, spells, monsters, GM tools (CC-BY-3.0)
 - **Basic Roleplaying Database** — Generated on first use from bundled seed data: BRP SRD 1.0.2 characteristics, skills, professions, weapons, armor, spot rules (BRP OGL v1.0)
 - **5E-Compatible Database** — Generated on first use from bundled seed data: d20 fantasy SRD classes, spells, monsters, feats, and rules (CC-BY-4.0)
-- **AI Rulings** — Ask rules questions, get cited answers from OGL/DW/BRP/5E-compatible/BYOD sources. Powered by local MLX or llama.cpp
+- **AI Rulings** — Ask rules questions, get cited answers from OGL/DW/BRP/5E-compatible/BYOD sources. Powered by local MLX, llama.cpp, or Ollama
 - **Discord webhooks** — Post rulings and table output to Discord channels from the MCP server
 - **BYOD Indexing** — Ingest your own PDF/text/markdown files for local full-text search
 - **Session Management** — Start/end sessions, log transcripts, search what was said at the table
-- **Local STT/LLM** — MLX on macOS; whisper.cpp and llama.cpp on Windows/Linux
+- **Local STT/LLM** — MLX on macOS; whisper.cpp, llama.cpp, or Ollama on Windows/Linux
 
 ## Quick Start
 
@@ -215,7 +215,9 @@ Versioning is **SemVer 2.0 lockstep** (root + every `packages/*` share one versi
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LLM model |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
 | `STT_BACKEND` | `mlx` | STT backend: `mlx` or `whispercpp` |
-| `LLM_BACKEND` | `mlx` | LLM backend: `mlx` or `llamacpp` |
+| `LLM_BACKEND` | `mlx` | LLM backend: `mlx`, `llamacpp`, or `ollama`. On Windows, default mlx falls back to ollama when `/api/tags` answers. |
+| `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama daemon URL (`LLM_BACKEND=ollama`) |
+| `OLLAMA_MODEL` | `llama3.2:3b` | Ollama model name (`LLM_BACKEND=ollama`) |
 | `LIVE_TRANSCRIPT_DB` | — | External companion SQLite path for `ingest_live_transcript` (`meetings` + `segments`) |
 | `LIVE_TRANSCRIPT_ALLOW_PATHS` | — | Extra allowlisted paths for companion SQLite/NDJSON (colon or semicolon separated) |
 

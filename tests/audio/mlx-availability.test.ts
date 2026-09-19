@@ -33,11 +33,26 @@ describe("isMLXLLMAvailable", () => {
     expect(isMLXLLMAvailable()).toBe(true);
   });
 
-  it("returns false when mlx_lm.generate is not found", async () => {
+    it("returns false when mlx_lm.generate is not found", async () => {
     vi.mocked(execSync).mockImplementation(() => {
       throw new Error("not found");
     });
     const { isMLXLLMAvailable } = await import("../../packages/server/src/rulings/mlx-synthesize.js");
     expect(isMLXLLMAvailable()).toBe(false);
+  });
+
+  it("returns true when LLM_BACKEND is ollama without requiring mlx_lm.generate", async () => {
+    vi.mocked(execSync).mockImplementation(() => {
+      throw new Error("not found");
+    });
+    const previous = process.env.LLM_BACKEND;
+    process.env.LLM_BACKEND = "ollama";
+    try {
+      const { isMLXLLMAvailable } = await import("../../packages/server/src/rulings/mlx-synthesize.js");
+      expect(isMLXLLMAvailable()).toBe(true);
+    } finally {
+      if (previous === undefined) delete process.env.LLM_BACKEND;
+      else process.env.LLM_BACKEND = previous;
+    }
   });
 });

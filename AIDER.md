@@ -75,7 +75,9 @@ Prompts: `skill-check`, `d20-check`, `percentile-check`, `lookup-rules`, `create
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LLM model |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
 | `STT_BACKEND` | `mlx` | STT backend: `mlx` or `whispercpp` |
-| `LLM_BACKEND` | `mlx` | LLM backend: `mlx` or `llamacpp` |
+| `LLM_BACKEND` | `mlx` | LLM backend: `mlx`, `llamacpp`, or `ollama` |
+| `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama daemon URL |
+| `OLLAMA_MODEL` | `llama3.2:3b` | Ollama model name |
 | `LIVE_TRANSCRIPT_DB` | — | External companion SQLite for `ingest_live_transcript` |
 | `LIVE_TRANSCRIPT_ALLOW_PATHS` | — | Extra allowlisted companion/NDJSON paths |
 
