@@ -16,11 +16,75 @@
 // under CC-BY-4.0.
 
 import Database from "better-sqlite3";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { ensure5ecompatibleSchema, close5ecompatibleDatabase } from "./database.js";
 
 const DEFAULT_SRD_PATH = resolve(process.cwd(), ".reference", "SRD");
+const COMPILED_SRD_STEM = "dnd_srd_5.2.1_compiled";
+
+type PathKind = "file" | "directory" | "missing";
+
+function pathKind(target: string): PathKind {
+  try {
+    if (!existsSync(target)) return "missing";
+    const st = statSync(target);
+    if (st.isFile()) return "file";
+    if (st.isDirectory()) return "directory";
+    return "missing";
+  } catch {
+    return "missing";
+  }
+}
+
+/**
+ * Resolve the compiled SRD markdown used to seed `sr5e_sections`.
+ * Current upstream layout is `docs_compiled/dnd_srd_5.2.1_compiled.md`.
+ * Older checkouts used the extensionless file (or a directory of the same name).
+ */
+export function resolveCompiledSrdPath(srdPath: string): string | null {
+  const compiledDir = resolve(srdPath, "docs_compiled");
+  const mdPath = resolve(compiledDir, `${COMPILED_SRD_STEM}.md`);
+  if (pathKind(mdPath) === "file") return mdPath;
+
+  const barePath = resolve(compiledDir, COMPILED_SRD_STEM);
+  const kind = pathKind(barePath);
+  switch (kind) {
+    case "file":
+      return barePath;
+    case "directory": {
+      const nestedMd = resolve(barePath, `${COMPILED_SRD_STEM}.md`);
+      if (pathKind(nestedMd) === "file") return nestedMd;
+      return barePath;
+    }
+    case "missing":
+      return null;
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+function readCompiledSrdContent(compiledPath: string): string {
+  const kind = pathKind(compiledPath);
+  switch (kind) {
+    case "file":
+      return readFileSync(compiledPath, "utf-8");
+    case "directory": {
+      const files = readdirSync(compiledPath)
+        .filter((name) => name.endsWith(".md"))
+        .sort();
+      return files.map((name) => readFileSync(resolve(compiledPath, name), "utf-8")).join("\n");
+    }
+    case "missing":
+      return "";
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
 
 export function populate5ecompatibleDatabase(
   dbPath: string,
@@ -63,10 +127,12 @@ function rebuildFts(db: Database.Database): void {
 // ─── SECTIONS (FTS content from compiled file) ────────────────────────────
 
 function seedSections(db: Database.Database, srdPath: string): void {
-  const compiledPath = resolve(srdPath, "docs_compiled", "dnd_srd_5.2.1_compiled");
-  if (!existsSync(compiledPath)) return;
+  const compiledPath = resolveCompiledSrdPath(srdPath);
+  if (!compiledPath) return;
 
-  const content = readFileSync(compiledPath, "utf-8");
+  const content = readCompiledSrdContent(compiledPath);
+  if (!content.trim()) return;
+
   const stmt = db.prepare("INSERT INTO sr5e_sections (section, topic, content) VALUES (?, ?, ?)");
 
   const sections = content.split(/\n## /);
