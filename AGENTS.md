@@ -242,6 +242,7 @@ Companion SQLite schema:
 4. Poll `ingest_live_transcript` with `action: poll` (alias `ingest`). Default source is `companion_sqlite` when `path` is omitted. Use `source: ndjson_file` plus `path` for `{ "start_ms", "end_ms", "speaker", "text", "id"? }` lines. `watch_dir` reads `.ndjson`/`.jsonl`/`.json` files in an allowlisted folder.
 5. Repeat poll during play. Cursors are per session and incremental — the same segment is not logged twice. `action: status` shows the cursor; `action: reset_cursor` starts over.
 6. Paths must stay under the project root, `BYOD_PATH`, `LIVE_TRANSCRIPT_ALLOW_PATHS`, or `LIVE_TRANSCRIPT_DB`. Compatible companion library files under common app-data locations are auto-discovered when present. System loopback / mic capture is out of scope for 2d6mcp.
+7. Live-sidecar smokes: rotate or truncate the NDJSON fixture, or start a fresh session, between scenarios so an older fixture `Me` line cannot sit in the same `from_context` window as a new check. `synthesize_ruling` now prefers the most recent speaker-`Me` rules-ish utterance (including STT lines that omit `?`), but ops hygiene still keeps windows small.
 
 The `2d6-mcp-stt-notes-ingest` workflow is not a repo skill (harness skills live under `.claude/skills/` / `.kilo/agent/`). Use this section plus the master `2d6mcp` skill.
 

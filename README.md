@@ -233,6 +233,8 @@ Companion SQLite schema: `meetings` (`id`, `title`, `started_at`, `duration_s`, 
 4. Poll `ingest_live_transcript` (`action: poll` or `ingest`) with that `session_id`. New segments are logged as voice/narration. Repeat during play; the per-session cursor is incremental and idempotent.
 5. `action: status` shows the cursor; `action: reset_cursor` clears it. Paths outside the project root, `BYOD_PATH`, `LIVE_TRANSCRIPT_ALLOW_PATHS`, and `LIVE_TRANSCRIPT_DB` are rejected.
 
+Live-sidecar smokes should rotate or truncate NDJSON (or start a fresh session) between scenarios so an older fixture line is not still in the `from_context` window. The code also prefers the most recent speaker-`Me` rules-ish utterance, including lines without `?`.
+
 Outbound webhook tools are unchanged. System loopback / mic capture is out of scope for 2d6mcp.
 
 ## Session labels

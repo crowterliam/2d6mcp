@@ -33,6 +33,7 @@ with **lockstep** versions across the npm workspaces (see [VERSIONING.md](VERSIO
 - OGL `query_rules` category aliases are case-insensitive, so display names such as `Trade & Commerce` and `TRADE & COMMERCE` route through the trade filter instead of core FTS.
 - `search_transcript` matches unquoted tokens with AND (all terms present, not necessarily adjacent). Quoted queries stay exact phrases.
 - `synthesize_ruling` prefers indexed personal files when `byod_system` is set and no longer silently ignores BYOD. Missing local LLM still returns retrieved context instead of a hard block.
+- `synthesize_ruling` `from_context` prefers the most recent speaker-`Me` rules-ish utterance (including STT lines that omit `?`) instead of latching an older `?` in the window.
 
 ### Changed
 

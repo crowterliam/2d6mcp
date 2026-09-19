@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { retrieveRulesContext, questionFromTranscript, BYOD_PREFERRED_WARNING } from "../../packages/server/src/rulings/retrieve.js";
+import { retrieveRulesContext, questionFromTranscript, formatTranscriptForQuestion, BYOD_PREFERRED_WARNING } from "../../packages/server/src/rulings/retrieve.js";
 import { openSessionDb, createSession, closeSessionDb } from "../../packages/server/src/session/database.js";
 import {
   getByodDatabase,
@@ -17,6 +17,48 @@ describe("questionFromTranscript", () => {
   it("prefers the last line that contains a question mark", () => {
     const q = questionFromTranscript("The party enters the room.\nCan I hide behind cover?\nI roll.");
     expect(q).toContain("hide behind cover");
+  });
+
+  it("prefers a newer Me line without a question mark over an older fixture with one", () => {
+    const q = questionFromTranscript(
+      [
+        "Me: Can I haggle with Broker?",
+        "System: dice clatter",
+        "Me: average broker check for freight tire",
+      ].join("\n")
+    );
+    expect(q).toMatch(/average broker.*freight tire/i);
+    expect(q).not.toMatch(/haggle/i);
+  });
+
+  it("ignores System-only noise", () => {
+    expect(questionFromTranscript("System: connecting\nSystem: ready")).toBe("");
+  });
+
+  it("returns empty for empty input", () => {
+    expect(questionFromTranscript("")).toBe("");
+    expect(questionFromTranscript("   \n  \n")).toBe("");
+  });
+
+  it("still prefers a real question mark on a recent Me line", () => {
+    const q = questionFromTranscript(
+      [
+        "Me: average broker check for freight tire",
+        "GM: rolls dice",
+        "Me: what is the TN for that check?",
+      ].join("\n")
+    );
+    expect(q).toMatch(/TN for that check/i);
+  });
+
+  it("sorts newest-first session rows so the later Me line still wins", () => {
+    const blob = formatTranscriptForQuestion([
+      { timestamp: 200, id: 2, speaker: "Me", text: "average broker check for freight tire" },
+      { timestamp: 100, id: 1, speaker: "Me", text: "Can I haggle with Broker?" },
+    ]);
+    const q = questionFromTranscript(blob);
+    expect(q).toMatch(/average broker.*freight tire/i);
+    expect(q).not.toMatch(/haggle/i);
   });
 });
 

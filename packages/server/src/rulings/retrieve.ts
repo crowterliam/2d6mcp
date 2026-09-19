@@ -151,13 +151,109 @@ export function resolveRulesSystem(
   return sessionRules ?? "auto";
 }
 
+const INTERROGATIVE_STARTS = new Set([
+  "what",
+  "how",
+  "when",
+  "where",
+  "why",
+  "which",
+  "can",
+  "does",
+  "is",
+  "target",
+  "average",
+  "check",
+]);
+
+const RULES_WORDS = ["broker", "check", "tn", "difficulty"];
+
+interface TranscriptLine {
+  speaker: string | null;
+  text: string;
+  raw: string;
+}
+
+function parseSpeakerLine(line: string): TranscriptLine {
+  const match = line.match(/^([^:]{1,40}):\s*(.*)$/);
+  if (!match) return { speaker: null, text: line, raw: line };
+  const speaker = match[1].trim();
+  if (!/^[A-Za-z][A-Za-z0-9 _-]{0,39}$/.test(speaker)) {
+    return { speaker: null, text: line, raw: line };
+  }
+  const text = match[2].trim();
+  return { speaker, text: text || line, raw: line };
+}
+
+function isSystemSpeaker(speaker: string | null): boolean {
+  return speaker !== null && speaker.toLowerCase() === "system";
+}
+
+function isMeSpeaker(speaker: string | null): boolean {
+  return speaker !== null && speaker.toLowerCase() === "me";
+}
+
+export function isRulesIshUtterance(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  if (trimmed.includes("?")) return true;
+  const lower = trimmed.toLowerCase();
+  const firstWord = lower.match(/^[a-z]+/)?.[0] ?? "";
+  if (INTERROGATIVE_STARTS.has(firstWord)) return true;
+  return RULES_WORDS.some((word) => {
+    if (word === "tn") {
+      return /(^|[^a-z0-9])tn([^a-z0-9]|$)/i.test(lower);
+    }
+    return lower.includes(word);
+  });
+}
+
+export interface TranscriptSegmentLike {
+  timestamp?: number;
+  id?: number;
+  speaker?: string | null;
+  text: string;
+}
+
+/** Oldest-first blob so questionFromTranscript can pick the most recent line from the end. */
+export function formatTranscriptForQuestion(segments: TranscriptSegmentLike[]): string {
+  return [...segments]
+    .sort((a, b) => {
+      const time = (a.timestamp ?? 0) - (b.timestamp ?? 0);
+      if (time !== 0) return time;
+      return (a.id ?? 0) - (b.id ?? 0);
+    })
+    .map((segment) => {
+      const speakerPrefix = segment.speaker ? `${segment.speaker}: ` : "";
+      return `${speakerPrefix}${segment.text}`;
+    })
+    .join("\n");
+}
+
 export function questionFromTranscript(transcriptText: string): string {
   const lines = transcriptText
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
-  const withQuestion = [...lines].reverse().find((line) => line.includes("?"));
-  const picked = withQuestion ?? lines.slice(-4).join(" ");
+  if (lines.length === 0) return "";
+
+  const parsed = lines.map(parseSpeakerLine);
+  const useful = parsed.filter((line) => !isSystemSpeaker(line.speaker));
+  if (useful.length === 0) return "";
+
+  const meLines = useful.filter((line) => isMeSpeaker(line.speaker));
+  for (let i = meLines.length - 1; i >= 0; i--) {
+    if (isRulesIshUtterance(meLines[i].text)) {
+      return meLines[i].text.slice(0, 400);
+    }
+  }
+
+  const withQuestion = [...useful].reverse().find((line) => line.text.includes("?") || line.raw.includes("?"));
+  if (withQuestion) {
+    return (withQuestion.text || withQuestion.raw).slice(0, 400);
+  }
+
+  const picked = useful.slice(-4).map((line) => line.raw).join(" ");
   return picked.slice(0, 400);
 }
 
