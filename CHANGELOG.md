@@ -23,6 +23,8 @@ with **lockstep** versions across the npm workspaces (see [VERSIONING.md](VERSIO
 
 ### Fixed
 
+- `populate-5ecompatible` reads `docs_compiled/dnd_srd_5.2.1_compiled.md` (current SRD 5.2.1 layout) and still falls back to the extensionless compiled file or directory from older checkouts, so `sr5e_sections` is no longer left empty.
+- Credit Oldmanumby for the structured markdown packaging cloned into `.reference/SRD` (`https://github.com/oldmanumby/dnd.srd.5.2.1`), separate from Wizards of the Coast LLC / CC-BY-4.0 SRD 5.2.1 attribution. Oldmanumby did not author the SRD text; that tree is not vendored.
 - Catalog matching no longer extra-indexes a sibling folder whose name merely contains a shorter hit (for example `collection-a-website-dump` next to `collection-a`).
 - On `BYOD_NETWORK=true`, sync does not start another file when remaining budget is below a small floor.
 - `loadConfig` logs the BYOD_PATH banner at most once per process.

@@ -71,6 +71,7 @@ Usage:
     2d6mcp populate-brp  Generate or regenerate the Basic Roleplaying SQLite database
     2d6mcp populate-brp --force  Force regeneration of BRP database
   2d6mcp populate-5ecompatible  Generate or regenerate the 5E-compatible SRD database
+                                 (clone Oldmanumby markdown packaging into .reference/SRD)
   2d6mcp populate-5ecompatible --force  Force regeneration of 5E database
   2d6mcp populate-orcus  Generate or regenerate the Orcus d20-compatible database
   2d6mcp populate-orcus --force  Force regeneration of Orcus database
