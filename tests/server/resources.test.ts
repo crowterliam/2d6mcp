@@ -60,6 +60,12 @@ describe("MCP resources", () => {
 
     const license = readResource("2d6mcp://license");
     expect(license.text).toContain("AGPL-3.0-only");
+
+    const environment = readResource("2d6mcp://docs/environment");
+    expect(environment.text).toMatch(/LLM_BACKEND/);
+    expect(environment.text).toMatch(/ollama/i);
+    expect(environment.text).toMatch(/OLLAMA_HOST/);
+    expect(environment.text).toMatch(/OLLAMA_MODEL/);
   });
 
   it("reports no active session when the db is missing", () => {

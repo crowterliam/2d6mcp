@@ -114,6 +114,26 @@ describe("loadConfig", () => {
     expect(config.liveTranscriptDb).toBe("/tmp/companion.db");
     expect(config.liveTranscriptAllowPathsRaw).toBe("/tmp/a;/tmp/b");
   });
+
+  it("defaults LLM_BACKEND to mlx and ollama host/model", () => {
+    delete process.env.LLM_BACKEND;
+    delete process.env.OLLAMA_HOST;
+    delete process.env.OLLAMA_MODEL;
+    const config = loadConfig();
+    expect(config.llmBackend).toBe("mlx");
+    expect(config.ollamaHost).toBe("http://127.0.0.1:11434");
+    expect(config.ollamaModel).toBe("llama3.2:3b");
+  });
+
+  it("reads LLM_BACKEND=ollama and OLLAMA_* from env", () => {
+    process.env.LLM_BACKEND = "ollama";
+    process.env.OLLAMA_HOST = "http://127.0.0.1:11434/";
+    process.env.OLLAMA_MODEL = "qwen3:8b";
+    const config = loadConfig();
+    expect(config.llmBackend).toBe("ollama");
+    expect(config.ollamaHost).toBe("http://127.0.0.1:11434/");
+    expect(config.ollamaModel).toBe("qwen3:8b");
+  });
 });
 
 describe("isByodEnabled", () => {

@@ -20,6 +20,11 @@ function findProjectRoot(): string {
   return resolve(__dirname, "..", "..");
 }
 
+export type LlmBackend = "mlx" | "llamacpp" | "ollama";
+
+export const DEFAULT_OLLAMA_HOST = "http://127.0.0.1:11434";
+export const DEFAULT_OLLAMA_MODEL = "llama3.2:3b";
+
 export const PROJECT_ROOT = findProjectRoot();
 
 export const BYOD_CONSENT_FILE = resolve(PROJECT_ROOT, ".mcp-byod-consent-accepted");
@@ -38,8 +43,10 @@ export interface Config {
   mlxLLMModel: string;
   whisperCppModel: string;
   llamaCppModel: string;
+  ollamaModel: string;
+  ollamaHost: string;
   sttBackend: "mlx" | "whispercpp";
-  llmBackend: "mlx" | "llamacpp";
+  llmBackend: LlmBackend;
   byodChunkSize: number;
   byodChunkOverlap: number;
   byodMaxFiles: number;
@@ -57,6 +64,21 @@ const DEFAULT_MAX_FILES = 2000;
 const DEFAULT_MAX_CHUNKS_PER_FILE = 500;
 const DEFAULT_MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 const DEFAULT_SYNC_TIMEOUT_MS = 15000;
+
+function parseLlmBackend(raw: string | undefined): LlmBackend {
+  const value = (raw ?? "").trim().toLowerCase();
+  switch (value) {
+    case "llamacpp":
+      return "llamacpp";
+    case "ollama":
+      return "ollama";
+    case "mlx":
+    case "":
+      return "mlx";
+    default:
+      return "mlx";
+  }
+}
 
 function parseIntEnv(key: string, fallback: number, min: number, max: number): number {
   const raw = process.env[key];
@@ -176,14 +198,17 @@ export function loadConfig(): Config {
     process.env.LLAMACPP_MODEL ||
     "Llama-3.2-3B-Instruct.Q4_K_M.gguf";
 
+  const ollamaModel = process.env.OLLAMA_MODEL?.trim() || DEFAULT_OLLAMA_MODEL;
+  const ollamaHost = process.env.OLLAMA_HOST?.trim() || DEFAULT_OLLAMA_HOST;
+
   const sttBackend = (process.env.STT_BACKEND === "whispercpp") ? "whispercpp" : "mlx";
-  const llmBackend = (process.env.LLM_BACKEND === "llamacpp") ? "llamacpp" : "mlx";
+  const llmBackend = parseLlmBackend(process.env.LLM_BACKEND);
 
   const liveTranscriptDb =
     process.env.LIVE_TRANSCRIPT_DB?.trim() || process.env.OPENGRANOLA_DB?.trim() || null;
   const liveTranscriptAllowPathsRaw = process.env.LIVE_TRANSCRIPT_ALLOW_PATHS ?? "";
 
-  return { byodConsented, byodPath, oglDbPath, dwDbPath, brpDbPath, sr5eDbPath, orcusDbPath, osrDbPath, sessionDbPath, mlxWhisperModel, mlxLLMModel, whisperCppModel, llamaCppModel, sttBackend, llmBackend, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs, byodMaxFileSize, byodNetwork, liveTranscriptDb, liveTranscriptAllowPathsRaw };
+  return { byodConsented, byodPath, oglDbPath, dwDbPath, brpDbPath, sr5eDbPath, orcusDbPath, osrDbPath, sessionDbPath, mlxWhisperModel, mlxLLMModel, whisperCppModel, llamaCppModel, ollamaModel, ollamaHost, sttBackend, llmBackend, byodChunkSize, byodChunkOverlap, byodMaxFiles, byodMaxChunksPerFile, byodSyncTimeoutMs, byodMaxFileSize, byodNetwork, liveTranscriptDb, liveTranscriptAllowPathsRaw };
 }
 
 export function isByodEnabled(): boolean {

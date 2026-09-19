@@ -75,6 +75,18 @@ docker build -t 2d6mcp .
 
 Restart Claude Desktop after editing.
 
+On Windows table machines with a local Ollama daemon (no MLX, no GGUF), add these to the harness `env` block:
+
+```json
+{
+  "LLM_BACKEND": "ollama",
+  "OLLAMA_HOST": "http://127.0.0.1:11434",
+  "OLLAMA_MODEL": "llama3.2:3b"
+}
+```
+
+If `LLM_BACKEND` is omitted on win32, `synthesize_ruling` still uses Ollama when `mlx_lm.generate` is missing and `http://127.0.0.1:11434/api/tags` answers. `llama-cli` is not required.
+
 ### Claude Code (CLI)
 
 **Config file**: `~/.claude.json` (global) or `.claude.json` in your project (local).
@@ -146,7 +158,9 @@ If the server is connected, the assistant will call `roll` and return dice resul
 | `MLX_LLM_MODEL` | `mlx-community/Llama-3.2-3B-Instruct-4bit` | MLX LLM model |
 | `SESSION_DB_PATH` | `~/.2d6mcp/sessions.db` | Session database location |
 | `STT_BACKEND` | `mlx` | STT backend: `mlx` or `whispercpp` |
-| `LLM_BACKEND` | `mlx` | LLM backend: `mlx` or `llamacpp` |
+| `LLM_BACKEND` | `mlx` | LLM backend: `mlx`, `llamacpp`, or `ollama`. On Windows, default mlx falls back to ollama when `/api/tags` answers. |
+| `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama daemon URL (`LLM_BACKEND=ollama`) |
+| `OLLAMA_MODEL` | `llama3.2:3b` | Ollama model name (`LLM_BACKEND=ollama`) |
 | `LIVE_TRANSCRIPT_DB` | — | External companion SQLite path (`meetings` + `segments`) |
 | `LIVE_TRANSCRIPT_ALLOW_PATHS` | — | Extra allowlisted companion/NDJSON paths (colon or semicolon) |
 

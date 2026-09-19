@@ -18,7 +18,7 @@ import {
 } from "../../session/database.js";
 import { transcribeAudioBuffer } from "../../audio/mlx-transcribe.js";
 import { synthesizeRuling as mlxSynthesizeRuling } from "../../rulings/mlx-synthesize.js";
-import { questionFromTranscript, retrieveRulesContext, BYOD_PREFERRED_WARNING } from "../../rulings/retrieve.js";
+import { questionFromTranscript, formatTranscriptForQuestion, retrieveRulesContext, BYOD_PREFERRED_WARNING } from "../../rulings/retrieve.js";
 import { resolveSafePath } from "../helpers.js";
 import { isAudioLong, chunkAudio, transcribeChunk, cleanupChunks, getChunkFiles } from "../../audio/chunker.js";
 import { handleListTranscriptions, handleClearTranscription } from "./session.js";
@@ -55,13 +55,7 @@ export async function handleSynthesizeRuling(args: Record<string, unknown> | und
         }, null, 2) }],
       };
     }
-    const transcriptText = transcripts
-      .map((t) => {
-        const speakerPrefix = t.speaker ? `${t.speaker}: ` : "";
-        return `${speakerPrefix}${t.text}`;
-      })
-      .join("\n");
-    question = questionFromTranscript(transcriptText);
+    question = questionFromTranscript(formatTranscriptForQuestion(transcripts));
   }
 
   if (!question) {
